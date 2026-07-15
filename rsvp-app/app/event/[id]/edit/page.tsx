@@ -46,7 +46,7 @@ export default function EditEventPage() {
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find(e => e.id.toString() === eventId.toString());
+   const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) {
       setFormData(prev => ({
         ...prev,
