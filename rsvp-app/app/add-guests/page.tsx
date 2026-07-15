@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -19,7 +19,7 @@ interface Guest {
   notes: string;
 }
 
-export default function AddGuestsPage() {
+function AddGuestsContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '1';
 
@@ -200,6 +200,13 @@ export default function AddGuestsPage() {
     </div>
   );
 }
-// final rebuild attempt - 15/07/2026 21:58
-// force vercel to use latest commit - 15/07/2026 22:12
+
+export default function AddGuestsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xl">טוען דף...</div>}>
+      <AddGuestsContent />
+    </Suspense>
+  );
+}
+
 // force fresh build - 16/07/2026
