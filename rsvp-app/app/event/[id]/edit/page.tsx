@@ -89,7 +89,7 @@ export default function EditEventPage() {
 
     const updatedEvent = {
       ...formData,
-      id: parseInt(eventId),
+     id: parseInt(Array.isArray(eventId) ? eventId[0] : eventId || '0'),
       creditLink: formData.creditLink || '',
     };
 
