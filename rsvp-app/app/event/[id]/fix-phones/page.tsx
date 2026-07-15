@@ -17,9 +17,9 @@ export default function FixPhonesPage() {
   }, [eventId]);
 
   const fixPhone = (id: string, newPhone: string) => {
-    const updated = guests.map(g => 
-      g.id.toString() === id ? { ...g, phone: newPhone } : g
-    );
+   const updated = guests.map((g: any) =>
+    g.id.toString() === id ? { ...g, phone: newPhone } : g
+);
     setGuests(updated);
 
     // שמירה
