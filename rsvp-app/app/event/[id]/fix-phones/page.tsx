@@ -7,7 +7,7 @@ export default function FixPhonesPage() {
   const params = useParams();
   const eventId = params.id || "1";
 
-  const [guests, setGuests] = useState([]);
+ const [guests, setGuests] = useState<any[]>([]);
   const [fixedGuests, setFixedGuests] = useState([]);
 
   useEffect(() => {
