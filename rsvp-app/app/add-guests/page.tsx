@@ -86,7 +86,6 @@ export default function AddGuestsPage() {
     localStorage.setItem(key, JSON.stringify([...existing, ...validGuests]));
 
     alert(`✅ ${validGuests.length} מוזמנים נשמרו בהצלחה לאירוע #${eventId}!`);
-
     setGuests([]);
   };
 
@@ -130,7 +129,6 @@ export default function AddGuestsPage() {
         </button>
       </div>
 
-      {/* טבלה */}
       <div className="bg-slate-100 rounded-3xl border shadow overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-200 sticky top-0 z-10">
