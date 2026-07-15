@@ -230,11 +230,15 @@ export default function EditEventPage() {
               { label: 'שירות דיילות', name: 'stewardService' },
             ].map((field) => (
               <label key={field.name} className="flex items-center gap-3 text-lg">
-                <input 
-                 {/* @ts-ignore */}
-                 type="checkbox" 
-                  checked={formData[field.name] === 'כן'} 
-                  onChange={() => setFormData({...formData, [field.name]: formData[field.name] === 'כן' ? 'לא' : 'כן'})} 
+                // @ts-ignore
+<input 
+    type="checkbox" 
+    checked={formData[field.name as keyof typeof formData] === 'כן'} 
+    onChange={() => setFormData({
+        ...formData, 
+        [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
+    })} 
+/>
                 />
                 {field.label}
               </label>
