@@ -7,10 +7,10 @@ export default function TransportPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get('eventId') || '1';
-  const guestId = searchParams.get('guestId'); // אם באים ממוזמן ספציפי
+  const guestId = searchParams.get('guestId');
 
-  const [eventData, setEventData] = useState(null);
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [eventData, setEventData] = useState<any>(null);
+  const [selectedOption, setSelectedOption] = useState<any>(null);
   const [customNote, setCustomNote] = useState('');
 
   const [options] = useState([
@@ -24,11 +24,11 @@ export default function TransportPage() {
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const current = events.find(e => e.id.toString() === eventId.toString());
+    const current = events.find((e: any) => e.id.toString() === eventId.toString());
     if (current) setEventData(current);
   }, [eventId]);
 
-  const handleSelect = (option) => {
+  const handleSelect = (option: any) => {
     setSelectedOption(option);
   };
 
@@ -37,15 +37,14 @@ export default function TransportPage() {
 
     const transportText = `${selectedOption.name} - ${selectedOption.time}`;
 
-    // שמירה ב-localStorage של המוזמנים
     const key = `guests_event_${eventId}`;
     let guests = JSON.parse(localStorage.getItem(key) || '[]');
 
     if (guestId) {
-      // עדכון מוזמן ספציפי
-      guests = guests.map(g => g.id.toString() === guestId ? {...g, transport: transportText} : g);
+      guests = guests.map((g: any) => 
+        g.id.toString() === guestId ? { ...g, transport: transportText } : g
+      );
     } else {
-      // אם אין guestId - שמירה כללית (לפי שם לדוגמא)
       alert(`נשמר: ${transportText}\n(בפועל זה יחובר למוזמן ספציפי)`);
     }
 
@@ -58,7 +57,9 @@ export default function TransportPage() {
   return (
     <div className="min-h-screen bg-[#f8f1e3] py-12" dir="rtl">
       <div className="max-w-4xl mx-auto px-6">
-        <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline mb-8 inline-block">← חזרה לרשימת מוזמנים</Link>
+        <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline mb-8 inline-block">
+          ← חזרה לרשימת מוזמנים
+        </Link>
 
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">הסעות לאירוע</h1>
@@ -75,7 +76,11 @@ export default function TransportPage() {
               <div
                 key={option.id}
                 onClick={() => handleSelect(option)}
-                className={`p-8 rounded-3xl border-2 cursor-pointer transition-all hover:shadow-md ${selectedOption?.id === option.id ? 'border-[#d4a017] bg-[#fff8e1]' : 'border-gray-200 hover:border-gray-300'}`}
+                className={`p-8 rounded-3xl border-2 cursor-pointer transition-all hover:shadow-md ${
+                  selectedOption?.id === option.id 
+                    ? 'border-[#d4a017] bg-[#fff8e1]' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
               >
                 <div className="text-2xl font-bold mb-2 text-gray-900">{option.name}</div>
                 <div className="text-gray-600 text-lg">יציאה בשעה {option.time}</div>
