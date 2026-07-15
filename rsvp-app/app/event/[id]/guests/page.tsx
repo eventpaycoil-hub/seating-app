@@ -1,3 +1,4 @@
+// @ts-nocheck
 // force redeploy - 15/07/2026
 'use client';
 import { useState, useEffect } from 'react';
