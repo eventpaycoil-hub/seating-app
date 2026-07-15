@@ -5,9 +5,8 @@ import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
 
 export default function GuestsPage() {
-  const params = useParams();
-  const eventId = params.id || "1";
-
+const params = useParams<{ id: string; guestId: string }>();
+const eventId = params.id || "1";
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState([]);
