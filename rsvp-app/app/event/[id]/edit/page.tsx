@@ -218,32 +218,31 @@ export default function EditEventPage() {
           </div>
 
           {/* כן/לא */}
-          <div className="grid grid-cols-2 gap-6">
-            {[
-              { label: 'סידורי הושבה', name: 'seatingArrangement' },
-              { label: 'QR Code', name: 'qrCode' },
-              { label: 'הערות מוזמן', name: 'guestNotes' },
-              { label: 'אירוע באנגלית', name: 'englishEvent' },
-              { label: 'אירוע של נופר', name: 'nufarEvent' },
-              { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
-              { label: 'שליחת SMS', name: 'smsService' },
-              { label: 'שירות דיילות', name: 'stewardService' },
-            ].map((field) => (
-              <label key={field.name} className="flex items-center gap-3 text-lg">
-                // @ts-ignore
-<input 
-    type="checkbox" 
-    checked={formData[field.name as keyof typeof formData] === 'כן'} 
-    onChange={() => setFormData({
-        ...formData, 
-        [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
-    })} 
-/>
-                />
-                {field.label}
-              </label>
-            ))}
-          </div>
+       <div className="grid grid-cols-2 gap-6">
+  {[
+    { label: 'סידורי הושבה', name: 'seatingArrangement' },
+    { label: 'QR Code', name: 'qrCode' },
+    { label: 'הערות מוזמן', name: 'guestNotes' },
+    { label: 'אירוע באנגלית', name: 'englishEvent' },
+    { label: 'אירוע של נופר', name: 'nufarEvent' },
+    { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
+    { label: 'שליחת SMS', name: 'smsService' },
+    { label: 'שירות דיילות', name: 'stewardService' },
+  ].map((field) => (
+    <label key={field.name} className="flex items-center gap-3 text-lg">
+      {/* @ts-ignore */}
+      <input 
+        type="checkbox" 
+        checked={formData[field.name as keyof typeof formData] === 'כן'} 
+        onChange={() => setFormData({
+          ...formData, 
+          [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
+        })} 
+      />
+      {field.label}
+    </label>
+  ))}
+</div>
 
           <div className="flex justify-center pt-8">
             <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-16 py-5 rounded-2xl text-2xl font-medium">
