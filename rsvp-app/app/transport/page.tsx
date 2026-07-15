@@ -1,11 +1,13 @@
 'use client';
+
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function TransportPage() {
+function TransportContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get('eventId') || '1';
@@ -112,5 +114,13 @@ export default function TransportPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TransportPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xl">טוען דף...</div>}>
+      <TransportContent />
+    </Suspense>
   );
 }
