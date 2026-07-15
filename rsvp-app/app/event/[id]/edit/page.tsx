@@ -9,6 +9,7 @@ export default function EditEventPage() {
 
   const [formData, setFormData] = useState({
     eventType: 'חתונה',
+    eventDate: '',
     owners: 'שלומי ויעל',
     hallName: 'אולם אירועים סאו',
     city: 'אשדוד',
@@ -168,6 +169,7 @@ export default function EditEventPage() {
           {/* תאריך + שעה */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
+              {/* @ts-ignore */}
               <label className="block text-sm font-medium mb-2">תאריך האירוע:</label>
               <input type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} className="w-full p-4 border rounded-2xl text-lg" />
             </div>
