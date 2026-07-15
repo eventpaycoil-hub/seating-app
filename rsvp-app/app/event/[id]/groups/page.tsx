@@ -8,7 +8,7 @@ export default function GroupsPage() {
   const params = useParams();
   const eventId = params.id || "1";
 
-  const [groups, setGroups] = useState([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [newGroupNames, setNewGroupNames] = useState(Array(5).fill(''));
 
   useEffect(() => {
