@@ -76,7 +76,7 @@ export default function EditEventPage() {
     setFormData(updatedData);
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const updatedEvents = events.map(e =>
+    const updatedEvents = events.map((e: any) =>
       e.id.toString() === eventId ? { ...e, ...updatedData } : e
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
