@@ -71,7 +71,7 @@ export default function EditEventPage() {
     const updatedData = {
       ...formData,
       isActive: newStatus,
-      activatedAt: newStatus ? new Date().toISOString() : null,
+   activatedAt: newStatus ? new Date().toISOString() : (null as any),
     };
     setFormData(updatedData);
 
