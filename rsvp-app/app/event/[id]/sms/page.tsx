@@ -20,26 +20,28 @@ export default function SMSPage() {
     if (event) setCurrentEvent(event);
   }, [eventId]);
 
- const updateEventDetails = () => {
-  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-  const event = events.find((e: any) => e.id.toString() === eventId.toString());
-  if (event) {
-    setCurrentEvent(event);
-    alert('✅ פרטי האירוע עודכנו!');
-  } else {
-    alert('❌ לא נמצא אירוע עם ID זה');
-  }
-};
+  const updateEventDetails = () => {
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const event = events.find((e: any) => e.id.toString() === eventId.toString());
+    if (event) {
+      setCurrentEvent(event);
+      alert('✅ פרטי האירוע עודכנו!');
+    } else {
+      alert('❌ לא נמצא אירוע עם ID זה');
+    }
+  };
+
+  // === תבניות משופרות ===
   const templates = useMemo(() => [
     { 
       id: 1, 
       title: "הודעה מס 1 אישור הגעה", 
-      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 [✅ אישור הגעה](http://localhost:3000/landing?ref=*guestId*)` 
+      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 אישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
     },
     { 
       id: 2, 
       title: "הודעה מס 2 תזכורת", 
-      content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירוט מקום הישיבה*.\n\nמצפים ומתרגשים.\n\nלניווט לחץ על הקישור:\n\n👉 [🗺️ ניווט WAZE](${currentEvent?.wazeLink || 'https://waze.com/ul?q=' + encodeURIComponent(currentEvent?.hallName || '')})` 
+      content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירטי מקום הישיבה*.\n\nמצפים ומתרגשים!\n\nלניווט: https://waze.com/ul?q=${encodeURIComponent(currentEvent?.hallName || '')}` 
     },
     { 
       id: 3, 
@@ -49,17 +51,17 @@ export default function SMSPage() {
     { 
       id: 4, 
       title: "הודעה מס 4 הסעה", 
-      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\n👉 [🚐 בחר הסעה](http://localhost:3000/transport?event=${eventId})` 
+      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\n👉 בחר הסעה: https://seating-app-dusky.vercel.app/transport?event=${eventId}` 
     },
     { 
       id: 5, 
       title: "הודעה מס 5 ברקוד", 
-      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'} לחץ על הקישור הבא:\n\n👉 [📱 הצג QR כניסה](http://localhost:3000/qr/${eventId}?guest=*guestId*)` 
+      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'}:\n\n👉 הצג QR כניסה: https://seating-app-dusky.vercel.app/qr/${eventId}?guest=*guestId*` 
     },
     { 
       id: 6, 
       title: "הודעה מס 6 טרם אישרת", 
-      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 [✅ אישור הגעה](http://localhost:3000/landing?ref=*guestId*)` 
+      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\n👉 אישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
     }
   ], [currentEvent, eventId]);
 
@@ -92,17 +94,15 @@ export default function SMSPage() {
       });
 
       const data = await res.json();
-      console.log('SMS Result:', data);
 
       if (data.success) {
         setLastResult(`✅ נשלח בהצלחה ל-${phone}`);
         alert(`✅ ההודעה נשלחה בהצלחה למספר ${phone}`);
       } else {
         setLastResult(`❌ שגיאה: ${data.error || JSON.stringify(data.details)}`);
-        alert(`❌ שגיאה בשליחה:\n${data.error}\n\nפרטים: ${JSON.stringify(data.details || data, null, 2)}`);
+        alert(`❌ שגיאה בשליחה:\n${data.error}`);
       }
     } catch (err: any) {
-      console.error(err);
       setLastResult(`❌ שגיאת רשת: ${err.message}`);
       alert('שגיאת רשת: ' + err.message);
     } finally {
@@ -114,7 +114,7 @@ export default function SMSPage() {
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">שמועון בדיקה חתונה - SMS</h1>
+          <h1 className="text-4xl font-bold">תבניות SMS</h1>
           <div className="flex gap-4">
             <button 
               onClick={updateEventDetails}
