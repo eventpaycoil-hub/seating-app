@@ -13,27 +13,24 @@ export async function POST(req: NextRequest) {
     const USERNAME = 'eventpay';
     const SOURCE = '0505270152';
 
-    // ניקוי מספר טלפון
     let cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length === 9 && cleanPhone.startsWith('5')) {
-      cleanPhone = '0' + cleanPhone;
-    }
+    if (cleanPhone.length === 9 && cleanPhone.startsWith('5')) cleanPhone = '0' + cleanPhone;
 
-    // === מבנה משופר ===
+    // === המבנה הנכון לפי 019 ===
     const payload = {
-  sms: {
-    user: { username: USERNAME },
-    source: SOURCE,
-    destinations: {
-      phone: [{ _: cleanPhone }]     // חזרנו למערך
-    },
-    message: message
-  }
-};
+      sms: {
+        user: { username: USERNAME },
+        source: SOURCE,
+        destinations: {
+          phone: [
+            { _: cleanPhone }
+          ]
+        },
+        message: message
+      }
+    };
 
-    console.log('=== Sending SMS ===');
-    console.log('To:', cleanPhone);
-    console.log('Message:', message);
+    console.log('Sending SMS to:', cleanPhone);
 
     const response = await fetch('https://019sms.co.il/api', {
       method: 'POST',
@@ -46,28 +43,15 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json().catch(() => response.text());
 
-    console.log('019 Response Status:', response.status);
-    console.log('019 Response Data:', data);
+    console.log('019 Response:', data);
 
     if (response.ok) {
-      return NextResponse.json({ 
-        success: true, 
-        message: 'ההודעה נשלחה בהצלחה',
-        data 
-      });
+      return NextResponse.json({ success: true, data });
     } else {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'שגיאה בשליחה', 
-        details: data 
-      }, { status: 400 });
+      return NextResponse.json({ success: false, error: data }, { status: 400 });
     }
-
   } catch (error: any) {
     console.error('SMS Error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message || 'שגיאה לא צפויה' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
