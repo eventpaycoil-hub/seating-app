@@ -62,24 +62,25 @@ export default function GuestsPage() {
     setSelectedGuests([]);
   };
 
-  // === תיקון SMS ===
- const sendSMS = () => {
-  if (selectedGuests.length === 0) {
-    alert("לא בחרת מוזמנים");
-    return;
-  }
-  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-  window.location.href = `/event/${eventId}/sms`;
-};
+  // === SMS - תקין ===
+  const sendSMS = () => {
+    if (selectedGuests.length === 0) {
+      alert("לא בחרת מוזמנים");
+      return;
+    }
+    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+    window.location.href = `/event/${eventId}/sms`;
+  };
 
+  // === WhatsApp - תוקן ===
   const sendWhatsApp = () => {
-  if (selectedGuests.length === 0) {
-    alert("לא בחרת מוזמנים");
-    return;
-  }
-  localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-  window.location.href = `/event/${eventId}/whatsapp-templates`;
-};
+    if (selectedGuests.length === 0) {
+      alert("לא בחרת מוזמנים");
+      return;
+    }
+    localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
+    window.location.href = `/event/${eventId}/whatsapp-templates`;
+  };
 
   const totalRows = guests.length;
   const totalConfirmed = guests.filter((g: any) => g.confirmed && g.confirmed.trim() !== '').length;
