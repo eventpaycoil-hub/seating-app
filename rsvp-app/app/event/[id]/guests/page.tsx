@@ -64,13 +64,13 @@ export default function GuestsPage() {
 
   // === תיקון חשוב ===
   const sendSMS = () => {
-    if (selectedGuests.length === 0) {
-      alert("לא בחרת מוזמנים");
-      return;
-    }
-    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;   // ← תוקן
-  };
+  if (selectedGuests.length === 0) {
+    alert("לא בחרת מוזמנים");
+    return;
+  }
+  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+  window.location.href = `/event/${eventId}/sms`;   // ← זה השורה החשובה
+};
 
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) {
