@@ -63,14 +63,14 @@ export default function GuestsPage() {
   };
 
   // === תיקון SMS ===
-  const sendSMS = () => {
-    if (selectedGuests.length === 0) {
-      alert("לא בחרת מוזמנים");
-      return;
-    }
-    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;
-  };
+ const sendSMS = () => {
+  if (selectedGuests.length === 0) {
+    alert("לא בחרת מוזמנים");
+    return;
+  }
+  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+  window.location.href = `/event/${eventId}/sms`;
+};
 
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) {
