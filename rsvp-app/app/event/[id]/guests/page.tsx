@@ -1,5 +1,4 @@
 // @ts-nocheck
-// force clean deploy - 16/07/2026
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -63,7 +62,7 @@ export default function GuestsPage() {
     setSelectedGuests([]);
   };
 
-  // === SMS - תקין ===
+  // === SMS ===
   const sendSMS = () => {
     if (selectedGuests.length === 0) {
       alert("לא בחרת מוזמנים");
@@ -73,7 +72,7 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/sms`;
   };
 
-  // === WhatsApp - תוקן ===
+  // === WhatsApp (תוקן) ===
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) {
       alert("לא בחרת מוזמנים");
