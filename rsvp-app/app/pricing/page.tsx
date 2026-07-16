@@ -3,8 +3,13 @@
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 import { useState, useCallback } from 'react';
-import html2pdf from 'html2pdf.js';
-import html2canvas from 'html2canvas-pro';
+const handlePDF = async () => {
+  // ייבוא דינמי - רק כשצריך
+  const html2pdf = (await import('html2pdf.js')).default;
+
+  const doc = new html2pdf.jsPDF();
+  ...
+};
 
 export default function PricingPage() {
   const [formData, setFormData] = useState({
