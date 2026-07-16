@@ -21,17 +21,15 @@ export async function POST(req: NextRequest) {
 
     // === מבנה משופר ===
     const payload = {
-      sms: {
-        user: {
-          username: USERNAME
-        },
-        source: SOURCE,
-        destinations: {
-          phone: cleanPhone          // שינוי חשוב: שליחה כמחרוזת ולא כמערך
-        },
-        message: message
-      }
-    };
+  sms: {
+    user: { username: USERNAME },
+    source: SOURCE,
+    destinations: {
+      phone: [{ _: cleanPhone }]     // חזרנו למערך
+    },
+    message: message
+  }
+};
 
     console.log('=== Sending SMS ===');
     console.log('To:', cleanPhone);
