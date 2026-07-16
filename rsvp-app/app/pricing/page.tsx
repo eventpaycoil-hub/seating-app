@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use client';
-
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 import { useState, useCallback } from 'react';
 import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas-pro';
