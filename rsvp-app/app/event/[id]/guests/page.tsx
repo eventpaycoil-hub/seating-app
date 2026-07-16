@@ -121,7 +121,10 @@ export default function GuestsPage() {
             <Link href="/events" className="flex flex-col items-center text-gray-600 hover:text-blue-600">📅 רשימת האירועים</Link>
             <Link href={`/event/${eventId}/edit`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">✏️ עריכת פרטי אירוע</Link>
             <Link href={`/event/${eventId}/sms`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 bg-white p-6 rounded-3xl shadow hover:shadow-xl w-40 text-center">📩 SMS</Link>
-            <Link href="/whatsapp-templates" className="flex flex-col items-center text-gray-600 hover:text-blue-600">💬 תבניות ווטסאפ</Link>
+            
+            {/* ===== הלינק המתוקן ===== */}
+            <Link href={`/event/${eventId}/whatsapp-templates`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">💬 תבניות ווטסאפ</Link>
+            
             <Link href="/transport?eventId=1" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🚌 הסעות</Link>
             <Link href={`/seating`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 font-bold">🪑 סקיצה אולם</Link>
             <Link href="/create-event" className="flex flex-col items-center text-gray-600 hover:text-blue-600 font-bold">➕ פתח אירוע חדש</Link>
