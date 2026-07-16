@@ -73,13 +73,13 @@ export default function GuestsPage() {
 };
 
   const sendWhatsApp = () => {
-    if (selectedGuests.length === 0) {
-      alert("לא בחרת מוזמנים");
-      return;
-    }
-    localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;
-  };
+  if (selectedGuests.length === 0) {
+    alert("לא בחרת מוזמנים");
+    return;
+  }
+  localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
+  window.location.href = `/event/${eventId}/whatsapp-templates`;
+};
 
   const totalRows = guests.length;
   const totalConfirmed = guests.filter((g: any) => g.confirmed && g.confirmed.trim() !== '').length;
