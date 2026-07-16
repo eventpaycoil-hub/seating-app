@@ -78,7 +78,7 @@ export default function GuestsPage() {
       return;
     }
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/whatsapp-templates`;
+    window.location.href = `/event/${eventId}/sms`;
   };
 
   const totalRows = guests.length;
