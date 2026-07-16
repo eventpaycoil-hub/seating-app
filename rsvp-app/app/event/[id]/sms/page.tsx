@@ -39,9 +39,10 @@ export default function SMSPage() {
       content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
     },
     { 
-      id: 2, 
-      title: "הודעה מס 2 תזכורת", 
-      content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירוט מקום הישיבה*.\n\nמצפים ומתרגשים!\n\nלניווט: https://waze.com/ul?q=${currentEvent?.hallName || ''}` 
+  id: 2, 
+  title: "הודעה מס 2 תזכורת", 
+  content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירוט מקום הישיבה*.\n\nמצפים ומתרגשים!\n\nלניווט: https://waze.com/ul?q=${currentEvent?.hallName || ''}` 
+},
     },
     { 
       id: 3, 
