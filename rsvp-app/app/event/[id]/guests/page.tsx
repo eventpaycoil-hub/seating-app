@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -6,26 +5,26 @@ import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
 
 export default function GuestsPage() {
-  const params = useParams<{ id: string }>();
+  const params = useParams();
   const eventId = params.id || "1";
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
-  const [guests, setGuests] = useState<any[]>([]);
+  const [guests, setGuests] = useState([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'noNote'>('all');
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
-    const validGuests = saved.filter((g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== '');
+    const validGuests = saved.filter(g => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== '');
     setGuests(validGuests);
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+    const currentEvent = events.find(e => e.id.toString() === eventId.toString());
     if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
   }, [eventId]);
 
-  const filteredGuests = guests.filter((g: any) => {
+  const filteredGuests = guests.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.phone.includes(searchTerm);
 
     if (activeFilter === 'yes') return matchesSearch && g.confirmed && g.confirmed.trim() !== '';
@@ -46,7 +45,7 @@ export default function GuestsPage() {
     if (selectedGuests.length === filteredGuests.length) {
       setSelectedGuests([]);
     } else {
-      setSelectedGuests(filteredGuests.map((g: any) => g.id));
+      setSelectedGuests(filteredGuests.map(g => g.id));
     }
   };
 
@@ -56,40 +55,38 @@ export default function GuestsPage() {
 
     const key = `guests_event_${eventId}`;
     const saved = JSON.parse(localStorage.getItem(key) || '[]');
-    const updated = saved.filter((g: any) => !selectedGuests.includes(g.id));
+    const updated = saved.filter(g => !selectedGuests.includes(g.id));
     localStorage.setItem(key, JSON.stringify(updated));
     setGuests(updated);
     setSelectedGuests([]);
   };
 
-  // === SMS ===
   const sendSMS = () => {
     if (selectedGuests.length === 0) {
       alert("לא בחרת מוזמנים");
       return;
     }
     localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;
+    window.location.href = `/sms?eventId=${eventId}`;
   };
 
-  // === WhatsApp (תוקן) ===
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) {
       alert("לא בחרת מוזמנים");
       return;
     }
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/whatsapp-templates`;
+    window.location.href = `/whatsapp-templates?eventId=${eventId}`;
   };
 
   const totalRows = guests.length;
-  const totalConfirmed = guests.filter((g: any) => g.confirmed && g.confirmed.trim() !== '').length;
-  const totalNo = guests.filter((g: any) => g.confirmed && g.confirmed.toLowerCase().includes('לא')).length;
-  const totalUnknown = guests.filter((g: any) => (!g.confirmed || g.confirmed.trim() === '') && g.notes && g.notes.trim() !== '').length;
-  const totalNoNote = guests.filter((g: any) => !g.notes || g.notes.trim() === '').length;
+  const totalConfirmed = guests.filter(g => g.confirmed && g.confirmed.trim() !== '').length;
+  const totalNo = guests.filter(g => g.confirmed && g.confirmed.toLowerCase().includes('לא')).length;
+  const totalUnknown = guests.filter(g => (!g.confirmed || g.confirmed.trim() === '') && g.notes && g.notes.trim() !== '').length;
+  const totalNoNote = guests.filter(g => !g.notes || g.notes.trim() === '').length;
 
   const exportToExcel = () => {
-    const data = guests.map((g: any) => ({
+    const data = guests.map(g => ({
       שם: g.name,
       טלפון: g.phone,
       קבוצה: g.group || '',
@@ -106,6 +103,7 @@ export default function GuestsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
+      {/* בר עליון עם סמלים */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -131,7 +129,8 @@ export default function GuestsPage() {
             <Link href="/pricing-view" className="flex flex-col items-center text-gray-600 hover:text-blue-600">👀 צפיה בהצעות מחיר</Link>
             <Link href="/events" className="flex flex-col items-center text-gray-600 hover:text-blue-600">📅 רשימת האירועים</Link>
             <Link href={`/event/${eventId}/edit`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">✏️ עריכת פרטי אירוע</Link>
-            <Link href={`/event/${eventId}/sms`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 bg-white p-6 rounded-3xl shadow hover:shadow-xl w-40 text-center">📩 SMS</Link>
+            <Link href={`/event/${eventId}/sms`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 bg-white p-6 rounded-3xl shadow hover:shadow-xl w-40 text-center">📩 SMS
+</Link>
             <Link href="/whatsapp-templates" className="flex flex-col items-center text-gray-600 hover:text-blue-600">💬 תבניות ווטסאפ</Link>
             <Link href="/transport?eventId=1" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🚌 הסעות</Link>
             <Link href={`/seating`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 font-bold">🪑 סקיצה אולם</Link>
@@ -140,6 +139,7 @@ export default function GuestsPage() {
         </div>
       </div>
 
+      {/* תוכן */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
@@ -183,7 +183,7 @@ export default function GuestsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredGuests.map((guest: any, index: number) => (
+              {filteredGuests.map((guest, index) => (
                 <tr key={guest.id} className="border-b hover:bg-gray-50">
                   <td className="px-6 py-5 text-center">
                     <input type="checkbox" checked={selectedGuests.includes(guest.id)} onChange={() => toggleGuest(guest.id)} className="w-5 h-5 accent-blue-600" />
@@ -214,7 +214,7 @@ export default function GuestsPage() {
                         if (confirm(`למחוק את ${guest.name}?`)) {
                           const key = `guests_event_${eventId}`;
                           const saved = JSON.parse(localStorage.getItem(key) || '[]');
-                          const updated = saved.filter((g: any) => g.id !== guest.id);
+                          const updated = saved.filter(g => g.id !== guest.id);
                           localStorage.setItem(key, JSON.stringify(updated));
                           setGuests(updated);
                         }

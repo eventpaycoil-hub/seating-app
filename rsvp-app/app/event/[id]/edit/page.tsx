@@ -48,7 +48,7 @@ export default function EditEventPage() {
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-   const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) {
       setFormData(prev => ({
         ...prev,
@@ -73,7 +73,7 @@ export default function EditEventPage() {
     const updatedData = {
       ...formData,
       isActive: newStatus,
-   activatedAt: newStatus ? new Date().toISOString() : (null as any),
+      activatedAt: newStatus ? new Date().toISOString() : (null as any),
     };
     setFormData(updatedData);
 
@@ -91,7 +91,7 @@ export default function EditEventPage() {
 
     const updatedEvent = {
       ...formData,
-     id: parseInt(Array.isArray(eventId) ? eventId[0] : eventId || '0'),
+      id: parseInt(Array.isArray(eventId) ? eventId[0] : eventId || '0'),
       creditLink: formData.creditLink || '',
     };
 
@@ -111,6 +111,18 @@ export default function EditEventPage() {
   const eventTypes = ["חתונה", "בר מצוה", "בת מצוה", "בר ובת מצוה", "ברית", "בריתה", "כנס", "אחר", "אחר 2", "אחר 3", "אירוע עם דף נחיתה פנימי"];
   const serviceTypes = ["אישורי הגעה בלבד", "אישורי הגעה וסידורי הושבה", "אישורי הגעה סידורי הושבה ושירות מתנה באשראי", "ניהול אירוע מלא"];
 
+  // === לינק ציבורי להפצה ===
+  const publicLink = typeof window !== 'undefined' 
+    ? `${window.location.origin}/event/${eventId}/landing` 
+    : '';
+
+  const copyPublicLink = () => {
+    if (publicLink) {
+      navigator.clipboard.writeText(publicLink);
+      alert('✅ הלינק הועתק! שלח אותו לבעל השמחה');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5e8c7] p-8" dir="rtl">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-10">
@@ -120,6 +132,27 @@ export default function EditEventPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">
+
+          {/* ===== לינק להפצה לאנשים שלא ברשימה ===== */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-bold text-xl text-blue-800">לינק להפצה לאנשים שלא ברשימה</div>
+                <div className="text-sm text-blue-600 mt-1">לינק קבוע שבעל השמחה יכול לשלוח לאורחים נוספים</div>
+              </div>
+              <button 
+                type="button"
+                onClick={copyPublicLink}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2"
+              >
+                📋 העתק לינק
+              </button>
+            </div>
+            <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-700 break-all">
+              {publicLink || 'http://localhost:3000/event/' + eventId + '/landing'}
+            </div>
+          </div>
+
           {/* הפעלת אירוע */}
           <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
             <div className="flex items-center justify-between">
@@ -170,7 +203,6 @@ export default function EditEventPage() {
           {/* תאריך + שעה */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              {/* @ts-ignore */}
               <label className="block text-sm font-medium mb-2">תאריך האירוע:</label>
               <input type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} className="w-full p-4 border rounded-2xl text-lg" />
             </div>
@@ -219,31 +251,30 @@ export default function EditEventPage() {
           </div>
 
           {/* כן/לא */}
-       <div className="grid grid-cols-2 gap-6">
-  {[
-    { label: 'סידורי הושבה', name: 'seatingArrangement' },
-    { label: 'QR Code', name: 'qrCode' },
-    { label: 'הערות מוזמן', name: 'guestNotes' },
-    { label: 'אירוע באנגלית', name: 'englishEvent' },
-    { label: 'אירוע של נופר', name: 'nufarEvent' },
-    { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
-    { label: 'שליחת SMS', name: 'smsService' },
-    { label: 'שירות דיילות', name: 'stewardService' },
-  ].map((field) => (
-    <label key={field.name} className="flex items-center gap-3 text-lg">
-      {/* @ts-ignore */}
-      <input 
-        type="checkbox" 
-        checked={formData[field.name as keyof typeof formData] === 'כן'} 
-        onChange={() => setFormData({
-          ...formData, 
-          [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
-        })} 
-      />
-      {field.label}
-    </label>
-  ))}
-</div>
+          <div className="grid grid-cols-2 gap-6">
+            {[
+              { label: 'סידורי הושבה', name: 'seatingArrangement' },
+              { label: 'QR Code', name: 'qrCode' },
+              { label: 'הערות מוזמן', name: 'guestNotes' },
+              { label: 'אירוע באנגלית', name: 'englishEvent' },
+              { label: 'אירוע של נופר', name: 'nufarEvent' },
+              { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
+              { label: 'שליחת SMS', name: 'smsService' },
+              { label: 'שירות דיילות', name: 'stewardService' },
+            ].map((field) => (
+              <label key={field.name} className="flex items-center gap-3 text-lg">
+                <input 
+                  type="checkbox" 
+                  checked={formData[field.name as keyof typeof formData] === 'כן'} 
+                  onChange={() => setFormData({
+                    ...formData, 
+                    [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
+                  })} 
+                />
+                {field.label}
+              </label>
+            ))}
+          </div>
 
           <div className="flex justify-center pt-8">
             <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-16 py-5 rounded-2xl text-2xl font-medium">
