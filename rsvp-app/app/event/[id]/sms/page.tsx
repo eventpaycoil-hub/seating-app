@@ -12,7 +12,7 @@ export default function SMSPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [sendingTo, setSendingTo] = useState<string | null>(null); // חדש
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function SMSPage() {
     }
 
     setIsSending(true);
-    setSendingTo(phone); // חדש
+    setSendingTo(phone);
     setLastResult(null);
 
     try {
@@ -108,7 +108,7 @@ export default function SMSPage() {
       alert('שגיאת רשת');
     } finally {
       setIsSending(false);
-      setSendingTo(null); // חדש
+      setSendingTo(null);
     }
   };
 
@@ -190,7 +190,9 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0505270152" ? '⏳ שולח לשמעון...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
+                    {isSending && sendingTo === "0505270152" 
+                      ? '⏳ שולח לשמעון...' 
+                      : '📱 שלח דוגמא לשמעון (050-5270152)'}
                   </button>
 
                   <button 
@@ -198,7 +200,9 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0507666937" ? '⏳ שולח לנופר...' : '📱 שלח דוגמא לנופר (050-7666937)'}
+                    {isSending && sendingTo === "0507666937" 
+                      ? '⏳ שולח לנופר...' 
+                      : '📱 שלח דוגמא לנופר (050-7666937)'}
                   </button>
                 </div>
               </>
