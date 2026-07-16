@@ -36,7 +36,7 @@ export default function SMSPage() {
     { 
       id: 1, 
       title: "הודעה מס 1 אישור הגעה", 
-      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 אישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
+      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
     },
     { 
       id: 2, 
@@ -51,17 +51,17 @@ export default function SMSPage() {
     { 
       id: 4, 
       title: "הודעה מס 4 הסעה", 
-      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\n👉 בחר הסעה: https://seating-app-dusky.vercel.app/transport?event=${eventId}` 
+      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\nבחר הסעה: https://seating-app-dusky.vercel.app/transport?event=${eventId}` 
     },
     { 
       id: 5, 
       title: "הודעה מס 5 ברקוד", 
-      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'}:\n\n👉 הצג QR כניסה: https://seating-app-dusky.vercel.app/qr/${eventId}?guest=*guestId*` 
+      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'}:\n\nהצג QR כניסה: https://seating-app-dusky.vercel.app/qr/${eventId}?guest=*guestId*` 
     },
     { 
       id: 6, 
       title: "הודעה מס 6 טרם אישרת", 
-      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\n👉 אישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
+      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
     }
   ], [currentEvent, eventId]);
 
