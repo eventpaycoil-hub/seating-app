@@ -62,15 +62,15 @@ export default function GuestsPage() {
     setSelectedGuests([]);
   };
 
-  // === תיקון חשוב ===
+  // === תיקון SMS ===
   const sendSMS = () => {
-  if (selectedGuests.length === 0) {
-    alert("לא בחרת מוזמנים");
-    return;
-  }
-  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-  window.location.href = `/event/${eventId}/sms`;   // ← זה השורה החשובה
-};
+    if (selectedGuests.length === 0) {
+      alert("לא בחרת מוזמנים");
+      return;
+    }
+    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+    window.location.href = `/event/${eventId}/sms`;
+  };
 
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) {
@@ -78,7 +78,7 @@ export default function GuestsPage() {
       return;
     }
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/whatsapp-templates`; // ← תוקן
+    window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
 
   const totalRows = guests.length;
@@ -105,7 +105,6 @@ export default function GuestsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
-      {/* בר עליון עם סמלים */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -140,7 +139,6 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* תוכן */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
