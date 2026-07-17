@@ -49,7 +49,6 @@ export default function EditGuestPage() {
     }));
   };
 
-  // === פונקציה שמאפסת ל"לא ידוע" (ממתין) ===
   const resetToUnknown = () => {
     const updatedGuest = { 
       ...guest, 
@@ -85,6 +84,19 @@ export default function EditGuestPage() {
     savedGuests = savedGuests.map((g: any) => g.id.toString() === guestId ? updatedGuest : g);
     localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
 
+    router.push(`/event/${eventId}/guests`);
+  };
+
+  // === פונקציית שמירה מרכזית ===
+  const saveAndGoBack = () => {
+    const guestsKey = `guests_event_${eventId}`;
+    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    
+    const updatedGuests = savedGuests.map((g: any) =>
+      g.id.toString() === guestId ? guest : g
+    );
+
+    localStorage.setItem(guestsKey, JSON.stringify(updatedGuests));
     router.push(`/event/${eventId}/guests`);
   };
 
@@ -155,7 +167,6 @@ export default function EditGuestPage() {
             <div className="text-sm text-gray-500 mb-3">כמות אנשים</div>
 
             <div className="flex gap-3 mb-4">
-              {/* כפתור לא ידוע - תמיד לחיץ ומאפס */}
               <button
                 onClick={resetToUnknown}
                 className={`flex-1 py-3.5 rounded-2xl font-bold text-lg border-2 transition-all cursor-pointer ${guest.confirmed === 'לא ידוע' 
@@ -197,13 +208,22 @@ export default function EditGuestPage() {
 
             <div className="bg-white rounded-3xl p-5 shadow">
               <label className="block text-sm text-gray-500 mb-2">הערות</label>
-              <textarea value={guest.notes || ''} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} className="w-full h-28 p-4 border rounded-2xl text-sm" placeholder="הערות..."/>
+              <textarea 
+                value={guest.notes || ''} 
+                onChange={(e) => setGuest({ ...guest, notes: e.target.value })} 
+                className="w-full h-28 p-4 border rounded-2xl text-sm" 
+                placeholder="הערות..."
+              />
             </div>
           </div>
         </div>
 
+        {/* === כפתור שמירה אמיתי === */}
         <div className="flex justify-center mt-8">
-          <button onClick={() => router.push(`/event/${eventId}/guests`)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-20 py-4 rounded-2xl text-xl font-medium">
+          <button 
+            onClick={saveAndGoBack} 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-20 py-4 rounded-2xl text-xl font-medium"
+          >
             עדכן והמשך
           </button>
         </div>

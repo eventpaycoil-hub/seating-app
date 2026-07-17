@@ -12,7 +12,7 @@ export default function GuestsPage() {
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'noNote'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'>('all');
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
@@ -24,21 +24,47 @@ export default function GuestsPage() {
     if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
   }, [eventId]);
 
+  // חישוב כפתורים
+  const yesCount = guests.filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1).length;
+  const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
+
+  const unknownWithNoteCount = guests.filter((g: any) => {
+    const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+    return isPending && g.notes && g.notes.trim() !== '';
+  }).length;
+
+  const unknownEmptyCount = guests.filter((g: any) => {
+    const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+    return isPending && (!g.notes || g.notes.trim() === '');
+  }).length;
+
+  // ===== סה"כ מוזמנים שאישרו - גרסה פשוטה וברורה =====
+  const totalConfirmedPeople = guests
+    .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
+    .reduce((sum, g) => {
+      const count = Number(g.count) || Number(g.confirmed);
+      return sum + (count > 0 ? count : 0);
+    }, 0);
+
   const filteredGuests = guests.filter((g: any) => {
     const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.phone.includes(searchTerm);
 
-    if (activeFilter === 'yes') return matchesSearch && g.confirmed && g.confirmed.trim() !== '';
-    if (activeFilter === 'no') return matchesSearch && g.confirmed && g.confirmed.toLowerCase().includes('לא');
-    if (activeFilter === 'unknown') return matchesSearch && (!g.confirmed || g.confirmed.trim() === '') && g.notes && g.notes.trim() !== '';
+    if (activeFilter === 'yes') return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
+    if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
+    if (activeFilter === 'unknown') {
+      const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+      return matchesSearch && isPending && g.notes && g.notes.trim() !== '';
+    }
+    if (activeFilter === 'unknownEmpty') {
+      const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+      return matchesSearch && isPending && (!g.notes || g.notes.trim() === '');
+    }
     if (activeFilter === 'noNote') return matchesSearch && (!g.notes || g.notes.trim() === '');
-
     return matchesSearch;
   });
 
   const toggleGuest = (id: number) => {
-    setSelectedGuests(prev =>
-      prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
-    );
+    setSelectedGuests(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
   };
 
   const toggleSelectAll = () => {
@@ -62,42 +88,20 @@ export default function GuestsPage() {
   };
 
   const sendSMS = () => {
-    if (selectedGuests.length === 0) {
-      alert("לא בחרת מוזמנים");
-      return;
-    }
+    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
     localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
     window.location.href = `/event/${eventId}/sms`;
   };
 
   const sendWhatsApp = () => {
-    if (selectedGuests.length === 0) {
-      alert("לא בחרת מוזמנים");
-      return;
-    }
+    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
     window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
 
-  const exportToExcel = () => {
-    const data = guests.map((g: any) => ({
-      שם: g.name,
-      טלפון: g.phone,
-      קבוצה: g.group || '',
-      צפי: g.quantity,
-      סטטוס: g.confirmed ? 'אישר' : 'ממתין',
-      הסעה: g.transport || '',
-      הערות: g.notes || ''
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "מוזמנים");
-    XLSX.writeFile(wb, "רשימת_מוזמנים.xlsx");
-  };
-
   return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
-      <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
+      <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="text-xl font-bold text-gray-800">
@@ -105,44 +109,54 @@ export default function GuestsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-6 mt-6 text-sm">
-            <Link href="/" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🏠 עמוד הבית</Link>
-            <Link href="/videos" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🎥 וידאו האירוע</Link>
-            <Link href="/gallery" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🖼 תמונת האירוע</Link>
-            <Link href={`/event/${eventId}/groups`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">👥 קבוצות המוזמנים</Link>
-            <Link href="/venue" className="flex flex-col items-center text-gray-600 hover:text-blue-600">📍 רשומות WAZE</Link>
-            <Link href={`/add-guests?eventId=${eventId}`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">➕ הוספת מוזמנים</Link>
-            <Link href="/seating-arrival" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🪑 הושבת מוזמנים באירוע</Link>
-            <Link href="/seating-arrival-fast" className="flex flex-col items-center text-gray-600 hover:text-blue-600 bg-white p-6 rounded-3xl shadow hover:shadow-xl w-40 text-center font-bold">⚡ הושבה מהירה</Link>
-            <Link href="/guests-arrived" className="flex flex-col items-center text-gray-600 hover:text-blue-600">✅ אורחים שהגיעו</Link>
-            <Link href="/addtable" className="flex flex-col items-center text-gray-600 hover:text-blue-600">➕ הוספת שולחנות</Link>
-            <Link href="/pricing" className="flex flex-col items-center text-gray-600 hover:text-blue-600">💰 הצעות מחיר</Link>
-            <Link href="/pricing-view" className="flex flex-col items-center text-gray-600 hover:text-blue-600">👀 צפיה בהצעות מחיר</Link>
-            <Link href="/events" className="flex flex-col items-center text-gray-600 hover:text-blue-600">📅 רשימת האירועים</Link>
-            <Link href={`/event/${eventId}/edit`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">✏️ עריכת פרטי אירוע</Link>
-            <Link href={`/event/${eventId}/sms`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 bg-white p-6 rounded-3xl shadow hover:shadow-xl w-40 text-center">📩 SMS</Link>
-            
-            {/* ===== הלינק המתוקן ===== */}
-            <Link href={`/event/${eventId}/whatsapp-templates`} className="flex flex-col items-center text-gray-600 hover:text-blue-600">💬 תבניות ווטסאפ</Link>
-            
-            <Link href="/transport?eventId=1" className="flex flex-col items-center text-gray-600 hover:text-blue-600">🚌 הסעות</Link>
-            <Link href={`/seating`} className="flex flex-col items-center text-gray-600 hover:text-blue-600 font-bold">🪑 סקיצה אולם</Link>
-            <Link href="/create-event" className="flex flex-col items-center text-gray-600 hover:text-blue-600 font-bold">➕ פתח אירוע חדש</Link>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
+            {[
+              { href: "/", label: "עמוד הבית", icon: "🏠" },
+              { href: "/videos", label: "וידאו האירוע", icon: "🎥" },
+              { href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
+              { href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
+              { href: "/venue", label: "רשומות WAZE", icon: "📍" },
+              { href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
+              { href: "/seating-arrival", label: "הושבת מוזמנים", icon: "🪑" },
+              { href: "/seating-arrival-fast", label: "הושבה מהירה", icon: "⚡" },
+              { href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
+              { href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
+              { href: "/pricing", label: "הצעות מחיר", icon: "💰" },
+              { href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
+              { href: "/events", label: "רשימת אירועים", icon: "📅" },
+              { href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
+              { href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
+              { href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
+              { href: "/transport?eventId=1", label: "הסעות", icon: "🚌" },
+              { href: `/seating`, label: "סקיצה אולם", icon: "🪑" },
+              { href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
+            ].map((item, index) => (
+              <Link key={index} href={item.href} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center">
+                <div className="text-4xl">{item.icon}</div>
+                <div className="text-sm font-medium text-gray-700">{item.label}</div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-          <div>
+          <div className="flex items-center gap-6">
             <div className="text-3xl font-bold">רשימת מוזמנים</div>
+
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
+              <div className="text-sm opacity-90">סה"כ אישרו</div>
+              <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
+            </div>
           </div>
 
           <div className="flex gap-3 flex-wrap">
             <button onClick={() => setActiveFilter('all')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>כל המוזמנים ({guests.length})</button>
-            <button onClick={() => setActiveFilter('yes')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white'}`}>יגיעו</button>
-            <button onClick={() => setActiveFilter('no')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white'}`}>לא יגיעו</button>
-            <button onClick={() => setActiveFilter('unknown')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'unknown' ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white'}`}>לא ידוע</button>
+            <button onClick={() => setActiveFilter('yes')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white'}`}>יגיעו ({yesCount})</button>
+            <button onClick={() => setActiveFilter('no')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white'}`}>לא יגיעו ({noCount})</button>
+            <button onClick={() => setActiveFilter('unknown')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white'}`}>לא ידוע ({unknownWithNoteCount})</button>
+            <button onClick={() => setActiveFilter('unknownEmpty')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'unknownEmpty' ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white'}`}>לא ידוע ({unknownEmptyCount})</button>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
@@ -157,16 +171,13 @@ export default function GuestsPage() {
           <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="px-6 py-5 text-center w-12">
-                  <input type="checkbox" checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length} onChange={toggleSelectAll} className="w-5 h-5 accent-blue-600" />
-                </th>
+                <th className="px-6 py-5 text-center w-12"><input type="checkbox" checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length} onChange={toggleSelectAll} className="w-5 h-5 accent-blue-600" /></th>
                 <th className="px-6 py-5 text-center">#</th>
                 <th className="px-6 py-5 text-center">אירוע</th>
                 <th className="px-6 py-5 text-right">שם</th>
                 <th className="px-6 py-5 text-right">טלפון</th>
                 <th className="px-6 py-5 text-right">קבוצה</th>
                 <th className="px-6 py-5 text-center">צפי</th>
-                <th className="px-6 py-5 text-center">אישור הגעה</th>
                 <th className="px-6 py-5 text-center">הסעה</th>
                 <th className="px-6 py-5 text-center">סטטוס</th>
                 <th className="px-6 py-5 text-center">הערה</th>
@@ -175,26 +186,22 @@ export default function GuestsPage() {
             </thead>
             <tbody>
               {filteredGuests.map((guest: any, index: number) => (
-                <tr key={guest.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-5 text-center">
-                    <input type="checkbox" checked={selectedGuests.includes(guest.id)} onChange={() => toggleGuest(guest.id)} className="w-5 h-5 accent-blue-600" />
-                  </td>
+                <tr key={`${guest.id}-${index}`} className="border-b hover:bg-gray-50">
+                  <td className="px-6 py-5 text-center"><input type="checkbox" checked={selectedGuests.includes(guest.id)} onChange={() => toggleGuest(guest.id)} className="w-5 h-5 accent-blue-600" /></td>
                   <td className="px-6 py-5 text-center text-gray-500 font-medium">{index + 1}</td>
                   <td className="px-6 py-5 text-center text-blue-600 font-medium">{eventTitle}</td>
                   <td className="px-6 py-5 font-medium">{guest.name}</td>
                   <td className="px-6 py-5 text-gray-600 font-mono">{guest.phone}</td>
                   <td className="px-6 py-5">{guest.group}</td>
                   <td className="px-6 py-5 text-center font-bold">{guest.quantity}</td>
-                  <td className="px-6 py-5 text-center text-sm font-mono">{guest.confirmed || ''}</td>
                   <td className="px-6 py-5 text-center font-medium text-blue-600">{guest.transport || '-'}</td>
                   <td className="px-6 py-5 text-center">
-                    {guest.confirmed && guest.confirmed.trim() !== '' ? (
-                      <div className="flex flex-col items-center">
-                        <div className="bg-emerald-100 text-emerald-700 px-5 py-2 rounded-2xl text-3xl font-bold flex items-center justify-center w-14 h-14">✅</div>
-                        <div className="text-emerald-600 font-medium mt-1 text-sm">{guest.confirmed}</div>
-                      </div>
+                    {guest.confirmed === 'לא מגיע' ? (
+                      <div className="flex flex-col items-center"><div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">❌</div><div className="text-red-600 font-semibold text-lg mt-1">0</div></div>
+                    ) : guest.confirmed && !isNaN(Number(guest.confirmed)) && Number(guest.confirmed) >= 1 ? (
+                      <div className="flex flex-col items-center"><div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">✅</div><div className="text-emerald-700 font-semibold text-lg mt-1">{guest.quantity || 1}</div></div>
                     ) : (
-                      <span className="inline-block px-4 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">⏳ ממתין</span>
+                      <div className="flex flex-col items-center"><div className="text-4xl">⏳</div><div className="text-amber-600 font-medium text-sm mt-1">ממתין</div></div>
                     )}
                   </td>
                   <td className="px-6 py-5 text-gray-600 text-sm">{guest.notes}</td>
