@@ -37,7 +37,6 @@ export default function GuestsPage() {
     return isPending && (!g.notes || g.notes.trim() === '');
   }).length;
 
-  // תיקון: משתמשים ב-count אם קיים, אחרת ב-quantity (צפי נשאר קבוע)
   const totalConfirmedPeople = guests
     .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
     .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
@@ -104,7 +103,7 @@ export default function GuestsPage() {
             </div>
           </div>
 
-          {/* סמלים */}
+          {/* סמלים / כפתורים מהירים */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
               { href: "/", label: "עמוד הבית", icon: "🏠" },
@@ -113,8 +112,8 @@ export default function GuestsPage() {
               { href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
               { href: "/venue", label: "רשומות WAZE", icon: "📍" },
               { href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
-              { href: "/seating-arrival", label: "הושבת מוזמנים", icon: "🪑" },
-              { href: "/seating-arrival-fast", label: "הושבה מהירה", icon: "⚡" },
+              { href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
+              { href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
               { href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
               { href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
               { href: "/pricing", label: "הצעות מחיר", icon: "💰" },

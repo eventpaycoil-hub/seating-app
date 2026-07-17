@@ -57,12 +57,24 @@ export default function EventsPage() {
             filteredEvents.map(event => (
               <Link key={event.id} href={`/event/${event.id}/guests`}>
                 <div className="bg-white hover:bg-gray-50 px-8 py-6 rounded-2xl shadow-sm hover:shadow transition min-w-[420px]">
-                  <div className="text-3xl font-bold text-blue-700 mb-1">{event.owners || event.title}</div>
-                  <div className="text-xl text-gray-600">{event.title}</div>
-                  <div className="flex justify-between items-center mt-4">
-                    <div className="text-2xl font-medium">{event.date}</div>
-                    <div className="text-sm text-gray-500">{event.type}</div>
+                  
+                  {/* שם בעלי השמחה */}
+                  <div className="text-3xl font-bold text-blue-700 mb-1">
+                    {event.owners}
                   </div>
+
+                  {/* אולם + תאריך */}
+                  <div className="text-xl text-gray-600 mb-4">
+                    {event.hallName} • {event.date}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-500">{event.type}</div>
+                    <div className="text-sm px-3 py-1 bg-gray-100 rounded-full text-gray-600">
+                      {event.city}
+                    </div>
+                  </div>
+
                 </div>
               </Link>
             ))

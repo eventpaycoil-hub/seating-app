@@ -1,0 +1,267 @@
+'use client';
+
+import { useState, useRef, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { Search, RefreshCw, Printer, ArrowLeft } from 'lucide-react';
+
+export default function SeatingArrivalPage() {
+  const params = useParams();
+  const eventId = params.id as string;
+
+  const [allGuests, setAllGuests] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [forceEmptyList, setForceEmptyList] = useState(false);
+  const [eventTitle, setEventTitle] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const currentEvent = events.find((e: any) => e.id.toString() === eventId);
+    if (currentEvent) {
+      setEventTitle(currentEvent.owners || currentEvent.title || '');
+    }
+
+    const guestsKey = `guests_event_${eventId}`;
+    const saved = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+
+    const guestsWithData = saved.map((g: any) => ({
+      ...g,
+      arrivedCount: Number(g.arrivedCount) || 0,
+      confirmedCount: Number(g.confirmed) || Number(g.confirmedCount) || Number(g.quantity) || 1,
+    }));
+
+    setAllGuests(guestsWithData);
+  }, [eventId]);
+
+  // חישוב חדש ומדויק של "אישרו באירוע הזה"
+  const confirmedPeople = allGuests.reduce((total, g) => {
+    const status = String(g.confirmed || '').trim();
+    const arrived = Number(g.arrivedCount) || 0;
+
+    // אם כבר סימנו אותו כהגיע בדף הזה - נספור אותו
+    if (arrived > 0) {
+      return total + arrived;
+    }
+
+    // אם אישר מראש (ולא סומן עדיין כהגיע)
+    if (
+      status !== 'לא מגיע' &&
+      status !== 'לא ידוע' &&
+      status !== 'ממתין' &&
+      status !== ''
+    ) {
+      return total + (Number(g.confirmed) || Number(g.confirmedCount) || Number(g.quantity) || 0);
+    }
+
+    return total;
+  }, 0);
+
+  const arrivedCount = allGuests.reduce((sum, g) => sum + Number(g.arrivedCount || 0), 0);
+  const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
+
+  const filteredGuests = useMemo(() => {
+    if (forceEmptyList) return [];
+    if (!searchTerm.trim()) return allGuests;
+
+    const term = searchTerm.toLowerCase().trim();
+    return allGuests.filter((g: any) =>
+      g.name?.toLowerCase().includes(term) || g.phone?.includes(searchTerm.trim())
+    );
+  }, [allGuests, searchTerm, forceEmptyList]);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    setForceEmptyList(false);
+  };
+
+  const markArrival = (id: number, count: number) => {
+    const updated = allGuests.map(guest =>
+      guest.id === id ? { ...guest, arrivedCount: count } : guest
+    );
+    setAllGuests(updated);
+
+    const guestsKey = `guests_event_${eventId}`;
+    localStorage.setItem(guestsKey, JSON.stringify(updated));
+
+    setSearchTerm('');
+    setForceEmptyList(true);
+
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 80);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setForceEmptyList(false);
+  };
+
+  const refresh = () => {
+    setSearchTerm('');
+    setForceEmptyList(false);
+  };
+
+  const printPage = () => window.print();
+
+  return (
+    <div className="min-h-screen bg-[#f5e8c7] p-8">
+      <div className="max-w-[1600px] mx-auto">
+        <div className="mb-6">
+          <Link 
+            href={`/event/${eventId}/guests`}
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <ArrowLeft size={20} /> חזרה לרשימת המוזמנים
+          </Link>
+        </div>
+
+        <h1 className="text-4xl font-bold text-center mb-8 text-amber-900">
+          הושבת מוזמנים באירוע {eventTitle && `• ${eventTitle}`}
+        </h1>
+
+        {/* 3 קופסאות סיכום */}
+        <div className="flex justify-center gap-8 mb-12">
+          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
+            <div className="text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
+            <div className="text-5xl font-bold text-blue-600">{confirmedPeople}</div>
+          </div>
+          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
+            <div className="text-sm text-gray-500 mb-1">כבר הגיעו</div>
+            <div className="text-5xl font-bold text-green-600">{arrivedCount}</div>
+          </div>
+          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
+            <div className="text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
+            <div className="text-5xl font-bold text-orange-500">{stillNotArrived}</div>
+          </div>
+        </div>
+
+        {/* חיפוש */}
+        <div className="flex items-center gap-4 mb-10 justify-center flex-wrap">
+          <div className="relative w-full max-w-2xl">
+            <Search className="absolute left-6 top-5 text-gray-400" size={24} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="חיפוש שם או טלפון..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-16 pr-6 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
+            />
+          </div>
+
+          <button onClick={clearSearch} className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium">נקה</button>
+          <button onClick={refresh} className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"><RefreshCw size={20} /> רענן</button>
+          <button onClick={printPage} className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"><Printer size={20} /> PDF</button>
+        </div>
+
+        {/* טבלה */}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-amber-100">
+              <tr>
+                <th className="text-right py-5 px-8">שם וטלפון</th>
+                <th className="text-center py-5 px-8">סטטוס</th>
+                <th className="text-center py-5 px-8">הגיע</th>
+                <th className="text-center py-5 px-8">התאמה</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGuests.length > 0 ? (
+                filteredGuests.map((guest: any) => {
+                  const confirmed = guest.confirmedCount || guest.quantity || 1;
+                  const isAlreadyArrived = guest.arrivedCount > 0;
+                  const isNotComing = guest.confirmed === 'לא מגיע';
+                  const isPending = !guest.confirmed || guest.confirmed === '' || guest.confirmed === 'לא ידוע' || guest.confirmed === 'ממתין';
+
+                  return (
+                    <tr key={guest.id} className="border-b hover:bg-amber-50">
+                      <td className="py-6 px-8">
+                        <div className="font-semibold text-xl">{guest.name}</div>
+                        <div className="text-gray-600 font-mono">{guest.phone}</div>
+                      </td>
+
+                      <td className="py-6 px-8 text-center">
+                        {isNotComing ? (
+                          <div className="flex flex-col items-center">
+                            <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">❌</div>
+                            <div className="text-red-600 font-semibold text-sm mt-1">לא מגיע</div>
+                          </div>
+                        ) : isPending ? (
+                          <div className="flex flex-col items-center">
+                            <div className="text-4xl">⏳</div>
+                            <div className="text-amber-600 font-medium text-sm mt-1">ממתין</div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">✅</div>
+                            <div className="text-emerald-700 font-semibold text-lg mt-1">{confirmed}</div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* עמודת הגיע */}
+                      <td className="py-6 px-8 text-center">
+                        {isAlreadyArrived ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="bg-gray-400 text-white px-8 py-4 rounded-3xl font-bold text-2xl shadow">
+                              אורח זה כבר הגיע
+                            </div>
+                            <div className="text-gray-600 font-semibold">
+                              הגיע {guest.arrivedCount}
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => markArrival(guest.id, confirmed)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-14 py-5 rounded-3xl font-bold text-2xl shadow"
+                          >
+                            {confirmed} הגיע
+                          </button>
+                        )}
+                      </td>
+
+                      {/* עמודת פעולות */}
+                      <td className="py-6 px-8 text-center">
+                        {isAlreadyArrived ? (
+                          <button
+                            onClick={() => markArrival(guest.id, 0)}
+                            className="px-8 py-4 rounded-3xl border-2 border-red-300 text-red-600 hover:bg-red-50 font-medium transition"
+                          >
+                            בטל הגעה
+                          </button>
+                        ) : (
+                          <div className="flex gap-2 justify-center flex-wrap">
+                            {[1,2,3,4,5,6,7].map(num => (
+                              <button
+                                key={num}
+                                onClick={() => markArrival(guest.id, num)}
+                                className="w-12 h-12 rounded-2xl font-bold text-lg border-2 bg-white border-gray-300 hover:bg-emerald-50 transition-all"
+                              >
+                                {num}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center text-gray-500 text-xl">
+                    {forceEmptyList 
+                      ? 'הרשימה נוקתה. חפש מוזמן חדש...' 
+                      : 'לא נמצאו תוצאות'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
