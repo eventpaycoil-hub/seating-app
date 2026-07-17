@@ -24,7 +24,6 @@ export default function GuestsPage() {
     if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
   }, [eventId]);
 
-  // חישוב כפתורים
   const yesCount = guests.filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1).length;
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
 
@@ -38,17 +37,13 @@ export default function GuestsPage() {
     return isPending && (!g.notes || g.notes.trim() === '');
   }).length;
 
-  // ===== סה"כ מוזמנים שאישרו - גרסה פשוטה וברורה =====
+  // תיקון: משתמשים ב-count אם קיים, אחרת ב-quantity (צפי נשאר קבוע)
   const totalConfirmedPeople = guests
     .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
-    .reduce((sum, g) => {
-      const count = Number(g.count) || Number(g.confirmed);
-      return sum + (count > 0 ? count : 0);
-    }, 0);
+    .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
 
   const filteredGuests = guests.filter((g: any) => {
     const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.phone.includes(searchTerm);
-
     if (activeFilter === 'yes') return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
     if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
     if (activeFilter === 'unknown') {
@@ -109,6 +104,7 @@ export default function GuestsPage() {
             </div>
           </div>
 
+          {/* סמלים */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
               { href: "/", label: "עמוד הבית", icon: "🏠" },
@@ -141,32 +137,44 @@ export default function GuestsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-          <div className="flex items-center gap-6">
-            <div className="text-3xl font-bold">רשימת מוזמנים</div>
 
-            <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
-              <div className="text-sm opacity-90">סה"כ אישרו</div>
-              <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 flex-wrap">
-            <button onClick={() => setActiveFilter('all')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>כל המוזמנים ({guests.length})</button>
-            <button onClick={() => setActiveFilter('yes')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white'}`}>יגיעו ({yesCount})</button>
-            <button onClick={() => setActiveFilter('no')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white'}`}>לא יגיעו ({noCount})</button>
-            <button onClick={() => setActiveFilter('unknown')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white'}`}>לא ידוע ({unknownWithNoteCount})</button>
-            <button onClick={() => setActiveFilter('unknownEmpty')} className={`px-7 py-3.5 rounded-2xl font-medium transition-all ${activeFilter === 'unknownEmpty' ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white'}`}>לא ידוע ({unknownEmptyCount})</button>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            <input type="text" placeholder="חיפוש..." className="flex-1 md:w-64 p-4 border border-gray-300 rounded-2xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <button onClick={sendSMS} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700">📩 SMS</button>
-            <button onClick={sendWhatsApp} className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700">💬 ווטסאפ</button>
-            <button onClick={deleteSelected} className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700">🗑 מחק מסומנים</button>
+        {/* כותרת + כפתור ספירה */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="text-3xl font-bold">רשימת מוזמנים</div>
+          <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
+            <div className="text-sm opacity-90">סה"כ אישרו</div>
+            <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
           </div>
         </div>
 
+        {/* 5 כפתורי סינון */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          <button onClick={() => setActiveFilter('all')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}>
+            כל המוזמנים ({guests.length})
+          </button>
+          <button onClick={() => setActiveFilter('yes')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
+            יגיעו ({yesCount})
+          </button>
+          <button onClick={() => setActiveFilter('no')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+            לא יגיעו ({noCount})
+          </button>
+          <button onClick={() => setActiveFilter('unknown')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'}`}>
+            לא ידוע ({unknownWithNoteCount})
+          </button>
+          <button onClick={() => setActiveFilter('unknownEmpty')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'unknownEmpty' ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+            לא ידוע ({unknownEmptyCount})
+          </button>
+        </div>
+
+        {/* חיפוש + SMS + ווטסאפ + מחק */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <input type="text" placeholder="חיפוש..." className="flex-1 p-4 border border-gray-300 rounded-2xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <button onClick={sendSMS} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700">📩 SMS</button>
+          <button onClick={sendWhatsApp} className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700">💬 ווטסאפ</button>
+          <button onClick={deleteSelected} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700">🗑 מחק מסומנים</button>
+        </div>
+
+        {/* טבלה */}
         <div className="bg-white rounded-3xl shadow overflow-x-auto">
           <table className="w-full min-w-[900px]">
             <thead>
@@ -199,7 +207,7 @@ export default function GuestsPage() {
                     {guest.confirmed === 'לא מגיע' ? (
                       <div className="flex flex-col items-center"><div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">❌</div><div className="text-red-600 font-semibold text-lg mt-1">0</div></div>
                     ) : guest.confirmed && !isNaN(Number(guest.confirmed)) && Number(guest.confirmed) >= 1 ? (
-                      <div className="flex flex-col items-center"><div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">✅</div><div className="text-emerald-700 font-semibold text-lg mt-1">{guest.quantity || 1}</div></div>
+                      <div className="flex flex-col items-center"><div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">✅</div><div className="text-emerald-700 font-semibold text-lg mt-1">{guest.count || guest.quantity || 1}</div></div>
                     ) : (
                       <div className="flex flex-col items-center"><div className="text-4xl">⏳</div><div className="text-amber-600 font-medium text-sm mt-1">ממתין</div></div>
                     )}

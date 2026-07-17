@@ -49,11 +49,13 @@ export default function EditGuestPage() {
     }));
   };
 
+  // === תיקון: לא דורסים quantity ===
   const resetToUnknown = () => {
     const updatedGuest = { 
       ...guest, 
       count: 0, 
-      confirmed: 'לא ידוע' 
+      confirmed: 'לא ידוע'
+      // quantity נשאר כמו שהוא
     };
     setGuest(updatedGuest);
 
@@ -64,7 +66,12 @@ export default function EditGuestPage() {
   };
 
   const setCountAndConfirm = (num: number) => {
-    const updatedGuest = { ...guest, count: num, confirmed: num.toString() };
+    const updatedGuest = { 
+      ...guest, 
+      count: num, 
+      confirmed: num.toString()
+      // quantity נשאר כמו שהוא (ההערכה המקורית)
+    };
     setGuest(updatedGuest);
 
     const guestsKey = `guests_event_${eventId}`;
@@ -76,7 +83,12 @@ export default function EditGuestPage() {
   };
 
   const markAsNotComing = () => {
-    const updatedGuest = { ...guest, count: 0, confirmed: 'לא מגיע' };
+    const updatedGuest = { 
+      ...guest, 
+      count: 0, 
+      confirmed: 'לא מגיע'
+      // quantity נשאר כמו שהוא
+    };
     setGuest(updatedGuest);
 
     const guestsKey = `guests_event_${eventId}`;
@@ -87,7 +99,6 @@ export default function EditGuestPage() {
     router.push(`/event/${eventId}/guests`);
   };
 
-  // === פונקציית שמירה מרכזית ===
   const saveAndGoBack = () => {
     const guestsKey = `guests_event_${eventId}`;
     let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
@@ -104,7 +115,7 @@ export default function EditGuestPage() {
 
   const quickActions = [
     "אין מענה", "תא קולי", "שיחה ממתינה", "מס לא מחובר",
-    "טעות במספר", "להתקשר מחר", "תחילת שבוע", "יאושר בהודעה",
+    "טעות במספר", "להתקשר מחדש", "תחילת שבוע", "יאושר בהודעה",
     "אפס הערה", "ספרה מיותרת", "חסרה ספרה", "להתקשר בעוד ימים",
     "יחזרו אלינו", "אירוע אחר", "להתקשר ביום א", "להתקשר ביום ב",
     "להתקשר ביום ג", "להתקשר ביום ד", "להתקשר ביום ה", "ההודעה נמסרה",
@@ -218,7 +229,6 @@ export default function EditGuestPage() {
           </div>
         </div>
 
-        {/* === כפתור שמירה אמיתי === */}
         <div className="flex justify-center mt-8">
           <button 
             onClick={saveAndGoBack} 
