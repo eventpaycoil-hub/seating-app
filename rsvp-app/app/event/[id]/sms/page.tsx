@@ -1,5 +1,4 @@
 // @ts-nocheck
-// force clean deploy - 16/07/2026
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,6 +10,8 @@ export default function SMSPage() {
   const eventId = params.id || "1";
 
   const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [guests, setGuests] = useState<any[]>([]);
+  const [seatingTables, setSeatingTables] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -21,19 +22,84 @@ export default function SMSPage() {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const event = events.find((e: any) => e.id.toString() === eventId.toString());
     if (event) setCurrentEvent(event);
+
+    const guestsKey = `guests_event_${eventId}`;
+    const savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    setGuests(savedGuests);
+
+    const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
+    setSeatingTables(seating);
   }, [eventId]);
 
-  const updateEventDetails = () => {
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const event = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (event) {
-      setCurrentEvent(event);
-      alert('✅ פרטי האירוע עודכנו!');
-    } else {
-      alert('❌ לא נמצא אירוע עם ID זה');
+  const selectedGuestIds = useMemo(() => {
+    const saved = localStorage.getItem('selectedForSMS');
+    return saved ? JSON.parse(saved) : [];
+  }, []);
+
+  const activeGuest = useMemo(() => {
+    if (selectedGuestIds.length > 0) {
+      return guests.find(g => selectedGuestIds.includes(g.id)) || guests[0];
     }
+    return guests[0];
+  }, [guests, selectedGuestIds]);
+
+  const getTableNumberForGuest = (guestName: string): number | null => {
+    for (const table of seatingTables) {
+      if (table.assignedGuests && table.assignedGuests.includes(guestName)) {
+        return table.tableNumber || null;
+      }
+    }
+    return null;
   };
 
+  // === בניית הודעה דינמית ===
+  const buildDynamicMessage = (template: any) => {
+    if (!template) return '';
+    if (!activeGuest) return template.content;
+
+    let message = template.content;
+    const guestName = activeGuest.name;
+
+    // החלפת שם (רק בהודעות 1,2,6)
+    if ([1, 2, 6].includes(template.id)) {
+      message = message.replace(/\*שם\*/g, guestName);
+    }
+
+    // === החלפת פירוט מקום ישיבה - רק בהודעה 2 ===
+    if (template.id === 2) {
+      const isSeatingEnabled = currentEvent?.seatingArrangement === 'כן';
+
+      if (isSeatingEnabled) {
+        const tableNum = getTableNumberForGuest(guestName);
+
+        if (tableNum) {
+          const table = seatingTables.find(t => t.tableNumber === tableNum);
+          const peopleCount = table?.assignedGuests?.length || 1;
+
+          let seatingText = '';
+          if (peopleCount === 1) {
+            seatingText = `הנך יושב בשולחן מספר ${tableNum}`;
+          } else if (peopleCount === 2) {
+            seatingText = `שניכם יושבים בשולחן מספר ${tableNum}`;
+          } else {
+            seatingText = `כולכם (${peopleCount}) יושבים בשולחן מספר ${tableNum}`;
+          }
+
+          message = message.replace(/\*פירוט מקום הישיבה\*/g, seatingText);
+        } else {
+          // אם אין שולחן אבל כן עושים הושבה
+          message = message.replace(/\*פירוט מקום הישיבה\*/g, 'מקום הישיבה יפורט בהמשך');
+        }
+      } else {
+        // אם לא עושים הושבה בכלל - מוחקים את השורה לגמרי
+        message = message.replace(/\n?\*פירוט מקום הישיבה\*\.?/g, '');
+      }
+    }
+
+    return message;
+  };
+
+  // === התבניות המלאות ===
   const templates = useMemo(() => [
     { 
       id: 1, 
@@ -67,46 +133,30 @@ export default function SMSPage() {
     }
   ], [currentEvent, eventId]);
 
-  const emojis = ['❤️','🎉','🙏','😊','🚀','🕊️','💐','✨','🙌','🎊','👍','👏','🥳','🌟','💖','🙂','😍','🎈','🏆','🔥','👑','🔔','📍','🗓️','⏰','📞','📲','💌'];
-
-  const addEmoji = (emoji: string) => {
-    if (selectedTemplate) {
-      const newContent = selectedTemplate.content + ' ' + emoji;
-      setSelectedTemplate({ ...selectedTemplate, content: newContent });
-    }
-  };
+  const previewMessage = selectedTemplate ? buildDynamicMessage(selectedTemplate) : '';
 
   const sendRealSMS = async (phone: string) => {
-    if (!selectedTemplate) {
-      alert("בחר תבנית קודם");
-      return;
-    }
+    if (!selectedTemplate) return alert("בחר תבנית קודם");
 
     setIsSending(true);
     setSendingTo(phone);
-    setLastResult(null);
+
+    const finalMessage = buildDynamicMessage(selectedTemplate);
 
     try {
       const res = await fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phone,
-          message: selectedTemplate.content,
-        }),
+        body: JSON.stringify({ phone, message: finalMessage }),
       });
 
       const data = await res.json();
-
       if (data.success) {
-        setLastResult(`✅ נשלח בהצלחה ל-${phone}`);
-        alert(`✅ ההודעה נשלחה בהצלחה למספר ${phone}`);
+        alert(`✅ נשלח בהצלחה ל-${phone}`);
       } else {
-        setLastResult(`❌ שגיאה`);
-        alert(`❌ שגיאה בשליחה`);
+        alert('❌ שגיאה בשליחה');
       }
-    } catch (err: any) {
-      setLastResult(`❌ שגיאת רשת`);
+    } catch {
       alert('שגיאת רשת');
     } finally {
       setIsSending(false);
@@ -119,22 +169,8 @@ export default function SMSPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">תבניות SMS</h1>
-          <div className="flex gap-4">
-            <button 
-              onClick={updateEventDetails}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2"
-            >
-              🔄 עדכן פרטי אירוע
-            </button>
-            <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline flex items-center">← חזרה לרשימת מוזמנים</Link>
-          </div>
+          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline">← חזרה לרשימת מוזמנים</Link>
         </div>
-
-        {lastResult && (
-          <div className={`mb-6 p-4 rounded-2xl text-center font-medium ${lastResult.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {lastResult}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-3xl shadow p-8">
@@ -158,32 +194,7 @@ export default function SMSPage() {
                 <h2 className="text-3xl font-bold mb-6">{selectedTemplate.title}</h2>
                 
                 <div className="bg-gray-50 p-8 rounded-2xl text-gray-700 whitespace-pre-wrap mb-8 text-lg min-h-[400px] border">
-                  {selectedTemplate.content}
-                </div>
-
-                <div className="mt-6">
-                  <button 
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="flex items-center gap-2 text-lg font-medium text-gray-700 hover:text-blue-600"
-                  >
-                    {showEmojiPicker ? '🔼 הסתר סמיילים' : '😀 הצג סמיילים'}
-                  </button>
-
-                  {showEmojiPicker && (
-                    <div className="mt-4 bg-white border rounded-3xl p-6 shadow-inner max-h-80 overflow-y-auto">
-                      <div className="grid grid-cols-8 gap-3">
-                        {emojis.map((emoji, i) => (
-                          <button
-                            key={i}
-                            onClick={() => addEmoji(emoji)}
-                            className="text-4xl hover:scale-125 active:scale-110 transition p-3 rounded-2xl hover:bg-gray-100"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {previewMessage}
                 </div>
 
                 <div className="space-y-4 mt-8">
@@ -192,9 +203,7 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0505270152" 
-                      ? '⏳ שולח לשמעון...' 
-                      : '📱 שלח דוגמא לשמעון (050-5270152)'}
+                    {isSending && sendingTo === "0505270152" ? '⏳ שולח לשמעון...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
                   </button>
 
                   <button 
@@ -202,9 +211,7 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0507666937" 
-                      ? '⏳ שולח לנופר...' 
-                      : '📱 שלח דוגמא לנופר (050-7666937)'}
+                    {isSending && sendingTo === "0507666937" ? '⏳ שולח לנופר...' : '📱 שלח דוגמא לנופר (050-7666937)'}
                   </button>
                 </div>
               </>
