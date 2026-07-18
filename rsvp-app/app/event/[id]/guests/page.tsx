@@ -123,7 +123,7 @@ export default function GuestsPage() {
               { href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
               { href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
               { href: "/transport?eventId=1", label: "הסעות", icon: "🚌" },
-              { href: `/seating`, label: "סקיצה אולם", icon: "🪑" },
+             { href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
               { href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
             ].map((item, index) => (
               <Link key={index} href={item.href} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center">

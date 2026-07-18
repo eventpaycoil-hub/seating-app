@@ -2,289 +2,492 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
-type TableType = 'round12' | 'round10' | 'square12' | 'rectangle14' | 'knights24' | 'dj' | 'dancefloor' | 'custom';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 
 interface PlacedTable {
   id: number;
-  type: TableType;
-  label?: string;
-  position: number;
-  span: number;
-  occupiedSeats: number;
-}
-
-interface CustomTable {
-  id: number;
   type: string;
-  label: string;
   seats: number;
-  shape: string;
+  x: number;
+  y: number;
+  tableNumber?: number;
+  tableName?: string;
+  assignedGuests: string[];
+  angle?: number;
+  isReserve?: boolean;
+  isSpecial?: boolean;
 }
 
-export default function SeatingPlanner() {
-  const GRID_SIZE = 80;
-  const router = useRouter();
-  const [placedTables, setPlacedTables] = useState<PlacedTable[]>([]);
-  const [selectedTable, setSelectedTable] = useState<number | null>(null);
-  const [customTables, setCustomTables] = useState<CustomTable[]>([]);
-  const [availableGuests, setAvailableGuests] = useState([
-    "דוד כהן", "שרה לוי", "יוסי גולד", "מיכל אברהם", "אבי כהן", "רחל כהן", "משה אברהם",
-    "יונתן לוי", "תמר כהן", "איתן גולד", "נועה אברהם", "שלומי כהן", "ליאור כהן", "אורית לוי",
-    "דניאל אברהם", "מירי גולד", "עמית כהן", "נועם לוי", "גלית כהן", "אלון אברהם"
-  ]);
+const TABLE_TYPES = [
+  { type: 'round', label: 'עגול', icon: '🔵' },
+  { type: 'square', label: 'מרובע', icon: '🟦' },
+  { type: 'rect', label: 'מלבן', icon: '🟫' },
+  { type: 'knight', label: 'נחש', icon: '🟤' },
+];
 
-  // טעינה
+const SPECIAL_ITEMS = [
+  { type: 'dj', label: 'DJ', icon: '🎧', width: 180, height: 100 },
+  { type: 'dancefloor', label: 'רחבת ריקודים', icon: '💃', width: 220, height: 220 },
+];
+
+const DEMO_GUESTS = [
+  'שמעון אברגל', 'נופר כהן', 'דני אסולין', 'דנה אסולין', 'גבי כהן', 'אליהו כהן',
+  'מיכל לוי', 'יוסי כהן', 'רינה שמעוני', 'אבי גולדשטיין', 'סימה כהן', 'אורן לוי',
+  'תמר כהן', 'דוד לוי', 'רחל שמעוני', 'יונתן אברגל'
+];
+
+export default function SeatingPage() {
+  const params = useParams();
+  const eventId = params.id as string;
+
+  const [placedTables, setPlacedTables] = useState<PlacedTable[]>([]);
+  const [guests, setGuests] = useState<string[]>([]);
+  const [eventTitle, setEventTitle] = useState('');
+
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTable, setEditingTable] = useState<PlacedTable | null>(null);
+  const [unassignedSearch, setUnassignedSearch] = useState('');
+  const [assignedSearch, setAssignedSearch] = useState('');
+  const [hoveredTableId, setHoveredTableId] = useState<number | null>(null);
+  const [showTableTypes, setShowTableTypes] = useState(false);
+  const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
+  const [selectedSeatedGuests, setSelectedSeatedGuests] = useState<Set<string>>(new Set());
+  const [selectedTypeIndex, setSelectedTypeIndex] = useState(0);
+  const [selectedSeats, setSelectedSeats] = useState(12);
+
+  const selectedTable = placedTables.find(t => t.id === selectedId);
+
+  // === טעינת נתונים לפי אירוע ===
   useEffect(() => {
     const savedTables = localStorage.getItem('seatingTables');
-    const savedCustom = localStorage.getItem('customTables');
-    const savedGuests = localStorage.getItem('availableGuests');
-
     if (savedTables) setPlacedTables(JSON.parse(savedTables));
-    if (savedCustom) setCustomTables(JSON.parse(savedCustom));
-    if (savedGuests) setAvailableGuests(JSON.parse(savedGuests));
-  }, []);
+
+    if (eventId) {
+      // טעינת שם האירוע
+      try {
+        const myEvents = JSON.parse(localStorage.getItem('myEvents') || '[]');
+        const currentEvent = myEvents.find((e: any) => e.id.toString() === eventId);
+        if (currentEvent) {
+          setEventTitle(currentEvent.owners || currentEvent.title || '');
+        }
+      } catch (e) {}
+
+      // טעינת מוזמנים של האירוע הספציפי
+      const eventGuestsKey = `guests_event_${eventId}`;
+      const eventGuests = localStorage.getItem(eventGuestsKey);
+      if (eventGuests) {
+        try {
+          const parsed = JSON.parse(eventGuests);
+          const loaded = parsed.map((g: any) => g.name).filter(Boolean);
+          setGuests(loaded.length > 0 ? loaded : DEMO_GUESTS);
+        } catch {
+          setGuests(DEMO_GUESTS);
+        }
+      } else {
+        setGuests(DEMO_GUESTS);
+      }
+    }
+  }, [eventId]);
 
   useEffect(() => {
     localStorage.setItem('seatingTables', JSON.stringify(placedTables));
   }, [placedTables]);
 
-  const standardTables = [
-    { type: 'square12' as const,   label: 'מרובע 12',   seats: 12, icon: '⬛' },
-    { type: 'round12' as const,    label: 'עגול 12',    seats: 12, icon: '⚪' },
-    { type: 'round10' as const,    label: 'עגול 10',    seats: 10, icon: '⚪' },
-    { type: 'rectangle14' as const,label: 'מלבני 14',   seats: 14, icon: '▭' },
-    { type: 'knights24' as const,  label: 'אבירים 24',  seats: 24, icon: '▭' },
-    { type: 'dj' as const,         label: 'DJ',         seats: 0,  icon: '🎧' },
-    { type: 'dancefloor' as const, label: 'רחבת ריקודים', seats: 0, icon: '💃' },
-  ];
-
-  const allAvailableTables = [
-    ...standardTables,
-    ...customTables.map(c => ({
-      type: 'custom' as const,
-      label: c.label,
-      seats: c.seats,
-      icon: c.shape === 'עגול' ? '⚪' : '⬛'
+  const seatedGuestsWithTable = placedTables.flatMap(table =>
+    table.assignedGuests.map(guest => ({
+      guest,
+      tableNumber: table.tableNumber,
+      tableName: table.tableName
     }))
-  ];
+  );
 
-  const handleDragStartFromSidebar = (e: React.DragEvent, table: any) => {
-    e.dataTransfer.setData('tableType', table.type);
-    e.dataTransfer.setData('isNew', 'true');
-    if (table.label) e.dataTransfer.setData('customLabel', table.label);
-    if (table.seats) e.dataTransfer.setData('customSeats', table.seats);
+  const filteredUnassigned = guests.filter(g =>
+    g.toLowerCase().includes(unassignedSearch.toLowerCase())
+  );
+
+  const filteredSeated = seatedGuestsWithTable.filter(item =>
+    item.guest.toLowerCase().includes(assignedSearch.toLowerCase())
+  );
+
+  const addRegularTable = () => {
+    const item = TABLE_TYPES[selectedTypeIndex];
+    const newTable: PlacedTable = {
+      id: Date.now(),
+      type: item.type,
+      seats: selectedSeats,
+      x: 200 + Math.random() * 400,
+      y: 150 + Math.random() * 300,
+      tableNumber: placedTables.length + 1,
+      assignedGuests: [],
+      angle: 0,
+      isReserve: false,
+    };
+    setPlacedTables(prev => [...prev, newTable]);
+    setShowAddModal(false);
+    setSelectedId(newTable.id);
   };
 
-  const handleDrop = (e: React.DragEvent, newPosition: number) => {
+  const addSpecial = (item: typeof SPECIAL_ITEMS[0]) => {
+    const newItem: PlacedTable = {
+      id: Date.now(),
+      type: item.type,
+      seats: 0,
+      x: 300 + Math.random() * 300,
+      y: 200 + Math.random() * 200,
+      assignedGuests: [],
+      angle: 0,
+      isSpecial: true,
+    };
+    setPlacedTables(prev => [...prev, newItem]);
+  };
+
+  const openEdit = (table: PlacedTable) => {
+    setEditingTable({ ...table });
+    setShowEditModal(true);
+  };
+
+  const saveEdit = () => {
+    if (!editingTable) return;
+    setPlacedTables(prev => prev.map(t => t.id === editingTable.id ? editingTable : t));
+    setShowEditModal(false);
+    setEditingTable(null);
+  };
+
+  const resetSelectedTable = () => {
+    if (!selectedId) return;
+    setPlacedTables(prev => prev.map(t => {
+      if (t.id === selectedId) {
+        const returnedGuests = [...t.assignedGuests];
+        setGuests(prevGuests => [...prevGuests, ...returnedGuests]);
+        return { ...t, assignedGuests: [] };
+      }
+      return t;
+    }));
+    setSelectedSeatedGuests(new Set());
+  };
+
+  const deleteTable = (id: number) => {
+    const table = placedTables.find(t => t.id === id);
+    if (!table) return;
+    if (confirm('למחוק את השולחן?')) {
+      setGuests(prev => [...prev, ...table.assignedGuests]);
+      setPlacedTables(prev => prev.filter(t => t.id !== id));
+      if (selectedId === id) setSelectedId(null);
+      setSelectedSeatedGuests(new Set());
+    }
+  };
+
+  const onDragStartTable = (id: number) => setDraggedId(id);
+
+  const onDropTable = (e: React.DragEvent) => {
     e.preventDefault();
-    const guestName = e.dataTransfer.getData('guestName');
+    if (draggedId === null) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(50, e.clientX - rect.left - 70);
+    const y = Math.max(50, e.clientY - rect.top - 70);
+    setPlacedTables(prev => prev.map(t => t.id === draggedId ? { ...t, x, y } : t));
+    setDraggedId(null);
+  };
 
-    if (guestName) {
-      const tableIndex = placedTables.findIndex(t => t.position === newPosition);
-      if (tableIndex !== -1) {
-        const updatedTables = [...placedTables];
-        updatedTables[tableIndex] = {
-          ...updatedTables[tableIndex],
-          occupiedSeats: Math.min((updatedTables[tableIndex].occupiedSeats || 0) + 1, 12)
-        };
-        setPlacedTables(updatedTables);
+  const toggleGuestSelection = (guest: string) => {
+    const newSet = new Set(selectedGuests);
+    if (newSet.has(guest)) newSet.delete(guest); else newSet.add(guest);
+    setSelectedGuests(newSet);
+  };
 
-        setAvailableGuests(prev => prev.filter(name => name !== guestName));
+  const toggleSeatedGuestSelection = (guest: string) => {
+    const newSet = new Set(selectedSeatedGuests);
+    if (newSet.has(guest)) newSet.delete(guest); else newSet.add(guest);
+    setSelectedSeatedGuests(newSet);
+  };
+
+  const assignSelectedGuests = () => {
+    if (!selectedId || selectedGuests.size === 0) return alert("בחר שולחן וסמן מוזמנים");
+    const guestsToAssign = Array.from(selectedGuests);
+    setPlacedTables(prev => prev.map(t =>
+      t.id === selectedId
+        ? { ...t, assignedGuests: [...new Set([...t.assignedGuests, ...guestsToAssign])] }
+        : t
+    ));
+    setGuests(prev => prev.filter(g => !selectedGuests.has(g)));
+    setSelectedGuests(new Set());
+  };
+
+  const removeSelectedSeatedGuests = () => {
+    if (!selectedId || selectedSeatedGuests.size === 0) return;
+    const guestsToRemove = Array.from(selectedSeatedGuests);
+    setPlacedTables(prev => prev.map(t =>
+      t.id === selectedId
+        ? { ...t, assignedGuests: t.assignedGuests.filter(g => !guestsToRemove.includes(g)) }
+        : t
+    ));
+    setGuests(prev => [...prev, ...guestsToRemove]);
+    setSelectedSeatedGuests(new Set());
+  };
+
+  const assignGuest = (guest: string) => {
+    if (!selectedId) return alert("קודם בחר שולחן");
+    setPlacedTables(prev => prev.map(t =>
+      t.id === selectedId && !t.assignedGuests.includes(guest)
+        ? { ...t, assignedGuests: [...t.assignedGuests, guest] }
+        : t
+    ));
+    setGuests(prev => prev.filter(g => g !== guest));
+  };
+
+  const rotateTable = (id: number) => {
+    setPlacedTables(prev => prev.map(t => t.id === id ? { ...t, angle: (t.angle || 0) + 90 } : t));
+  };
+
+  const returnAllGuests = () => {
+    const eventGuestsKey = `guests_event_${eventId}`;
+    const eventGuests = localStorage.getItem(eventGuestsKey);
+    if (eventGuests) {
+      try {
+        const parsed = JSON.parse(eventGuests);
+        const names = parsed.map((g: any) => g.name).filter(Boolean);
+        setGuests(names.length > 0 ? names : DEMO_GUESTS);
+      } catch {
+        setGuests(DEMO_GUESTS);
       }
-      return;
-    }
-
-    const isNew = e.dataTransfer.getData('isNew') === 'true';
-
-    if (isNew) {
-      const type = e.dataTransfer.getData('tableType') as TableType;
-      const label = e.dataTransfer.getData('customLabel');
-      const span = type === 'knights24' ? 2 : 1;
-
-      for (let i = 0; i < span; i++) {
-        if (newPosition + i >= GRID_SIZE || placedTables.some(t => t.position === newPosition + i)) {
-          alert('אין מספיק מקום כאן');
-          return;
-        }
-      }
-
-      setPlacedTables([...placedTables, { 
-        id: Date.now(), 
-        type, 
-        label: label || undefined,
-        position: newPosition, 
-        span, 
-        occupiedSeats: 0 
-      }]);
     } else {
-      const tableId = parseInt(e.dataTransfer.getData('tableId'));
-      const tableIndex = placedTables.findIndex(t => t.id === tableId);
-      if (tableIndex === -1) return;
-
-      const table = placedTables[tableIndex];
-      const oldPosition = table.position;
-
-      for (let i = 0; i < table.span; i++) {
-        if (newPosition + i >= GRID_SIZE || 
-            (newPosition + i !== oldPosition && placedTables.some(t => t.position === newPosition + i))) {
-          alert('אין מספיק מקום כאן');
-          return;
-        }
-      }
-
-      const updatedTables = [...placedTables];
-      updatedTables[tableIndex] = { ...table, position: newPosition };
-      setPlacedTables(updatedTables);
+      setGuests(DEMO_GUESTS);
     }
+
+    setPlacedTables(prev => prev.map(t => ({ ...t, assignedGuests: [] })));
+    setSelectedGuests(new Set());
+    setSelectedSeatedGuests(new Set());
   };
 
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-
-  const removeTable = (id: number) => {
-    setPlacedTables(placedTables.filter(t => t.id !== id));
-  };
-
-  const openGuests = (tableId: number) => {
-    setSelectedTable(tableId);
-  };
-
-  const addNewTable = () => {
-    router.push('/addtable');
-  };
+  const hoveredTable = placedTables.find(t => t.id === hoveredTableId);
+  const totalTables = placedTables.length;
+  const totalSeats = placedTables.reduce((sum, t) => sum + t.seats, 0);
+  const occupiedSeats = placedTables.reduce((sum, t) => sum + t.assignedGuests.length, 0);
 
   return (
-    <div className="flex h-screen bg-[#f8f5f0] text-[#333] overflow-hidden">
-      
-      {/* תפריט ימין */}
-      <div className="w-72 bg-white border-l border-gray-200 p-4 overflow-y-auto flex-shrink-0">
-        <h2 className="text-xl font-bold mb-6 text-center text-[#2c2218]">סוגי שולחנות</h2>
-
-        <div className="space-y-3">
-          {allAvailableTables.map((table, index) => (
-            <div
-              key={index}
-              draggable
-              onDragStart={(e) => handleDragStartFromSidebar(e, table)}
-              className="group flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl cursor-grab active:cursor-grabbing hover:border-[#d4b88a] hover:shadow transition-all"
-            >
-              <div className="text-4xl text-[#3c2f1e] group-hover:scale-110 transition-transform">
-                {table.icon}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-base text-[#2c2218]">{table.label}</div>
-                {table.seats > 0 && <div className="text-sm text-gray-500">{table.seats} מושבים</div>}
-              </div>
-            </div>
-          ))}
+    <div className="flex h-screen bg-slate-900 text-white flex-col" dir="rtl">
+      {/* כותרת עליונה */}
+      <div className="bg-slate-800 p-4 flex items-center justify-between border-b border-slate-700 z-50">
+        <div>
+          <div className="text-emerald-400 text-sm">סקיצת שולחנות</div>
+          <div className="text-2xl font-bold">{eventTitle || 'אירוע'}</div>
         </div>
 
-        <div 
-          onClick={addNewTable}
-          className="mt-8 flex items-center justify-center text-4xl text-white bg-[#2c2218] hover:bg-[#3c2f1e] rounded-2xl py-5 cursor-pointer transition-all active:scale-95"
-        >
-          +
-        </div>
-      </div>
-
-      {/* רצפת האולם */}
-      <div className="flex-1 p-4 bg-[#f8f5f0] overflow-auto">
-        <div className="flex items-center justify-between mb-8">
-          <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl font-medium flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Link 
+            href={`/event/${eventId}/guests`}
+            className="bg-slate-700 hover:bg-slate-600 px-6 py-3 rounded-3xl font-medium flex items-center gap-2"
+          >
             ← חזרה לרשימת המוזמנים
-          </button>
+          </Link>
 
-          <h1 className="text-3xl font-bold text-[#2c2218]">רצפת האולם - סידור הושבה</h1>
-
-          <div className="relative w-72">
-            <input 
-              type="text" 
-              placeholder="חיפוש מוזמנים..." 
-              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:border-[#d4b88a]"
-            />
-            <span className="absolute left-4 top-3.5 text-gray-400">🔍</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-10 gap-1 bg-[#2c2218] p-4 rounded-3xl border border-[#3c2f1e] w-full h-[calc(100vh-160px)]">
-          {Array.from({ length: GRID_SIZE }).map((_, index) => {
-            const table = placedTables.find(t => 
-              t.position === index || (t.span === 2 && t.position + 1 === index)
-            );
-
-            const isSecondCell = table?.span === 2 && table.position + 1 === index;
-
-            return (
-              <div
-                key={index}
-                draggable={!!table && !isSecondCell}
-                onDragStart={(e) => table && !isSecondCell && handleDragStartFromFloor(e, table.id)}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragOver={handleDragOver}
-                onClick={() => table && openGuests(table.id)}
-                className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold border transition-all cursor-pointer relative
-                  ${table 
-                    ? 'bg-[#d4b88a] text-[#3c2f1e] border-[#3c2f1e] shadow-md' 
-                    : 'bg-[#3c2f1e] hover:bg-[#4a3a2a]'
-                  } ${isSecondCell ? 'opacity-0 pointer-events-none' : ''}`}
-              >
-                {table && !isSecondCell && (
-                  <div className="w-full h-full flex flex-col items-center justify-center relative">
-                    <div 
-                      onClick={(e) => { e.stopPropagation(); removeTable(table.id); }}
-                      className="absolute top-1 right-1 text-red-600 text-xs font-bold cursor-pointer hover:text-red-800 z-10"
-                    >
-                      ✕
-                    </div>
-
-                    <div className={`text-3xl mb-1 ${table.type === 'knights24' ? 'text-4xl' : ''}`}>
-                      {table.label ? table.label[0] : tableTypes.find(t => t.type === table.type)?.icon}
-                    </div>
-                    
-                    <div className="flex gap-0.5 text-[6px] text-[#3c2f1e] opacity-80 flex-wrap justify-center">
-                      {Array.from({ length: Math.floor((tableTypes.find(t => t.type === table.type)?.seats || 12) / 4) }).map((_, i) => (
-                        <span key={i} className={i < (table.occupiedSeats || 0) ? 'text-red-600' : ''}>⬜</span>
-                      ))}
-                    </div>
-                    
-                    <div className="text-xs mt-1">#{table.id.toString().slice(-4)}</div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <button onClick={() => setShowAddModal(true)} className="bg-emerald-600 hover:bg-emerald-700 px-8 py-3 rounded-3xl font-bold">+ הוסף שולחן</button>
+          <button onClick={returnAllGuests} className="bg-amber-600 hover:bg-amber-700 px-6 py-3 rounded-3xl whitespace-nowrap">אפס סקיצה</button>
         </div>
       </div>
 
-      {/* לוח מוזמנים */}
-      {selectedTable && (
-        <div className="w-96 bg-white border-l border-gray-200 p-6 overflow-y-auto">
-          <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-4 border-b">
-            <h2 className="text-xl font-bold">מוזמנים שלא הושבו ({availableGuests.length})</h2>
-            <button onClick={() => setSelectedTable(null)} className="text-red-600 text-2xl">✕</button>
+      <div className="flex flex-1 overflow-hidden">
+        {/* תפריט שמאלי - מוזמנים */}
+        <div className="w-72 bg-slate-800 border-l border-slate-700 flex flex-col">
+          <div className="p-5 border-b border-slate-700">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold">מוזמנים שלא הושבו ({guests.length})</h3>
+              {selectedGuests.size > 0 && (
+                <button onClick={assignSelectedGuests} className="text-xs bg-emerald-600 px-3 py-1 rounded-xl">העבר {selectedGuests.size}</button>
+              )}
+            </div>
+            <input type="text" placeholder="🔍 חיפוש..." value={unassignedSearch} onChange={(e) => setUnassignedSearch(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded-2xl px-4 py-3 mb-4 focus:outline-none focus:border-emerald-500" />
+
+            <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-2">
+              {filteredUnassigned.map((guest, i) => (
+                <div key={i} className="bg-slate-700 p-3 rounded-xl flex items-center gap-3 hover:bg-slate-600">
+                  <input type="checkbox" checked={selectedGuests.has(guest)} onChange={() => toggleGuestSelection(guest)} className="w-5 h-5 accent-emerald-500" />
+                  <div onClick={() => assignGuest(guest)} className="flex-1 cursor-pointer">{guest}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <input 
-            type="text" 
-            placeholder="חפש מוזמנים" 
-            className="w-full p-3 border border-gray-300 rounded-2xl mb-6"
-          />
+          <div className="flex-1 p-5 overflow-y-auto">
+            <button onClick={() => setShowTableTypes(!showTableTypes)} className="w-full bg-slate-700 hover:bg-slate-600 p-4 rounded-2xl font-bold mb-6">
+              {showTableTypes ? 'הסתר' : 'הצג'} סוגי שולחנות
+            </button>
 
-          <div className="space-y-6">
-            <div>
-              <div className="font-semibold text-blue-600 mb-2">חברים אחים ({availableGuests.length})</div>
-              <div className="space-y-2">
-                {availableGuests.map((name, i) => (
-                  <div 
-                    key={i}
-                    draggable
-                    onDragStart={(e) => handleDragStartGuest(e, name)}
-                    className="bg-gray-50 p-3 rounded-xl cursor-grab active:cursor-grabbing border border-gray-200 hover:bg-blue-50"
-                  >
-                    {name}
+            {showTableTypes && (
+              <div className="space-y-3 mb-10">
+                {TABLE_TYPES.map((item, i) => (
+                  <div key={i} onClick={() => { setSelectedTypeIndex(i); addRegularTable(); }} className="bg-slate-700 hover:bg-slate-600 p-4 rounded-2xl cursor-pointer flex items-center gap-4 text-sm transition-all active:scale-95">
+                    <div className="text-4xl">{item.icon}</div>
+                    <div>
+                      <div className="font-bold">{item.label}</div>
+                      <div className="text-emerald-400 text-xs">עד 50 כסאות</div>
+                    </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            <h2 className="text-xl font-bold mb-4">אלמנטים</h2>
+            <div className="space-y-3">
+              {SPECIAL_ITEMS.map((item, i) => (
+                <div key={i} onClick={() => addSpecial(item)} className="bg-slate-700 hover:bg-slate-600 p-4 rounded-2xl cursor-pointer flex items-center gap-4 text-sm transition-all active:scale-95 relative">
+                  <div className="text-4xl">{item.icon}</div>
+                  <div className="font-bold">{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* אזור הסקיצה */}
+        <div className="flex-1 relative overflow-auto" onDrop={onDropTable} onDragOver={(e) => e.preventDefault()}
+          style={{ backgroundColor: '#d4b48c', backgroundImage: 'linear-gradient(#c9a26e 1px, transparent 1px), linear-gradient(90deg, #c9a26e 1px, transparent 1px)', backgroundSize: '60px 60px' }}>
+
+          {placedTables.map(table => (
+            <div key={table.id} draggable onDragStart={() => onDragStartTable(table.id)}
+              onClick={() => setSelectedId(table.id)}
+              onMouseEnter={() => setHoveredTableId(table.id)}
+              onMouseLeave={() => setHoveredTableId(null)}
+              onContextMenu={(e) => { e.preventDefault(); openEdit(table); }}
+              className={`absolute flex items-center justify-center cursor-move shadow-2xl select-none transition-all ${selectedId === table.id ? 'ring-4 ring-yellow-400 scale-105' : ''}`}
+              style={{ 
+                left: table.x, top: table.y, 
+                width: table.isSpecial ? (table.type === 'dj' ? '180px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '280px' : '160px'),
+                height: table.isSpecial ? (table.type === 'dj' ? '100px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '100px' : '160px'),
+                borderRadius: table.type === 'round' ? '9999px' : (table.type === 'square' || table.type === 'dancefloor') ? '20px' : '8px',
+                background: table.isSpecial ? (table.type === 'dj' ? '#1f2937' : '#334155') : (table.isReserve ? '#374151' : 'linear-gradient(135deg, #854d0e, #451a03)'),
+                boxShadow: '0 15px 35px rgba(0,0,0,0.5), inset 0 4px 12px rgba(255,255,255,0.15)',
+                border: table.isReserve ? '3px solid #9ca3af' : '3px solid #78350f'
+              }}
+            >
+              {!table.isSpecial && table.tableNumber && <span className="font-black text-amber-100 drop-shadow-2xl text-4xl z-10 relative">{table.tableNumber}</span>}
+              {table.isSpecial && <div className="text-6xl text-white/80 z-10">{table.type === 'dj' ? '🎧 DJ' : '💃'}</div>}
+              {table.isReserve && !table.isSpecial && <div className="absolute text-8xl font-black text-white/30 z-0">R</div>}
+
+              {!table.isSpecial && Array.from({ length: table.seats }).map((_, i) => {
+                const isOccupied = i < table.assignedGuests.length;
+                return (
+                  <div key={i} className={`absolute w-7 h-8 border-2 rounded-md flex items-center justify-center text-xs font-bold shadow-md transition-all ${isOccupied ? 'bg-red-600 border-red-800 scale-110' : 'bg-amber-50 border-amber-900'}`}
+                    style={{ top: `${50 + Math.sin((i / table.seats) * Math.PI * 2) * 47}%`, left: `${50 + Math.cos((i / table.seats) * Math.PI * 2) * 47}%`, transform: 'translate(-50%, -50%)' }}>
+                    {isOccupied ? '👤' : '🪑'}
+                  </div>
+                );
+              })}
+
+              <button onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }} className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">✕</button>
+              {!table.isSpecial && (table.type === 'rect' || table.seats >= 20) && (
+                <button onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }} className="absolute -top-3 -left-3 bg-blue-600 hover:bg-blue-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">↻</button>
+              )}
+            </div>
+          ))}
+
+          {hoveredTable && hoveredTable.assignedGuests.length > 0 && (
+            <div className="absolute bg-black/90 text-white text-sm p-4 rounded-2xl shadow-2xl pointer-events-none z-50 max-w-xs" style={{ left: hoveredTable.x + 120, top: hoveredTable.y - 90 }}>
+              <div className="font-bold mb-2">שולחן {hoveredTable.tableNumber} {hoveredTable.isReserve ? '(רזרבה)' : ''}:</div>
+              <ul className="list-disc list-inside space-y-1">
+                {hoveredTable.assignedGuests.map((g, i) => <li key={i}>{g}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* תפריט ימני */}
+        {selectedTable && (
+          <div className="w-80 bg-slate-800 border-l border-slate-700 p-6 overflow-y-auto">
+            <div className="flex justify-between mb-6">
+              <h2 className="text-2xl font-bold">שולחן {selectedTable.tableNumber}</h2>
+              <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+
+            {selectedTable.tableName && <p className="text-emerald-400 mb-4 text-lg">{selectedTable.tableName}</p>}
+            {selectedTable.isReserve && <div className="bg-gray-600 px-4 py-2 rounded-xl inline-block mb-6">רזרבה</div>}
+
+            <div className="bg-slate-700 rounded-2xl p-6 mb-6">
+              <div className="text-4xl font-bold mb-1">{selectedTable.assignedGuests.length} / {selectedTable.seats}</div>
+              <div className="text-gray-400">{selectedTable.seats - selectedTable.assignedGuests.length} פנויים</div>
+            </div>
+
+            <button onClick={resetSelectedTable} className="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded-2xl font-bold mb-4">אפס שולחן</button>
+
+            {selectedTable.assignedGuests.length > 0 && (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold">יושבים בשולחן:</h3>
+                  {selectedSeatedGuests.size > 0 && (
+                    <button onClick={removeSelectedSeatedGuests} className="text-xs bg-red-600 px-3 py-1 rounded-xl">הסר {selectedSeatedGuests.size}</button>
+                  )}
+                </div>
+                <div className="space-y-2 mb-6">
+                  {selectedTable.assignedGuests.map((g, i) => (
+                    <div key={i} className="bg-slate-700 p-3 rounded-xl flex items-center gap-3">
+                      <input type="checkbox" checked={selectedSeatedGuests.has(g)} onChange={() => toggleSeatedGuestSelection(g)} className="w-5 h-5 accent-red-500" />
+                      <div className="flex-1">{g}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-slate-800 border-t border-slate-700 p-4 text-sm flex justify-between items-center">
+        <div><strong>סיכום:</strong> {totalTables} שולחנות • {occupiedSeats}/{totalSeats} מושבים</div>
+        <div className="text-emerald-400">לחץ ימני על שולחן = עריכה</div>
+      </div>
+
+      {/* מודל הוספה */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white text-black rounded-3xl p-8 w-96">
+            <h2 className="text-2xl font-bold mb-6 text-center">הוסף שולחן</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">צורה</label>
+                <select value={selectedTypeIndex} onChange={(e) => setSelectedTypeIndex(parseInt(e.target.value))} className="w-full p-3 border rounded-xl">
+                  {TABLE_TYPES.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">מספר כסאות (4-50)</label>
+                <input type="range" min="4" max="50" step="2" value={selectedSeats} onChange={(e) => setSelectedSeats(parseInt(e.target.value))} className="w-full" />
+                <div className="text-center text-4xl font-bold mt-4">{selectedSeats}</div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAddModal(false)} className="flex-1 py-3 border rounded-2xl">ביטול</button>
+                <button onClick={addRegularTable} className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-bold">הוסף</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* מודל עריכה */}
+      {showEditModal && editingTable && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white text-black rounded-3xl p-8 w-96">
+            <h2 className="text-2xl font-bold mb-6">עריכת שולחן</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">מספר שולחן</label>
+                <input type="number" value={editingTable.tableNumber || ''} onChange={(e) => setEditingTable({ ...editingTable, tableNumber: parseInt(e.target.value) || undefined })} className="w-full p-3 border rounded-xl" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">שם שולחן</label>
+                <input type="text" value={editingTable.tableName || ''} onChange={(e) => setEditingTable({ ...editingTable, tableName: e.target.value })} className="w-full p-3 border rounded-xl" />
+              </div>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" checked={editingTable.isReserve} onChange={(e) => setEditingTable({ ...editingTable, isReserve: e.target.checked })} className="w-5 h-5" />
+                <label>שולחן רזרבה</label>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => { setShowEditModal(false); setEditingTable(null); }} className="flex-1 py-3 border rounded-2xl">ביטול</button>
+                <button onClick={saveEdit} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold">שמור</button>
               </div>
             </div>
           </div>

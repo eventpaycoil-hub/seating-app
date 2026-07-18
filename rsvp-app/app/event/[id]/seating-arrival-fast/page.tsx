@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft } from 'lucide-react';
 
-export default function SeatingArrivalPage() {
+export default function SeatingArrivalFastPage() {
   const params = useParams();
   const eventId = params.id as string;
 
@@ -14,15 +14,47 @@ export default function SeatingArrivalPage() {
   const [forceEmptyList, setForceEmptyList] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [tableMapVersion, setTableMapVersion] = useState(0);
+
+  // === חיבור חזק לסקיצה ===
+  const tableMap = useMemo(() => {
+    const map = new Map<string, number>();
+    try {
+      const saved = localStorage.getItem('seatingTables');
+      if (!saved) return map;
+
+      const seatingData = JSON.parse(saved);
+      if (Array.isArray(seatingData)) {
+        seatingData.forEach((table: any) => {
+          if (table.tableNumber && Array.isArray(table.assignedGuests)) {
+            table.assignedGuests.forEach((guestName: string) => {
+              if (guestName && typeof guestName === 'string') {
+                map.set(guestName.trim().toLowerCase(), table.tableNumber);
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Error loading seating data', e);
+    }
+    return map;
+  }, [tableMapVersion]);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'seatingTables') setTableMapVersion(prev => prev + 1);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     if (!eventId) return;
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId);
-    if (currentEvent) {
-      setEventTitle(currentEvent.owners || currentEvent.title || '');
-    }
+    if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title || '');
 
     const guestsKey = `guests_event_${eventId}`;
     const saved = JSON.parse(localStorage.getItem(guestsKey) || '[]');
@@ -36,24 +68,13 @@ export default function SeatingArrivalPage() {
     setAllGuests(guestsWithData);
   }, [eventId]);
 
-  // חישוב "אישרו באירוע הזה" - כולל מי שהגיע בלי אישור מראש
   const confirmedPeople = allGuests.reduce((total, g) => {
     const status = String(g.confirmed || '').trim();
     const arrived = Number(g.arrivedCount) || 0;
-
-    if (arrived > 0) {
-      return total + arrived;
-    }
-
-    if (
-      status !== 'לא מגיע' &&
-      status !== 'לא ידוע' &&
-      status !== 'ממתין' &&
-      status !== ''
-    ) {
+    if (arrived > 0) return total + arrived;
+    if (status !== 'לא מגיע' && status !== 'לא ידוע' && status !== 'ממתין' && status !== '') {
       return total + (Number(g.confirmed) || Number(g.confirmedCount) || Number(g.quantity) || 0);
     }
-
     return total;
   }, 0);
 
@@ -63,7 +84,6 @@ export default function SeatingArrivalPage() {
   const filteredGuests = useMemo(() => {
     if (forceEmptyList) return [];
     if (!searchTerm.trim()) return allGuests;
-
     const term = searchTerm.toLowerCase().trim();
     return allGuests.filter((g: any) =>
       g.name?.toLowerCase().includes(term) || g.phone?.includes(searchTerm.trim())
@@ -80,16 +100,10 @@ export default function SeatingArrivalPage() {
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
     setAllGuests(updated);
-
-    const guestsKey = `guests_event_${eventId}`;
-    localStorage.setItem(guestsKey, JSON.stringify(updated));
-
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
     setSearchTerm('');
     setForceEmptyList(true);
-
-    setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 80);
+    setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
   const clearSearch = () => {
@@ -100,6 +114,7 @@ export default function SeatingArrivalPage() {
   const refresh = () => {
     setSearchTerm('');
     setForceEmptyList(false);
+    setTableMapVersion(prev => prev + 1);
   };
 
   const printPage = () => window.print();
@@ -108,26 +123,22 @@ export default function SeatingArrivalPage() {
     <div className="min-h-screen bg-[#f5e8c7] p-8">
       <div className="max-w-[1600px] mx-auto">
         <div className="mb-6">
-          <Link 
-            href={`/event/${eventId}/guests`}
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-          >
+          <Link href={`/event/${eventId}/guests`} className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
             <ArrowLeft size={20} /> חזרה לרשימת המוזמנים
           </Link>
         </div>
 
         <h1 className="text-4xl font-bold text-center mb-8 text-amber-900">
-          הושבת מוזמנים באירוע {eventTitle && `• ${eventTitle}`}
+          הושבה מהירה • {eventTitle}
         </h1>
 
-        {/* 3 קופסאות סיכום */}
         <div className="flex justify-center gap-8 mb-12">
           <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
+            <div className="text-sm text-gray-500 mb-1">אישרו</div>
             <div className="text-5xl font-bold text-blue-600">{confirmedPeople}</div>
           </div>
           <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">כבר הגיעו</div>
+            <div className="text-sm text-gray-500 mb-1">הגיעו</div>
             <div className="text-5xl font-bold text-green-600">{arrivedCount}</div>
           </div>
           <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
@@ -136,7 +147,6 @@ export default function SeatingArrivalPage() {
           </div>
         </div>
 
-        {/* חיפוש */}
         <div className="flex items-center gap-4 mb-10 justify-center flex-wrap">
           <div className="relative w-full max-w-2xl">
             <Search className="absolute left-6 top-5 text-gray-400" size={24} />
@@ -149,18 +159,21 @@ export default function SeatingArrivalPage() {
               className="w-full pl-16 pr-6 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
             />
           </div>
-
           <button onClick={clearSearch} className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium">נקה</button>
-          <button onClick={refresh} className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"><RefreshCw size={20} /> רענן</button>
-          <button onClick={printPage} className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"><Printer size={20} /> PDF</button>
+          <button onClick={refresh} className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium">
+            <RefreshCw size={20} /> רענן שולחנות
+          </button>
+          <button onClick={printPage} className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium">
+            <Printer size={20} /> PDF
+          </button>
         </div>
 
-        {/* טבלה */}
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-amber-100">
               <tr>
                 <th className="text-right py-5 px-8">שם וטלפון</th>
+                <th className="text-center py-5 px-8">מס שולחן</th>
                 <th className="text-center py-5 px-8">סטטוס</th>
                 <th className="text-center py-5 px-8">הגיע</th>
                 <th className="text-center py-5 px-8">התאמה</th>
@@ -173,12 +186,17 @@ export default function SeatingArrivalPage() {
                   const isAlreadyArrived = guest.arrivedCount > 0;
                   const isNotComing = guest.confirmed === 'לא מגיע';
                   const isPending = !guest.confirmed || guest.confirmed === '' || guest.confirmed === 'לא ידוע' || guest.confirmed === 'ממתין';
+                  const tableNum = tableMap.get(guest.name?.trim().toLowerCase());
 
                   return (
                     <tr key={guest.id} className="border-b hover:bg-amber-50">
                       <td className="py-6 px-8">
                         <div className="font-semibold text-xl">{guest.name}</div>
                         <div className="text-gray-600 font-mono">{guest.phone}</div>
+                      </td>
+
+                      <td className="py-6 px-8 text-center font-bold text-xl text-amber-700">
+                        {tableNum ? `שולחן ${tableNum}` : 'אורח לא הושב'}
                       </td>
 
                       <td className="py-6 px-8 text-center">
@@ -200,44 +218,28 @@ export default function SeatingArrivalPage() {
                         )}
                       </td>
 
-                      {/* עמודת הגיע */}
                       <td className="py-6 px-8 text-center">
                         {isAlreadyArrived ? (
                           <div className="flex flex-col items-center gap-2">
-                            <div className="bg-gray-400 text-white px-8 py-4 rounded-3xl font-bold text-2xl shadow">
-                              אורח זה כבר הגיע
-                            </div>
-                            <div className="text-gray-600 font-semibold">
-                              הגיע {guest.arrivedCount}
-                            </div>
+                            <div className="bg-gray-400 text-white px-8 py-4 rounded-3xl font-bold text-2xl shadow">אורח זה כבר הגיע</div>
+                            <div className="text-gray-600 font-semibold">הגיע {guest.arrivedCount}</div>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => markArrival(guest.id, confirmed)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-14 py-5 rounded-3xl font-bold text-2xl shadow"
-                          >
+                          <button onClick={() => markArrival(guest.id, confirmed)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-14 py-5 rounded-3xl font-bold text-2xl shadow">
                             {confirmed} הגיע
                           </button>
                         )}
                       </td>
 
-                      {/* עמודת פעולות */}
                       <td className="py-6 px-8 text-center">
                         {isAlreadyArrived ? (
-                          <button
-                            onClick={() => markArrival(guest.id, 0)}
-                            className="px-8 py-4 rounded-3xl border-2 border-red-300 text-red-600 hover:bg-red-50 font-medium transition"
-                          >
+                          <button onClick={() => markArrival(guest.id, 0)} className="px-8 py-4 rounded-3xl border-2 border-red-300 text-red-600 hover:bg-red-50 font-medium transition">
                             בטל הגעה
                           </button>
                         ) : (
                           <div className="flex gap-2 justify-center flex-wrap">
                             {[1,2,3,4,5,6,7].map(num => (
-                              <button
-                                key={num}
-                                onClick={() => markArrival(guest.id, num)}
-                                className="w-12 h-12 rounded-2xl font-bold text-lg border-2 bg-white border-gray-300 hover:bg-emerald-50 transition-all"
-                              >
+                              <button key={num} onClick={() => markArrival(guest.id, num)} className="w-12 h-12 rounded-2xl font-bold text-lg border-2 bg-white border-gray-300 hover:bg-emerald-50 transition-all">
                                 {num}
                               </button>
                             ))}
@@ -249,10 +251,8 @@ export default function SeatingArrivalPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-20 text-center text-gray-500 text-xl">
-                    {forceEmptyList 
-                      ? 'הרשימה נוקתה. חפש מוזמן חדש...' 
-                      : 'לא נמצאו תוצאות'}
+                  <td colSpan={5} className="py-20 text-center text-gray-500 text-xl">
+                    {forceEmptyList ? 'הרשימה נוקתה. חפש מוזמן חדש...' : 'לא נמצאו תוצאות'}
                   </td>
                 </tr>
               )}
