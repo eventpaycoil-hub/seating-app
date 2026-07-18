@@ -6,8 +6,9 @@ import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
 
 export default function GuestsPage() {
-  const params = useParams();
-  const eventId = params.id || "1";
+ const params = useParams();
+const rawId = params.id;
+const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || "1");
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
@@ -15,23 +16,23 @@ export default function GuestsPage() {
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'>('all');
 
- useEffect(() => {
-  if (!eventId) return;
+  useEffect(() => {
+    if (!eventId) return;
 
-  // טעינת מוזמנים דרך הפונקציה המרכזית
-  const allGuests = getGuests(eventId);
-  const validGuests = allGuests.filter(
-    (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
-  );
-  setGuests(validGuests);
+   const allGuests = getGuests(String(eventId));
+    const validGuests = allGuests.filter(
+      (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
+    );
+    setGuests(validGuests);
 
-  // טעינת פרטי האירוע
-  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-  const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-  if (currentEvent) {
-    setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
-  }
-}, [eventId]);
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+    if (currentEvent) {
+      setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
+    }
+  }, [eventId]);
+
+  // ... כל שאר הקוד נשאר בדיוק כמו שהוא ...
 
   const yesCount = guests.filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1).length;
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
@@ -79,20 +80,21 @@ export default function GuestsPage() {
   };
 
   const deleteSelected = () => {
-  if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
-  if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
+    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+    if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
 
-  const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
-  saveGuests(eventId, updated);
-  setGuests(updated);
-  setSelectedGuests([]);
-};
+    const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
+    saveGuests(eventId, updated);
+    setGuests(updated);
+    setSelectedGuests([]);
+  };
 
   const sendSMS = () => {
-  if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
-  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-  window.location.href = `/event/${eventId}/sms`;
-};
+    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+    window.location.href = `/event/${eventId}/sms`;
+  };
+
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
@@ -112,30 +114,28 @@ export default function GuestsPage() {
           {/* סמלים / כפתורים מהירים */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
-  { href: "/", label: "עמוד הבית", icon: "🏠" },
-  { href: "/videos", label: "וידאו האירוע", icon: "🎥" },
-  { href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
-  { href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
-  { href: "/venue", label: "רשומות WAZE", icon: "📍" },
-  { href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
-  { href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
-  { href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
-  { href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
-  { href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
-  { href: "/pricing", label: "הצעות מחיר", icon: "💰" },
-  { href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
-  { href: "/events", label: "רשימת אירועים", icon: "📅" },
-  { href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
-  { href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
-  { href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
-  { href: `/landing?eventId=${eventId}`, label: "דף נחיתה", icon: "🌐" },
-  // ←←← הכרטיסייה החדשה שתוסיף
-  { href: `/event/${eventId}/whatsapp-templates/manage`, label: "ניהול תבניות ווטסאפ", icon: "⚙️" },
-
-  { href: "/transport?eventId=1", label: "הסעות", icon: "🚌" },
-  { href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
-  { href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
-].map((item, index) => (
+              { href: "/", label: "עמוד הבית", icon: "🏠" },
+              { href: "/videos", label: "וידאו האירוע", icon: "🎥" },
+              { href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
+              { href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
+              { href: "/venue", label: "רשומות WAZE", icon: "📍" },
+              { href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
+              { href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
+              { href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
+              { href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
+              { href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
+              { href: "/pricing", label: "הצעות מחיר", icon: "💰" },
+              { href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
+              { href: "/events", label: "רשימת אירועים", icon: "📅" },
+              { href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
+              { href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
+              { href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
+              { href: `/landing?eventId=${eventId}`, label: "דף נחיתה", icon: "🌐" },
+              { href: `/event/${eventId}/whatsapp-templates/manage`, label: "ניהול תבניות ווטסאפ", icon: "⚙️" },
+              { href: "/transport?eventId=1", label: "הסעות", icon: "🚌" },
+              { href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
+              { href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
+            ].map((item, index) => (
               <Link key={index} href={item.href} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center">
                 <div className="text-4xl">{item.icon}</div>
                 <div className="text-sm font-medium text-gray-700">{item.label}</div>
@@ -174,7 +174,7 @@ export default function GuestsPage() {
           </button>
         </div>
 
-        {/* === שורת חיפוש + כפתורים דביקה === */}
+        {/* שורת חיפוש + כפתורים */}
         <div className="sticky top-0 z-50 bg-white py-4 border-b shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <input 
@@ -186,11 +186,11 @@ export default function GuestsPage() {
             />
             
             <button
-  onClick={sendSMS}
-  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
->
-  📩 SMS
-</button>
+              onClick={sendSMS}
+              className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
+            >
+              📩 SMS
+            </button>
             
             <button 
               onClick={sendWhatsApp} 
@@ -275,11 +275,11 @@ export default function GuestsPage() {
                       <Link href={`/event/${eventId}/guests/${guest.id}/edit`} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium">✏️ ערוך</Link>
                       <button 
                         onClick={() => {
-                      if (confirm(`למחוק את ${guest.name}?`)) {
-  const updated = guests.filter((g: any) => g.id !== guest.id);
-  saveGuests(eventId, updated);
-  setGuests(updated);
-}
+                          if (confirm(`למחוק את ${guest.name}?`)) {
+                            const updated = guests.filter((g: any) => g.id !== guest.id);
+                            saveGuests(eventId, updated);
+                            setGuests(updated);
+                          }
                         }} 
                         className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
                       >
