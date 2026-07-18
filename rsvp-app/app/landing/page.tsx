@@ -3,10 +3,10 @@
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function LandingPage() {
+function LandingPageContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref') || searchParams.get('guestId');
   const eventId = searchParams.get('eventId') || '1';
@@ -214,5 +214,18 @@ export default function LandingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// הקומפוננטה הראשית עם Suspense
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]">
+        <div className="text-2xl text-gray-600">טוען דף נחיתה...</div>
+      </div>
+    }>
+      <LandingPageContent />
+    </Suspense>
   );
 }
