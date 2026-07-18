@@ -1,6 +1,5 @@
 // @ts-nocheck
 'use client';
-
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -87,11 +86,9 @@ export default function SMSPage() {
 
           message = message.replace(/\*פירוט מקום הישיבה\*/g, seatingText);
         } else {
-          // אם אין שולחן אבל כן עושים הושבה
           message = message.replace(/\*פירוט מקום הישיבה\*/g, 'מקום הישיבה יפורט בהמשך');
         }
       } else {
-        // אם לא עושים הושבה בכלל - מוחקים את השורה לגמרי
         message = message.replace(/\n?\*פירוט מקום הישיבה\*\.?/g, '');
       }
     }
@@ -101,35 +98,35 @@ export default function SMSPage() {
 
   // === התבניות המלאות ===
   const templates = useMemo(() => [
-    { 
-      id: 1, 
-      title: "הודעה מס 1 אישור הגעה", 
-      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
+    {
+      id: 1,
+      title: "הודעה מס 1 אישור הגעה",
+      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*`
     },
-    { 
-      id: 2, 
-      title: "הודעה מס 2 תזכורת", 
-      content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירוט מקום הישיבה*.\n\nמצפים ומתרגשים!\n\nלניווט: https://waze.com/ul?q=${currentEvent?.hallName || ''}` 
+    {
+      id: 2,
+      title: "הודעה מס 2 תזכורת",
+      content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בשעה ${currentEvent?.time || ''}.\n\n*פירוט מקום הישיבה*.\n\nמצפים ומתרגשים!\n\nלניווט: https://waze.com/ul?q=${currentEvent?.hallName || ''}`
     },
-    { 
-      id: 3, 
-      title: "הודעה מס 3 תודה", 
-      content: `היה לנו אירוע מדהים בזכותכם!\nתודה רבה שחגגתם איתנו!\nשנתראה רק בשמחות.\nאוהבים ${currentEvent?.owners || 'החתן והכלה'} ❤️` 
+    {
+      id: 3,
+      title: "הודעה מס 3 תודה",
+      content: `היה לנו אירוע מדהים בזכותכם!\nתודה רבה שחגגתם איתנו!\nשנתראה רק בשמחות.\nאוהבים ${currentEvent?.owners || 'החתן והכלה'} ❤️`
     },
-    { 
-      id: 4, 
-      title: "הודעה מס 4 הסעה", 
-      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\nבחר הסעה: https://seating-app-dusky.vercel.app/transport?event=${eventId}` 
+    {
+      id: 4,
+      title: "הודעה מס 4 הסעה",
+      content: `אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'}.\n\nלהצטרפות להסעה לחצו כאן:\n\nבחר הסעה: https://seating-app-dusky.vercel.app/transport?event=${eventId}`
     },
-    { 
-      id: 5, 
-      title: "הודעה מס 5 ברקוד", 
-      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'}:\n\nהצג QR כניסה: https://seating-app-dusky.vercel.app/qr/${eventId}?guest=*guestId*` 
+    {
+      id: 5,
+      title: "הודעה מס 5 ברקוד",
+      content: `לרישום מהיר בכניסה לאולם בחתונה של ${currentEvent?.owners || 'החתן והכלה'}:\n\nהצג QR כניסה: https://seating-app-dusky.vercel.app/qr/${eventId}?guest=*guestId*`
     },
-    { 
-      id: 6, 
-      title: "הודעה מס 6 טרם אישרת", 
-      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*` 
+    {
+      id: 6,
+      title: "הודעה מס 6 טרם אישרת",
+      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*`
     }
   ], [currentEvent, eventId]);
 
@@ -151,6 +148,7 @@ export default function SMSPage() {
       });
 
       const data = await res.json();
+
       if (data.success) {
         alert(`✅ נשלח בהצלחה ל-${phone}`);
       } else {
@@ -173,11 +171,12 @@ export default function SMSPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* רשימת תבניות */}
           <div className="bg-white rounded-3xl shadow p-8">
             <h2 className="text-2xl font-bold mb-6">התבניות שלי</h2>
             <div className="space-y-3">
               {templates.map(t => (
-                <div 
+                <div
                   key={t.id}
                   onClick={() => setSelectedTemplate(t)}
                   className={`p-4 rounded-2xl cursor-pointer transition ${selectedTemplate?.id === t.id ? 'bg-blue-50 border border-blue-500' : 'hover:bg-gray-50'}`}
@@ -188,30 +187,35 @@ export default function SMSPage() {
             </div>
           </div>
 
+          {/* תצוגה + שליחה */}
           <div className="bg-white rounded-3xl shadow p-8">
             {selectedTemplate ? (
               <>
                 <h2 className="text-3xl font-bold mb-6">{selectedTemplate.title}</h2>
-                
+
                 <div className="bg-gray-50 p-8 rounded-2xl text-gray-700 whitespace-pre-wrap mb-8 text-lg min-h-[400px] border">
                   {previewMessage}
                 </div>
 
                 <div className="space-y-4 mt-8">
-                  <button 
-                    onClick={() => sendRealSMS("0505270152")} 
+                  <button
+                    onClick={() => sendRealSMS("0505270152")}
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0505270152" ? '⏳ שולח לשמעון...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
+                    {isSending && sendingTo === "0505270152" 
+                      ? '⏳ שולח לשמעון...' 
+                      : '📱 שלח דוגמא לשמעון (050-5270152)'}
                   </button>
 
-                  <button 
-                    onClick={() => sendRealSMS("0507666937")} 
+                  <button
+                    onClick={() => sendRealSMS("0507666937")}
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0507666937" ? '⏳ שולח לנופר...' : '📱 שלח דוגמא לנופר (050-7666937)'}
+                    {isSending && sendingTo === "0507666937" 
+                      ? '⏳ שולח לנופר...' 
+                      : '📱 שלח דוגמא לנופר (050-7666937)'}
                   </button>
                 </div>
               </>

@@ -6,7 +6,9 @@ import { useParams } from 'next/navigation';
 
 export default function EditEventPage() {
   const params = useParams();
-  const eventId = params.id || "1";
+  const eventId = params?.id 
+    ? (Array.isArray(params.id) ? params.id[0] : params.id) 
+    : "1";
 
   const [formData, setFormData] = useState({
     eventType: 'חתונה',
@@ -44,6 +46,9 @@ export default function EditEventPage() {
     activatedAt: null,
     creditLink: '',
     fullDate: '',
+    // === חדש ===
+    hasTransport: 'לא',
+    hasSeparation: 'לא',
   });
 
   useEffect(() => {
@@ -54,6 +59,8 @@ export default function EditEventPage() {
         ...prev,
         ...currentEvent,
         time: currentEvent.time || '19:30',
+        hasTransport: currentEvent.hasTransport || 'לא',
+        hasSeparation: currentEvent.hasSeparation || 'לא',
       }));
     }
   }, [eventId]);
@@ -73,7 +80,7 @@ export default function EditEventPage() {
     const updatedData = {
       ...formData,
       isActive: newStatus,
-      activatedAt: newStatus ? new Date().toISOString() : (null as any),
+      activatedAt: newStatus ? new Date().toISOString() : null,
     };
     setFormData(updatedData);
 
@@ -82,28 +89,26 @@ export default function EditEventPage() {
       e.id.toString() === eventId ? { ...e, ...updatedData } : e
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
-
     alert(newStatus ? '🎉 האירוע הופעל בהצלחה!' : 'האירוע הושבת.');
   };
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
-
     const updatedEvent = {
       ...formData,
-      id: parseInt(Array.isArray(eventId) ? eventId[0] : eventId || '0'),
+      id: parseInt(eventId),
       creditLink: formData.creditLink || '',
     };
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const index = events.findIndex((e: any) => e.id.toString() === eventId);
-    
+
     if (index !== -1) {
       events[index] = updatedEvent;
     } else {
       events.push(updatedEvent);
     }
-    
+
     localStorage.setItem('myEvents', JSON.stringify(events));
     alert('✅ נשמר!');
   };
@@ -111,9 +116,8 @@ export default function EditEventPage() {
   const eventTypes = ["חתונה", "בר מצוה", "בת מצוה", "בר ובת מצוה", "ברית", "בריתה", "כנס", "אחר", "אחר 2", "אחר 3", "אירוע עם דף נחיתה פנימי"];
   const serviceTypes = ["אישורי הגעה בלבד", "אישורי הגעה וסידורי הושבה", "אישורי הגעה סידורי הושבה ושירות מתנה באשראי", "ניהול אירוע מלא"];
 
-  // === לינק ציבורי להפצה ===
-  const publicLink = typeof window !== 'undefined' 
-    ? `${window.location.origin}/event/${eventId}/landing` 
+  const publicLink = typeof window !== 'undefined'
+    ? `${window.location.origin}/event/${eventId}/landing`
     : '';
 
   const copyPublicLink = () => {
@@ -133,27 +137,23 @@ export default function EditEventPage() {
 
         <form onSubmit={handleSubmit} className="space-y-10">
 
-          {/* ===== לינק להפצה לאנשים שלא ברשימה ===== */}
+          {/* לינק להפצה */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="font-bold text-xl text-blue-800">לינק להפצה לאנשים שלא ברשימה</div>
                 <div className="text-sm text-blue-600 mt-1">לינק קבוע שבעל השמחה יכול לשלוח לאורחים נוספים</div>
               </div>
-              <button 
-                type="button"
-                onClick={copyPublicLink}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2"
-              >
+              <button type="button" onClick={copyPublicLink} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2">
                 📋 העתק לינק
               </button>
             </div>
             <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-700 break-all">
-              {publicLink || 'http://localhost:3000/event/' + eventId + '/landing'}
+              {publicLink || `http://localhost:3000/event/${eventId}/landing`}
             </div>
           </div>
 
-          {/* הפעלת אירוע */}
+          {/* סטטוס אירוע */}
           <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
@@ -162,11 +162,7 @@ export default function EditEventPage() {
                   {formData.isActive ? '✅ האירוע פעיל' : '⏳ האירוע לא פעיל'}
                 </div>
               </div>
-              <button 
-                type="button"
-                onClick={toggleActivate}
-                className={`px-10 py-4 rounded-2xl text-xl font-bold transition-all ${formData.isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
-              >
+              <button type="button" onClick={toggleActivate} className={`px-10 py-4 rounded-2xl text-xl font-bold transition-all ${formData.isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`}>
                 {formData.isActive ? '⚠️ השבת את האירוע' : '🚀 הפעל את האירוע'}
               </button>
             </div>
@@ -182,9 +178,7 @@ export default function EditEventPage() {
           <div>
             <label className="block text-sm font-medium mb-2">סוג האירוע:</label>
             <select name="eventType" value={formData.eventType} onChange={handleChange} className="w-full p-4 border rounded-2xl text-lg">
-              {eventTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
+              {eventTypes.map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
           </div>
 
@@ -250,7 +244,7 @@ export default function EditEventPage() {
             </select>
           </div>
 
-          {/* כן/לא */}
+          {/* כן/לא + 2 הכפתורים החדשים */}
           <div className="grid grid-cols-2 gap-6">
             {[
               { label: 'סידורי הושבה', name: 'seatingArrangement' },
@@ -261,15 +255,17 @@ export default function EditEventPage() {
               { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
               { label: 'שליחת SMS', name: 'smsService' },
               { label: 'שירות דיילות', name: 'stewardService' },
+              { label: 'הסעות', name: 'hasTransport' },
+              { label: 'אירוע בהפרדה', name: 'hasSeparation' },
             ].map((field) => (
               <label key={field.name} className="flex items-center gap-3 text-lg">
-                <input 
-                  type="checkbox" 
-                  checked={formData[field.name as keyof typeof formData] === 'כן'} 
+                <input
+                  type="checkbox"
+                  checked={formData[field.name as keyof typeof formData] === 'כן'}
                   onChange={() => setFormData({
-                    ...formData, 
+                    ...formData,
                     [field.name]: formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן'
-                  })} 
+                  })}
                 />
                 {field.label}
               </label>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
+import { getGuests, saveGuests } from '../../../lib/guests';
 
 export default function GuestsPage() {
   const params = useParams();
@@ -14,15 +15,23 @@ export default function GuestsPage() {
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'>('all');
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
-    const validGuests = saved.filter((g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== '');
-    setGuests(validGuests);
+ useEffect(() => {
+  if (!eventId) return;
 
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
-  }, [eventId]);
+  // טעינת מוזמנים דרך הפונקציה המרכזית
+  const allGuests = getGuests(eventId);
+  const validGuests = allGuests.filter(
+    (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
+  );
+  setGuests(validGuests);
+
+  // טעינת פרטי האירוע
+  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+  const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+  if (currentEvent) {
+    setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
+  }
+}, [eventId]);
 
   const yesCount = guests.filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1).length;
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
@@ -70,23 +79,20 @@ export default function GuestsPage() {
   };
 
   const deleteSelected = () => {
-    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
-    if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
+  if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+  if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
 
-    const key = `guests_event_${eventId}`;
-    const saved = JSON.parse(localStorage.getItem(key) || '[]');
-    const updated = saved.filter((g: any) => !selectedGuests.includes(g.id));
-    localStorage.setItem(key, JSON.stringify(updated));
-    setGuests(updated);
-    setSelectedGuests([]);
-  };
+  const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
+  saveGuests(eventId, updated);
+  setGuests(updated);
+  setSelectedGuests([]);
+};
 
   const sendSMS = () => {
-    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
-    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;
-  };
-
+  if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+  window.location.href = `/event/${eventId}/sms`;
+};
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
@@ -179,12 +185,12 @@ export default function GuestsPage() {
               onChange={(e) => setSearchTerm(e.target.value)} 
             />
             
-            <button 
-              onClick={sendSMS} 
-              className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
-            >
-              📩 SMS
-            </button>
+            <button
+  onClick={sendSMS}
+  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
+>
+  📩 SMS
+</button>
             
             <button 
               onClick={sendWhatsApp} 
@@ -269,13 +275,11 @@ export default function GuestsPage() {
                       <Link href={`/event/${eventId}/guests/${guest.id}/edit`} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium">✏️ ערוך</Link>
                       <button 
                         onClick={() => {
-                          if (confirm(`למחוק את ${guest.name}?`)) {
-                            const key = `guests_event_${eventId}`;
-                            const saved = JSON.parse(localStorage.getItem(key) || '[]');
-                            const updated = saved.filter((g: any) => g.id !== guest.id);
-                            localStorage.setItem(key, JSON.stringify(updated));
-                            setGuests(updated);
-                          }
+                      if (confirm(`למחוק את ${guest.name}?`)) {
+  const updated = guests.filter((g: any) => g.id !== guest.id);
+  saveGuests(eventId, updated);
+  setGuests(updated);
+}
                         }} 
                         className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
                       >

@@ -1,11 +1,11 @@
 'use client';
-
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { getGuests, saveGuests, normalizeGuest } from '../lib/guests';
 
 interface Guest {
   id: number;
@@ -49,6 +49,7 @@ function AddGuestsContent() {
     const text = e.clipboardData.getData('text');
     const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (lines.length <= 1) return;
+
     e.preventDefault();
 
     setGuests(prev => {
@@ -80,15 +81,18 @@ function AddGuestsContent() {
 
   const uploadToEvent = () => {
     const validGuests = guests.filter(g => g.name.trim() !== '' && g.phone.trim() !== '');
-
     if (validGuests.length === 0) return alert('אין מוזמנים תקינים להעלאה');
 
-    const key = `guests_event_${eventId}`;
-    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    // טען מוזמנים קיימים דרך הפונקציה המרכזית
+    const existing = getGuests(eventId);
 
-    localStorage.setItem(key, JSON.stringify([...existing, ...validGuests]));
+    // נרמל את המוזמנים החדשים (id + inviteCode אוטומטית)
+    const normalizedNew = validGuests.map(g => normalizeGuest(g));
 
-    alert(`✅ ${validGuests.length} מוזמנים נשמרו בהצלחה לאירוע #${eventId}!`);
+    // שמור הכל דרך הפונקציה המרכזית
+    saveGuests(eventId, [...existing, ...normalizedNew]);
+
+    alert(`✅ ${validGuests.length} מוזמנים נשמרו בהצלחה לאירוע!`);
     setGuests([]);
   };
 
@@ -105,7 +109,6 @@ function AddGuestsContent() {
     <div className="max-w-[1600px] mx-auto px-6 py-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold">הוספת אורחים - {eventTitle}</h1>
-
         <Link href={`/event/${eventId}/guests`}>
           <button className="px-8 py-3 bg-gray-700 hover:bg-gray-800 text-white rounded-2xl font-semibold flex items-center gap-2">
             ← חזרה לרשימת מוזמנים
@@ -118,7 +121,6 @@ function AddGuestsContent() {
           <input type="checkbox" checked={allTransportation} onChange={toggleAllTransportation} />
           <span>אפשרות הסעה לכולם</span>
         </div>
-
         <div className="flex items-center gap-2">
           <span>בחר קבוצה קיימת:</span>
           <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)} className="border border-slate-300 rounded-xl px-4 py-2 text-sm">
@@ -126,7 +128,6 @@ function AddGuestsContent() {
             {groups.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
-
         <button onClick={uploadToEvent} className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-semibold">
           העלה לאירוע
         </button>
@@ -152,39 +153,30 @@ function AddGuestsContent() {
             {guests.map((guest, idx) => (
               <tr key={guest.id} className="hover:bg-slate-50 transition-colors">
                 <td className="text-center text-slate-500 py-3 border-r border-slate-200">{idx + 1}</td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.name} onChange={e => updateGuest(guest.id, 'name', e.target.value)} onPaste={e => handlePaste(e, idx, 'name')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.phone} onChange={e => updateGuest(guest.id, 'phone', e.target.value)} onPaste={e => handlePaste(e, idx, 'phone')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.quantity} onChange={e => updateGuest(guest.id, 'quantity', e.target.value)} onPaste={e => handlePaste(e, idx, 'quantity')} className="w-full py-3.5 outline-none text-center bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.group} onChange={e => updateGuest(guest.id, 'group', e.target.value)} onPaste={e => handlePaste(e, idx, 'group')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.transportation} onChange={e => updateGuest(guest.id, 'transportation', e.target.value)} onPaste={e => handlePaste(e, idx, 'transportation')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.confirmed} onChange={e => updateGuest(guest.id, 'confirmed', e.target.value)} onPaste={e => handlePaste(e, idx, 'confirmed')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6 border-r border-slate-200">
                   <input value={guest.customerExpectation} onChange={e => updateGuest(guest.id, 'customerExpectation', e.target.value)} onPaste={e => handlePaste(e, idx, 'customerExpectation')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="pr-6">
                   <input value={guest.notes} onChange={e => updateGuest(guest.id, 'notes', e.target.value)} onPaste={e => handlePaste(e, idx, 'notes')} className="w-full py-3.5 outline-none bg-transparent" />
                 </td>
-                
                 <td className="text-center border-l border-slate-200">
                   <button onClick={() => deleteRow(guest.id)} className="text-red-500 hover:text-red-700 text-xl px-3">×</button>
                 </td>
@@ -208,5 +200,3 @@ export default function AddGuestsPage() {
     </Suspense>
   );
 }
-
-// force fresh build - 16/07/2026
