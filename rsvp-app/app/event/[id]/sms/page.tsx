@@ -1,9 +1,9 @@
-// @ts-nocheck
 'use client';
+
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-
+import { getGuests, saveGuests } from '../../../lib/guests';
 export default function SMSPage() {
   const params = useParams();
   const eventId = params.id || "1";
@@ -22,17 +22,24 @@ export default function SMSPage() {
     const event = events.find((e: any) => e.id.toString() === eventId.toString());
     if (event) setCurrentEvent(event);
 
-    const guestsKey = `guests_event_${eventId}`;
-    const savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    setGuests(savedGuests);
+    // טוען מוזמנים + שומר כדי שה-inviteCode יישמר
+    const normalizedGuests = getGuests(String(eventId));
+    setGuests(normalizedGuests);
+    saveGuests(String(eventId), normalizedGuests);   // ← שומר את הקודים
 
     const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
     setSeatingTables(seating);
   }, [eventId]);
 
-  const selectedGuestIds = useMemo(() => {
-    const saved = localStorage.getItem('selectedForSMS');
-    return saved ? JSON.parse(saved) : [];
+  const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedForSMS');
+      if (saved) {
+        setSelectedGuestIds(JSON.parse(saved));
+      }
+    }
   }, []);
 
   const activeGuest = useMemo(() => {
@@ -51,39 +58,42 @@ export default function SMSPage() {
     return null;
   };
 
-  // === בניית הודעה דינמית ===
+  // בניית הודעה דינמית
   const buildDynamicMessage = (template: any) => {
     if (!template) return '';
-    if (!activeGuest) return template.content;
-
     let message = template.content;
-    const guestName = activeGuest.name;
 
-    // החלפת שם (רק בהודעות 1,2,6)
-    if ([1, 2, 6].includes(template.id)) {
-      message = message.replace(/\*שם\*/g, guestName);
+    if (activeGuest?.name && [1, 2, 6].includes(template.id)) {
+      message = message.replace(/\*שם\*/g, activeGuest.name);
     }
 
-    // === החלפת פירוט מקום ישיבה - רק בהודעה 2 ===
+    if (template.id === 1 || template.id === 6) {
+      const eventIdForLink = currentEvent?.id || eventId || '1';
+      const guestCode = activeGuest?.inviteCode || 'TEST123';
+      const rsvplink = `http://localhost:3000/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
+      message = message.replace(/\*guestId\*/g, guestCode);
+      message = message.replace(/\*RSVP_LINK\*/g, rsvplink);
+      message = message.replace(/ref=\*guestId\*/g, `ref=${guestCode}`);
+
+      if (!message.includes('eventId=')) {
+        message = message.replace(
+  /https:\/\/seating-app-dusky\.vercel\.app\/landing\?/g,
+  `http://localhost:3000/landing?eventId=${eventIdForLink}&`
+);
+      }
+    }
+
     if (template.id === 2) {
       const isSeatingEnabled = currentEvent?.seatingArrangement === 'כן';
-
-      if (isSeatingEnabled) {
-        const tableNum = getTableNumberForGuest(guestName);
-
+      if (isSeatingEnabled && activeGuest?.name) {
+        const tableNum = getTableNumberForGuest(activeGuest.name);
         if (tableNum) {
           const table = seatingTables.find(t => t.tableNumber === tableNum);
           const peopleCount = table?.assignedGuests?.length || 1;
-
           let seatingText = '';
-          if (peopleCount === 1) {
-            seatingText = `הנך יושב בשולחן מספר ${tableNum}`;
-          } else if (peopleCount === 2) {
-            seatingText = `שניכם יושבים בשולחן מספר ${tableNum}`;
-          } else {
-            seatingText = `כולכם (${peopleCount}) יושבים בשולחן מספר ${tableNum}`;
-          }
-
+          if (peopleCount === 1) seatingText = `הנך יושב בשולחן מספר ${tableNum}`;
+          else if (peopleCount === 2) seatingText = `שניכם יושבים בשולחן מספר ${tableNum}`;
+          else seatingText = `כולכם (${peopleCount}) יושבים בשולחן מספר ${tableNum}`;
           message = message.replace(/\*פירוט מקום הישיבה\*/g, seatingText);
         } else {
           message = message.replace(/\*פירוט מקום הישיבה\*/g, 'מקום הישיבה יפורט בהמשך');
@@ -92,16 +102,14 @@ export default function SMSPage() {
         message = message.replace(/\n?\*פירוט מקום הישיבה\*\.?/g, '');
       }
     }
-
     return message;
   };
 
-  // === התבניות המלאות ===
   const templates = useMemo(() => [
     {
       id: 1,
       title: "הודעה מס 1 אישור הגעה",
-      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*`
+      content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 אישור הגעה: *RSVP_LINK*`
     },
     {
       id: 2,
@@ -126,7 +134,7 @@ export default function SMSPage() {
     {
       id: 6,
       title: "הודעה מס 6 טרם אישרת",
-      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\nאישור הגעה: https://seating-app-dusky.vercel.app/landing?ref=*guestId*`
+      content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${currentEvent?.owners || 'החתן והכלה'} ב"${currentEvent?.hallName || 'האולם'}" ב${currentEvent?.city || ''} בתאריך ${currentEvent?.eventDate || currentEvent?.fullDate || currentEvent?.date || ''} בשעה ${currentEvent?.time || ''}.\n\nהורי החתן: ${currentEvent?.groomParents || ''}.\nהורי הכלה: ${currentEvent?.brideParents || ''}.\n\nנא לאשר הגעה:\n\nאישור הגעה: *RSVP_LINK*`
     }
   ], [currentEvent, eventId]);
 
@@ -146,7 +154,6 @@ export default function SMSPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, message: finalMessage }),
       });
-
       const data = await res.json();
 
       if (data.success) {
@@ -171,7 +178,6 @@ export default function SMSPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* רשימת תבניות */}
           <div className="bg-white rounded-3xl shadow p-8">
             <h2 className="text-2xl font-bold mb-6">התבניות שלי</h2>
             <div className="space-y-3">
@@ -187,12 +193,10 @@ export default function SMSPage() {
             </div>
           </div>
 
-          {/* תצוגה + שליחה */}
           <div className="bg-white rounded-3xl shadow p-8">
             {selectedTemplate ? (
               <>
                 <h2 className="text-3xl font-bold mb-6">{selectedTemplate.title}</h2>
-
                 <div className="bg-gray-50 p-8 rounded-2xl text-gray-700 whitespace-pre-wrap mb-8 text-lg min-h-[400px] border">
                   {previewMessage}
                 </div>
@@ -203,9 +207,7 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0505270152" 
-                      ? '⏳ שולח לשמעון...' 
-                      : '📱 שלח דוגמא לשמעון (050-5270152)'}
+                    {isSending && sendingTo === "0505270152" ? '⏳ שולח לשמעון...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
                   </button>
 
                   <button
@@ -213,9 +215,7 @@ export default function SMSPage() {
                     disabled={isSending}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                   >
-                    {isSending && sendingTo === "0507666937" 
-                      ? '⏳ שולח לנופר...' 
-                      : '📱 שלח דוגמא לנופר (050-7666937)'}
+                    {isSending && sendingTo === "0507666937" ? '⏳ שולח לנופר...' : '📱 שלח דוגמא לנופר (050-7666937)'}
                   </button>
                 </div>
               </>

@@ -1,41 +1,49 @@
 // lib/guests.ts
 
-// ייצור קוד הזמנה ייחודי
-export function generateInviteCode(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
-}
-
-// מנרמל מוזמן בודד - מוסיף id ו-inviteCode אם חסרים
 export function normalizeGuest(guest: any) {
-  return {
-    ...guest,
-    id: guest.id || Date.now() + Math.floor(Math.random() * 100000),
-    inviteCode: guest.inviteCode || generateInviteCode(),
-    confirmed: guest.confirmed ?? "",
-    confirmedCount: guest.confirmedCount ?? 0,
-    arrivedCount: guest.arrivedCount ?? 0,
-  };
+  if (!guest) return guest;
+
+  // אם אין inviteCode – ניצור אחד יציב על בסיס ה-id
+  if (!guest.inviteCode && guest.id) {
+    // הופך את ה-id למחרוזת נקייה ויציבה
+    guest.inviteCode = String(guest.id).replace(/\./g, '').slice(-12);
+  }
+
+  // תאימות לאחור
+  if (!guest.code && guest.inviteCode) {
+    guest.code = guest.inviteCode;
+  }
+
+  // ודא שיש confirmedCount
+  if (guest.confirmed !== undefined && guest.confirmedCount === undefined) {
+    const num = Number(guest.confirmed);
+    guest.confirmedCount = isNaN(num) ? 0 : num;
+  }
+
+  return guest;
 }
 
-// מקבל את כל המוזמנים של אירוע + מנרמל אותם
 export function getGuests(eventId: string | number): any[] {
+  if (!eventId) return [];
+  
   const key = `guests_event_${eventId}`;
-  const saved = JSON.parse(localStorage.getItem(key) || '[]');
-  return saved.map(normalizeGuest);
+  const raw = localStorage.getItem(key);
+  if (!raw) return [];
+
+  try {
+    const guests = JSON.parse(raw);
+    if (!Array.isArray(guests)) return [];
+
+    // מנרמל + יוצר inviteCode יציב לכל מי שחסר
+    return guests.map(normalizeGuest);
+  } catch (e) {
+    console.error('Error parsing guests', e);
+    return [];
+  }
 }
 
-// שומר מוזמנים + מנרמל אותם לפני השמירה
 export function saveGuests(eventId: string | number, guests: any[]) {
+  if (!eventId) return;
   const key = `guests_event_${eventId}`;
-  const normalized = guests.map(normalizeGuest);
-  localStorage.setItem(key, JSON.stringify(normalized));
-}
-
-// מוסיף מוזמן חדש בצורה בטוחה
-export function addGuest(eventId: string | number, guestData: any) {
-  const guests = getGuests(eventId);
-  const newGuest = normalizeGuest(guestData);
-  guests.push(newGuest);
-  saveGuests(eventId, guests);
-  return newGuest;
+  localStorage.setItem(key, JSON.stringify(guests));
 }

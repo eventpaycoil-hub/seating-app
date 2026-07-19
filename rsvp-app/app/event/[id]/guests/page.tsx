@@ -19,11 +19,12 @@ const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || "1");
   useEffect(() => {
     if (!eventId) return;
 
-   const allGuests = getGuests(String(eventId));
-    const validGuests = allGuests.filter(
-      (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
-    );
-    setGuests(validGuests);
+   // === בדיקה זמנית - שולף ישירות מ-localStorage ===
+const allGuests = getGuests(String(eventId));
+const validGuests = allGuests.filter(
+  (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
+);
+setGuests(validGuests);
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());

@@ -2,6 +2,7 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { getGuests } from '../lib/guests';
 
 function LandingPageContent() {
   const searchParams = useSearchParams();
@@ -51,6 +52,16 @@ function LandingPageContent() {
     return dateStr;
   };
 
+  // === חיפוש חכם (התיקון) ===
+  const findGuestIndex = (saved: any[], searchCode: string) => {
+    return saved.findIndex((g: any) =>
+      g.inviteCode === searchCode ||
+      g.code === searchCode ||
+      String(g.id) === searchCode ||
+      (g.name && g.name.toLowerCase().includes(searchCode.toLowerCase()))
+    );
+  };
+
   // אישור עם מספר אורחים
   const handleRsvp = (count: number) => {
     if (!eventId) {
@@ -63,12 +74,8 @@ function LandingPageContent() {
       return;
     }
 
-    const key = `guests_event_${eventId}`;
-    let saved: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-
-    const guestIndex = saved.findIndex((g: any) => 
-      g.inviteCode === code || g.code === code
-    );
+    let saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, code);
 
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
@@ -79,6 +86,7 @@ function LandingPageContent() {
     saved[guestIndex].confirmedCount = count;
     saved[guestIndex].arrivedCount = count;
 
+    const key = `guests_event_${eventId}`;
     localStorage.setItem(key, JSON.stringify(saved));
 
     setRsvpCount(count);
@@ -92,12 +100,8 @@ function LandingPageContent() {
       return;
     }
 
-    const key = `guests_event_${eventId}`;
-    let saved: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-
-    const guestIndex = saved.findIndex((g: any) => 
-      g.inviteCode === code || g.code === code
-    );
+    let saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, code);
 
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
@@ -107,6 +111,7 @@ function LandingPageContent() {
     saved[guestIndex].confirmed = 'לא ידוע';
     saved[guestIndex].confirmedCount = 0;
 
+    const key = `guests_event_${eventId}`;
     localStorage.setItem(key, JSON.stringify(saved));
 
     setRsvpStatus('pending');
@@ -119,12 +124,12 @@ function LandingPageContent() {
     }
 
     if (code && eventId) {
-      const key = `guests_event_${eventId}`;
-      let saved: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const guestIndex = saved.findIndex((g: any) => g.inviteCode === code || g.code === code);
+      let saved: any[] = getGuests(String(eventId));
+      const guestIndex = findGuestIndex(saved, code);
 
       if (guestIndex !== -1) {
         saved[guestIndex].notes = personalNote;
+        const key = `guests_event_${eventId}`;
         localStorage.setItem(key, JSON.stringify(saved));
       }
     }
