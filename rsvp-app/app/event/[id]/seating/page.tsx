@@ -43,6 +43,7 @@ export default function SeatingPage() {
 
   const [placedTables, setPlacedTables] = useState<PlacedTable[]>([]);
   const [guests, setGuests] = useState<string[]>([]);
+  const [guestQuantities, setGuestQuantities] = useState<Record<string, number>>({});
   const [eventTitle, setEventTitle] = useState('');
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -67,7 +68,6 @@ export default function SeatingPage() {
     if (savedTables) setPlacedTables(JSON.parse(savedTables));
 
     if (eventId) {
-      // טעינת שם האירוע
       try {
         const myEvents = JSON.parse(localStorage.getItem('myEvents') || '[]');
         const currentEvent = myEvents.find((e: any) => e.id.toString() === eventId);
@@ -76,14 +76,24 @@ export default function SeatingPage() {
         }
       } catch (e) {}
 
-      // טעינת מוזמנים של האירוע הספציפי
       const eventGuestsKey = `guests_event_${eventId}`;
       const eventGuests = localStorage.getItem(eventGuestsKey);
       if (eventGuests) {
         try {
           const parsed = JSON.parse(eventGuests);
-          const loaded = parsed.map((g: any) => g.name).filter(Boolean);
-          setGuests(loaded.length > 0 ? loaded : DEMO_GUESTS);
+          const names: string[] = [];
+          const quantities: Record<string, number> = {};
+
+          parsed.forEach((g: any) => {
+            if (g.name) {
+              names.push(g.name);
+              const qty = Number(g.confirmed) || Number(g.confirmedCount) || Number(g.quantity) || 1;
+              quantities[g.name] = qty > 0 ? qty : 1;
+            }
+          });
+
+          setGuests(names.length > 0 ? names : DEMO_GUESTS);
+          setGuestQuantities(quantities);
         } catch {
           setGuests(DEMO_GUESTS);
         }
@@ -96,6 +106,14 @@ export default function SeatingPage() {
   useEffect(() => {
     localStorage.setItem('seatingTables', JSON.stringify(placedTables));
   }, [placedTables]);
+
+  // כמה כסאות תופס מוזמן
+  const getGuestQty = (name: string) => guestQuantities[name] || 1;
+
+  // כמה כסאות תפוסים בשולחן (לפי כמויות אמיתיות)
+  const getOccupiedSeats = (table: PlacedTable) => {
+    return table.assignedGuests.reduce((sum, name) => sum + getGuestQty(name), 0);
+  };
 
   const seatedGuestsWithTable = placedTables.flatMap(table =>
     table.assignedGuests.map(guest => ({
@@ -205,9 +223,22 @@ export default function SeatingPage() {
     setSelectedSeatedGuests(newSet);
   };
 
+  // ===== הושבת מוזמנים מסומנים (עם בדיקת מקום) =====
   const assignSelectedGuests = () => {
     if (!selectedId || selectedGuests.size === 0) return alert("בחר שולחן וסמן מוזמנים");
+
+    const table = placedTables.find(t => t.id === selectedId);
+    if (!table) return;
+
     const guestsToAssign = Array.from(selectedGuests);
+    const neededSeats = guestsToAssign.reduce((sum, name) => sum + getGuestQty(name), 0);
+    const currentOccupied = getOccupiedSeats(table);
+
+    if (currentOccupied + neededSeats > table.seats) {
+      alert(`אין מספיק מקום בשולחן!\nפנויים: ${table.seats - currentOccupied}\nמנסים להושיב: ${neededSeats}`);
+      return;
+    }
+
     setPlacedTables(prev => prev.map(t =>
       t.id === selectedId
         ? { ...t, assignedGuests: [...new Set([...t.assignedGuests, ...guestsToAssign])] }
@@ -229,10 +260,25 @@ export default function SeatingPage() {
     setSelectedSeatedGuests(new Set());
   };
 
+  // ===== הושבת מוזמן בודד (עם בדיקת מקום) =====
   const assignGuest = (guest: string) => {
     if (!selectedId) return alert("קודם בחר שולחן");
+
+    const table = placedTables.find(t => t.id === selectedId);
+    if (!table) return;
+
+    if (table.assignedGuests.includes(guest)) return;
+
+    const needed = getGuestQty(guest);
+    const currentOccupied = getOccupiedSeats(table);
+
+    if (currentOccupied + needed > table.seats) {
+      alert(`אין מספיק מקום בשולחן!\nפנויים: ${table.seats - currentOccupied}\nמנסים להושיב: ${needed}`);
+      return;
+    }
+
     setPlacedTables(prev => prev.map(t =>
-      t.id === selectedId && !t.assignedGuests.includes(guest)
+      t.id === selectedId
         ? { ...t, assignedGuests: [...t.assignedGuests, guest] }
         : t
     ));
@@ -249,8 +295,19 @@ export default function SeatingPage() {
     if (eventGuests) {
       try {
         const parsed = JSON.parse(eventGuests);
-        const names = parsed.map((g: any) => g.name).filter(Boolean);
+        const names: string[] = [];
+        const quantities: Record<string, number> = {};
+
+        parsed.forEach((g: any) => {
+          if (g.name) {
+            names.push(g.name);
+            const qty = Number(g.confirmed) || Number(g.confirmedCount) || Number(g.quantity) || 1;
+            quantities[g.name] = qty > 0 ? qty : 1;
+          }
+        });
+
         setGuests(names.length > 0 ? names : DEMO_GUESTS);
+        setGuestQuantities(quantities);
       } catch {
         setGuests(DEMO_GUESTS);
       }
@@ -266,7 +323,7 @@ export default function SeatingPage() {
   const hoveredTable = placedTables.find(t => t.id === hoveredTableId);
   const totalTables = placedTables.length;
   const totalSeats = placedTables.reduce((sum, t) => sum + t.seats, 0);
-  const occupiedSeats = placedTables.reduce((sum, t) => sum + t.assignedGuests.length, 0);
+  const occupiedSeats = placedTables.reduce((sum, t) => sum + getOccupiedSeats(t), 0);
 
   return (
     <div className="flex h-screen bg-slate-900 text-white flex-col" dir="rtl">
@@ -307,7 +364,9 @@ export default function SeatingPage() {
               {filteredUnassigned.map((guest, i) => (
                 <div key={i} className="bg-slate-700 p-3 rounded-xl flex items-center gap-3 hover:bg-slate-600">
                   <input type="checkbox" checked={selectedGuests.has(guest)} onChange={() => toggleGuestSelection(guest)} className="w-5 h-5 accent-emerald-500" />
-                  <div onClick={() => assignGuest(guest)} className="flex-1 cursor-pointer">{guest}</div>
+                  <div onClick={() => assignGuest(guest)} className="flex-1 cursor-pointer">
+                    {guest} <span className="text-emerald-400 font-bold">({getGuestQty(guest)})</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -348,49 +407,55 @@ export default function SeatingPage() {
         <div className="flex-1 relative overflow-auto" onDrop={onDropTable} onDragOver={(e) => e.preventDefault()}
           style={{ backgroundColor: '#d4b48c', backgroundImage: 'linear-gradient(#c9a26e 1px, transparent 1px), linear-gradient(90deg, #c9a26e 1px, transparent 1px)', backgroundSize: '60px 60px' }}>
 
-          {placedTables.map(table => (
-            <div key={table.id} draggable onDragStart={() => onDragStartTable(table.id)}
-              onClick={() => setSelectedId(table.id)}
-              onMouseEnter={() => setHoveredTableId(table.id)}
-              onMouseLeave={() => setHoveredTableId(null)}
-              onContextMenu={(e) => { e.preventDefault(); openEdit(table); }}
-              className={`absolute flex items-center justify-center cursor-move shadow-2xl select-none transition-all ${selectedId === table.id ? 'ring-4 ring-yellow-400 scale-105' : ''}`}
-              style={{ 
-                left: table.x, top: table.y, 
-                width: table.isSpecial ? (table.type === 'dj' ? '180px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '280px' : '160px'),
-                height: table.isSpecial ? (table.type === 'dj' ? '100px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '100px' : '160px'),
-                borderRadius: table.type === 'round' ? '9999px' : (table.type === 'square' || table.type === 'dancefloor') ? '20px' : '8px',
-                background: table.isSpecial ? (table.type === 'dj' ? '#1f2937' : '#334155') : (table.isReserve ? '#374151' : 'linear-gradient(135deg, #854d0e, #451a03)'),
-                boxShadow: '0 15px 35px rgba(0,0,0,0.5), inset 0 4px 12px rgba(255,255,255,0.15)',
-                border: table.isReserve ? '3px solid #9ca3af' : '3px solid #78350f'
-              }}
-            >
-              {!table.isSpecial && table.tableNumber && <span className="font-black text-amber-100 drop-shadow-2xl text-4xl z-10 relative">{table.tableNumber}</span>}
-              {table.isSpecial && <div className="text-6xl text-white/80 z-10">{table.type === 'dj' ? '🎧 DJ' : '💃'}</div>}
-              {table.isReserve && !table.isSpecial && <div className="absolute text-8xl font-black text-white/30 z-0">R</div>}
+          {placedTables.map(table => {
+            const occupied = getOccupiedSeats(table);
 
-              {!table.isSpecial && Array.from({ length: table.seats }).map((_, i) => {
-                const isOccupied = i < table.assignedGuests.length;
-                return (
-                  <div key={i} className={`absolute w-7 h-8 border-2 rounded-md flex items-center justify-center text-xs font-bold shadow-md transition-all ${isOccupied ? 'bg-red-600 border-red-800 scale-110' : 'bg-amber-50 border-amber-900'}`}
-                    style={{ top: `${50 + Math.sin((i / table.seats) * Math.PI * 2) * 47}%`, left: `${50 + Math.cos((i / table.seats) * Math.PI * 2) * 47}%`, transform: 'translate(-50%, -50%)' }}>
-                    {isOccupied ? '👤' : '🪑'}
-                  </div>
-                );
-              })}
+            return (
+              <div key={table.id} draggable onDragStart={() => onDragStartTable(table.id)}
+                onClick={() => setSelectedId(table.id)}
+                onMouseEnter={() => setHoveredTableId(table.id)}
+                onMouseLeave={() => setHoveredTableId(null)}
+                onContextMenu={(e) => { e.preventDefault(); openEdit(table); }}
+                className={`absolute flex items-center justify-center cursor-move shadow-2xl select-none transition-all ${selectedId === table.id ? 'ring-4 ring-yellow-400 scale-105' : ''}`}
+                style={{ 
+                  left: table.x, top: table.y, 
+                  width: table.isSpecial ? (table.type === 'dj' ? '180px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '280px' : '160px'),
+                  height: table.isSpecial ? (table.type === 'dj' ? '100px' : '220px') : (table.type === 'rect' || table.seats >= 20 ? '100px' : '160px'),
+                  borderRadius: table.type === 'round' ? '9999px' : (table.type === 'square' || table.type === 'dancefloor') ? '20px' : '8px',
+                  background: table.isSpecial ? (table.type === 'dj' ? '#1f2937' : '#334155') : (table.isReserve ? '#374151' : 'linear-gradient(135deg, #854d0e, #451a03)'),
+                  boxShadow: '0 15px 35px rgba(0,0,0,0.5), inset 0 4px 12px rgba(255,255,255,0.15)',
+                  border: table.isReserve ? '3px solid #9ca3af' : '3px solid #78350f'
+                }}
+              >
+                {!table.isSpecial && table.tableNumber && <span className="font-black text-amber-100 drop-shadow-2xl text-4xl z-10 relative">{table.tableNumber}</span>}
+                {table.isSpecial && <div className="text-6xl text-white/80 z-10">{table.type === 'dj' ? '🎧 DJ' : '💃'}</div>}
+                {table.isReserve && !table.isSpecial && <div className="absolute text-8xl font-black text-white/30 z-0">R</div>}
 
-              <button onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }} className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">✕</button>
-              {!table.isSpecial && (table.type === 'rect' || table.seats >= 20) && (
-                <button onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }} className="absolute -top-3 -left-3 bg-blue-600 hover:bg-blue-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">↻</button>
-              )}
-            </div>
-          ))}
+                {!table.isSpecial && Array.from({ length: table.seats }).map((_, i) => {
+                  const isOccupied = i < occupied;
+                  return (
+                    <div key={i} className={`absolute w-7 h-8 border-2 rounded-md flex items-center justify-center text-xs font-bold shadow-md transition-all ${isOccupied ? 'bg-red-600 border-red-800 scale-110' : 'bg-amber-50 border-amber-900'}`}
+                      style={{ top: `${50 + Math.sin((i / table.seats) * Math.PI * 2) * 47}%`, left: `${50 + Math.cos((i / table.seats) * Math.PI * 2) * 47}%`, transform: 'translate(-50%, -50%)' }}>
+                      {isOccupied ? '👤' : '🪑'}
+                    </div>
+                  );
+                })}
+
+                <button onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }} className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">✕</button>
+                {!table.isSpecial && (table.type === 'rect' || table.seats >= 20) && (
+                  <button onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }} className="absolute -top-3 -left-3 bg-blue-600 hover:bg-blue-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-lg z-30">↻</button>
+                )}
+              </div>
+            );
+          })}
 
           {hoveredTable && hoveredTable.assignedGuests.length > 0 && (
             <div className="absolute bg-black/90 text-white text-sm p-4 rounded-2xl shadow-2xl pointer-events-none z-50 max-w-xs" style={{ left: hoveredTable.x + 120, top: hoveredTable.y - 90 }}>
               <div className="font-bold mb-2">שולחן {hoveredTable.tableNumber} {hoveredTable.isReserve ? '(רזרבה)' : ''}:</div>
               <ul className="list-disc list-inside space-y-1">
-                {hoveredTable.assignedGuests.map((g, i) => <li key={i}>{g}</li>)}
+                {hoveredTable.assignedGuests.map((g, i) => (
+                  <li key={i}>{g} ({getGuestQty(g)})</li>
+                ))}
               </ul>
             </div>
           )}
@@ -408,8 +473,12 @@ export default function SeatingPage() {
             {selectedTable.isReserve && <div className="bg-gray-600 px-4 py-2 rounded-xl inline-block mb-6">רזרבה</div>}
 
             <div className="bg-slate-700 rounded-2xl p-6 mb-6">
-              <div className="text-4xl font-bold mb-1">{selectedTable.assignedGuests.length} / {selectedTable.seats}</div>
-              <div className="text-gray-400">{selectedTable.seats - selectedTable.assignedGuests.length} פנויים</div>
+              <div className="text-4xl font-bold mb-1">
+                {getOccupiedSeats(selectedTable)} / {selectedTable.seats}
+              </div>
+              <div className="text-gray-400">
+                {selectedTable.seats - getOccupiedSeats(selectedTable)} פנויים
+              </div>
             </div>
 
             <button onClick={resetSelectedTable} className="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded-2xl font-bold mb-4">אפס שולחן</button>
@@ -426,7 +495,9 @@ export default function SeatingPage() {
                   {selectedTable.assignedGuests.map((g, i) => (
                     <div key={i} className="bg-slate-700 p-3 rounded-xl flex items-center gap-3">
                       <input type="checkbox" checked={selectedSeatedGuests.has(g)} onChange={() => toggleSeatedGuestSelection(g)} className="w-5 h-5 accent-red-500" />
-                      <div className="flex-1">{g}</div>
+                      <div className="flex-1">
+                        {g} <span className="text-emerald-400 font-bold">({getGuestQty(g)})</span>
+                      </div>
                     </div>
                   ))}
                 </div>
