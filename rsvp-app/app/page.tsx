@@ -27,14 +27,41 @@ export default function HomePage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginData.username && loginData.password) {
-      alert(`נכנסת בהצלחה כ-${loginData.username}`);
-      setShowLogin(false);
-    } else {
-      alert('נא למלא שם משתמש וסיסמה');
-    }
-  };
 
+    const username = loginData.username.trim();
+    const password = loginData.password.trim();
+
+    if (!username || !password) {
+      alert('נא למלא שם משתמש וסיסמה');
+      return;
+    }
+
+    // ===== מנהל =====
+    if (username.toUpperCase() === 'ADMIN' && password === '123456') {
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('loggedInUser', 'ADMIN');
+      setShowLogin(false);
+      window.location.href = '/event/1/guests';
+      return;
+    }
+
+    // ===== לקוח =====
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const matchedEvent = events.find(
+      (ev: any) => ev.username === username && ev.password === password
+    );
+
+    if (matchedEvent) {
+      localStorage.setItem('userRole', 'client');
+      localStorage.setItem('loggedInUser', username);
+      localStorage.setItem('clientEventId', matchedEvent.id.toString());
+      setShowLogin(false);
+      window.location.href = `/event/${matchedEvent.id}/guests`;
+      return;
+    }
+
+    alert('שם משתמש או סיסמה שגויים');
+  };
   return (
     <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', direction: 'rtl' }}>
       

@@ -52,6 +52,11 @@ export default function SeatingPage() {
   const [unassignedSearch, setUnassignedSearch] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
   const [selectedSeatedGuests, setSelectedSeatedGuests] = useState<Set<string>>(new Set());
+    const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setIsAdmin(localStorage.getItem('userRole') === 'admin');
+  }, []);
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -361,19 +366,23 @@ const ry = tableH * 0.51;
     <div className="min-h-screen flex flex-col" dir="rtl" style={{ background: '#1e293b' }}>
       {/* כותרת */}
       <div className="px-4 py-2.5 flex items-center gap-3 flex-wrap" style={{ background: '#0f172a' }}>
-        <div className="flex gap-2">
-          <button
-            onClick={returnAllGuests}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
-          >
-            אפס סקיצה
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
-          >
-            + הוסף שולחן
-          </button>
+                <div className="flex gap-2">
+          {isAdmin && (
+            <button
+              onClick={returnAllGuests}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
+            >
+              אפס סקיצה
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
+            >
+              + הוסף שולחן
+            </button>
+          )}
           <Link
             href={`/event/${eventId}/guests`}
             className="bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 rounded-xl text-sm font-bold"
@@ -584,21 +593,23 @@ if (table.isSpecial) {
 })}
                 </div>
 
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
-                  className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
-                >
-                  ✕
-                </button>
+               {isAdmin && (
+  <button
+    onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
+    className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
+  >
+    ✕
+  </button>
+)}
 
-                {!table.isSpecial && isWide && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }}
-                    className="absolute -top-2 -left-2 bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
-                  >
-                    ↻
-                  </button>
-                )}
+{isAdmin && !table.isSpecial && isWide && (
+  <button
+    onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }}
+    className="absolute -top-2 -left-2 bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
+  >
+    ↻
+  </button>
+)}
 
                 {hoveredTableId === table.id && table.assignedGuests.length > 0 && (
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
@@ -657,6 +668,7 @@ if (table.isSpecial) {
             </div>
           </div>
 
+         {isAdmin && (
           <div className="p-3 border-t border-slate-700 space-y-2">
             <button
               onClick={() => setShowTableTypes(v => !v)}
@@ -664,6 +676,7 @@ if (table.isSpecial) {
             >
               {showTableTypes ? 'הסתר סוגי שולחנות' : 'הצג סוגי שולחנות'}
             </button>
+
             {showTableTypes && (
               <div className="space-y-1">
                 {TABLE_TYPES.map((t, i) => (
@@ -678,6 +691,7 @@ if (table.isSpecial) {
                 ))}
               </div>
             )}
+
             {SPECIAL_ITEMS.map((t, i) => (
               <button
                 key={i}
@@ -688,12 +702,14 @@ if (table.isSpecial) {
                 <span>{t.label}</span>
               </button>
             ))}
-            <div className="text-xs text-slate-400 pt-2 border-t border-slate-700 text-center">
-              סיכום: {totalTables} שולחנות · {occupiedSeats}/{totalSeats} מושבים
-            </div>
           </div>
+        )}
+
+        <div className="text-xs text-slate-400 pt-2 border-t border-slate-700 text-center px-3 pb-3">
+          סיכום: {totalTables} שולחנות · {occupiedSeats}/{totalSeats} מושבים
         </div>
       </div>
+    </div>
 
       {/* מודל הוספת שולחן */}
       {showAddModal && (
