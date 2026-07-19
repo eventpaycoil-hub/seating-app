@@ -12,7 +12,14 @@ export default function EditGuestPage() {
 
   const [guest, setGuest] = useState<any>({});
   const [event, setEvent] = useState<any>({});
-  const [shonut, setShonut] = useState('');
+  const [transportOptions, setTransportOptions] = useState<any[]>([]);
+  const [hasSeparation, setHasSeparation] = useState(false);
+  const [hasTransport, setHasTransport] = useState(false);
+
+  // מגדר
+  const [genderMode, setGenderMode] = useState<'simple' | 'custom'>('simple');
+  const [menCount, setMenCount] = useState(0);
+  const [womenCount, setWomenCount] = useState(0);
 
   useEffect(() => {
     const guestsKey = `guests_event_${eventId}`;
@@ -31,83 +38,100 @@ export default function EditGuestPage() {
         localStorage.setItem(guestsKey, JSON.stringify(updated));
       }
       setGuest(foundGuest);
+
+      // טעינת מגדר קיים
+      const sep = (foundGuest.separation || '').toString().trim();
+      if (sep && sep !== 'גבר' && sep !== 'אישה' && sep !== 'זוג') {
+        setGenderMode('custom');
+        const menMatch = sep.match(/(\d+)\s*גבר/);
+        const womenMatch = sep.match(/(\d+)\s*איש/);
+        if (menMatch) setMenCount(parseInt(menMatch[1]));
+        if (womenMatch) setWomenCount(parseInt(womenMatch[1]));
+      }
     } else {
       setGuest({ confirmed: 'לא ידוע', count: 0 });
     }
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) setEvent(currentEvent);
+    if (currentEvent) {
+      setEvent(currentEvent);
+      setHasSeparation(currentEvent.hasSeparation === 'כן');
+      setHasTransport(currentEvent.hasTransport === 'כן');
+    }
+
+    // טעינת הסעות
+    const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
+    if (savedTransport) {
+      try {
+        const parsed = JSON.parse(savedTransport);
+        setTransportOptions(parsed.filter((o: any) => o.name && o.name.trim() !== ''));
+      } catch {}
+    }
   }, [eventId, guestId]);
+
+  const saveGuestField = (updatedGuest: any) => {
+    setGuest(updatedGuest);
+    const guestsKey = `guests_event_${eventId}`;
+    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    savedGuests = savedGuests.map((g: any) =>
+      g.id.toString() === guestId ? updatedGuest : g
+    );
+    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
+  };
 
   const addToNotes = (text: string) => {
     const date = new Date().toLocaleString('he-IL');
     const newNote = `${text} - ${date}`;
-    setGuest((prev: any) => ({
-      ...prev,
-      notes: prev.notes ? `${prev.notes}\n${newNote}` : newNote
-    }));
+    saveGuestField({
+      ...guest,
+      notes: guest.notes ? `${guest.notes}\n${newNote}` : newNote
+    });
   };
 
-  // === תיקון: לא דורסים quantity ===
   const resetToUnknown = () => {
-    const updatedGuest = { 
-      ...guest, 
-      count: 0, 
-      confirmed: 'לא ידוע'
-      // quantity נשאר כמו שהוא
-    };
-    setGuest(updatedGuest);
-
-    const guestsKey = `guests_event_${eventId}`;
-    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    savedGuests = savedGuests.map((g: any) => g.id.toString() === guestId ? updatedGuest : g);
-    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
+    saveGuestField({ ...guest, count: 0, confirmed: 'לא ידוע' });
   };
 
   const setCountAndConfirm = (num: number) => {
-    const updatedGuest = { 
-      ...guest, 
-      count: num, 
-      confirmed: num.toString()
-      // quantity נשאר כמו שהוא (ההערכה המקורית)
-    };
-    setGuest(updatedGuest);
-
-    const guestsKey = `guests_event_${eventId}`;
-    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    savedGuests = savedGuests.map((g: any) => g.id.toString() === guestId ? updatedGuest : g);
-    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
-
+    const updatedGuest = { ...guest, count: num, confirmed: num.toString() };
+    saveGuestField(updatedGuest);
     router.push(`/event/${eventId}/guests`);
   };
 
   const markAsNotComing = () => {
-    const updatedGuest = { 
-      ...guest, 
-      count: 0, 
-      confirmed: 'לא מגיע'
-      // quantity נשאר כמו שהוא
-    };
-    setGuest(updatedGuest);
-
-    const guestsKey = `guests_event_${eventId}`;
-    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    savedGuests = savedGuests.map((g: any) => g.id.toString() === guestId ? updatedGuest : g);
-    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
-
+    const updatedGuest = { ...guest, count: 0, confirmed: 'לא מגיע' };
+    saveGuestField(updatedGuest);
     router.push(`/event/${eventId}/guests`);
   };
 
-  const saveAndGoBack = () => {
-    const guestsKey = `guests_event_${eventId}`;
-    let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    
-    const updatedGuests = savedGuests.map((g: any) =>
-      g.id.toString() === guestId ? guest : g
-    );
+  const handleTransportChange = (value: string) => {
+    saveGuestField({ ...guest, transportation: value });
+  };
 
-    localStorage.setItem(guestsKey, JSON.stringify(updatedGuests));
+  // ===== מגדר =====
+  const handleGenderSimple = (value: string) => {
+    setGenderMode('simple');
+    saveGuestField({ ...guest, separation: value });
+  };
+
+  const handleGenderCustom = () => {
+    setGenderMode('custom');
+  };
+
+  const saveCustomGender = () => {
+    if (menCount === 0 && womenCount === 0) {
+      alert('נא לבחור לפחות אדם אחד');
+      return;
+    }
+    const parts = [];
+    if (menCount > 0) parts.push(`${menCount} גבר${menCount > 1 ? 'ים' : ''}`);
+    if (womenCount > 0) parts.push(`${womenCount} איש${womenCount > 1 ? 'ות' : 'ה'}`);
+    saveGuestField({ ...guest, separation: parts.join(' + ') });
+  };
+
+  const saveAndGoBack = () => {
+    saveGuestField(guest);
     router.push(`/event/${eventId}/guests`);
   };
 
@@ -134,6 +158,9 @@ export default function EditGuestPage() {
     }
     return event.day || '';
   };
+
+  const currentTransport = guest.transportation || guest.transport || '';
+  const currentGender = guest.separation || '';
 
   return (
     <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
@@ -207,15 +234,120 @@ export default function EditGuestPage() {
           </div>
 
           <div className="lg:col-span-3 space-y-5">
-            <div className="bg-white rounded-3xl p-5 shadow">
-              <label className="block text-sm text-gray-500 mb-2">שונות</label>
-              <select value={shonut} onChange={(e) => setShonut(e.target.value)} className="w-full p-3 border rounded-2xl">
-                <option value="">בחר</option>
-                <option value="צמחוני">צמחוני</option>
-                <option value="ילדים">ילדים</option>
-                <option value="נכות / עזרה">נכות / עזרה</option>
-              </select>
-            </div>
+
+            {/* ===== הסעה (רק אם מסומן) ===== */}
+            {hasTransport && (
+              <div className="bg-white rounded-3xl p-5 shadow">
+                <label className="block text-sm text-gray-500 mb-2">הסעה</label>
+                <select 
+                  value={currentTransport} 
+                  onChange={(e) => handleTransportChange(e.target.value)} 
+                  className="w-full p-3 border rounded-2xl"
+                >
+                  <option value="">בחר הסעה...</option>
+                  {transportOptions.map((opt) => (
+                    <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>
+                      {opt.name}{opt.time ? ` (${opt.time})` : ''}
+                    </option>
+                  ))}
+                  <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
+                </select>
+              </div>
+            )}
+
+            {/* ===== מגדר (רק אם הפרדה) ===== */}
+            {hasSeparation && (
+              <div className="bg-white rounded-3xl p-5 shadow">
+                <label className="block text-sm text-gray-500 mb-3">בחר מגדר</label>
+
+                {genderMode === 'simple' && (
+                  <>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      {['גבר', 'אישה', 'זוג'].map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => handleGenderSimple(opt)}
+                          className={`py-3 rounded-2xl font-bold border-2 transition-all ${
+                            currentGender === opt
+                              ? 'bg-purple-600 text-white border-purple-600'
+                              : 'bg-white border-gray-300 hover:border-purple-400'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleGenderCustom}
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-600 hover:border-purple-400 hover:text-purple-700"
+                    >
+                      אחר (בחירה מותאמת)
+                    </button>
+                    {currentGender && currentGender !== 'גבר' && currentGender !== 'אישה' && currentGender !== 'זוג' && (
+                      <div className="mt-2 text-center text-purple-700 font-medium">{currentGender}</div>
+                    )}
+                  </>
+                )}
+
+                {genderMode === 'custom' && (
+                  <div className="space-y-5">
+                    <div>
+                      <div className="text-center font-bold mb-2">גברים</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {[0,1,2,3,4,5,6,7,8].map(num => (
+                          <button
+                            key={num}
+                            onClick={() => setMenCount(num)}
+                            className={`w-12 h-12 rounded-full font-bold border-2 ${
+                              menCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-center font-bold mb-2">נשים</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {[0,1,2,3,4,5,6,7,8].map(num => (
+                          <button
+                            key={num}
+                            onClick={() => setWomenCount(num)}
+                            className={`w-12 h-12 rounded-full font-bold border-2 ${
+                              womenCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {(menCount > 0 || womenCount > 0) && (
+                      <div className="bg-purple-50 rounded-2xl p-3 text-center text-purple-800 font-medium">
+                        {menCount > 0 && `${menCount} גבר${menCount > 1 ? 'ים' : ''}`}
+                        {menCount > 0 && womenCount > 0 && ' + '}
+                        {womenCount > 0 && `${womenCount} איש${womenCount > 1 ? 'ות' : 'ה'}`}
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setGenderMode('simple')}
+                        className="flex-1 py-3 border rounded-2xl"
+                      >
+                        ביטול
+                      </button>
+                      <button
+                        onClick={saveCustomGender}
+                        className="flex-1 py-3 bg-purple-600 text-white rounded-2xl font-bold"
+                      >
+                        שמור
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="bg-white rounded-3xl p-5 shadow">
               <label className="block text-sm text-gray-500 mb-2">הערות</label>

@@ -11,13 +11,12 @@ function LandingPageContent() {
 
   const [event, setEvent] = useState<any>(null);
   const [heroMedia, setHeroMedia] = useState<{ type: 'video' | 'image'; url: string } | null>(null);
-  const [rsvpStatus, setRsvpStatus] = useState<'none' | 'confirmed' | 'notFound' | 'general' | 'pending'>('none');
+  const [rsvpStatus, setRsvpStatus] = useState<'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'>('none');
   const [rsvpCount, setRsvpCount] = useState(0);
   const [showMore, setShowMore] = useState(false);
   const [showPersonalNote, setShowPersonalNote] = useState(false);
   const [personalNote, setPersonalNote] = useState('');
 
-  // טעינת פרטי האירוע
   useEffect(() => {
     if (!eventId) return;
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -25,7 +24,6 @@ function LandingPageContent() {
     if (currentEvent) setEvent(currentEvent);
   }, [eventId]);
 
-  // טעינת מדיה
   useEffect(() => {
     if (!eventId) return;
 
@@ -52,7 +50,6 @@ function LandingPageContent() {
     return dateStr;
   };
 
-  // === חיפוש חכם (התיקון) ===
   const findGuestIndex = (saved: any[], searchCode: string) => {
     return saved.findIndex((g: any) =>
       g.inviteCode === searchCode ||
@@ -62,7 +59,6 @@ function LandingPageContent() {
     );
   };
 
-  // אישור עם מספר אורחים
   const handleRsvp = (count: number) => {
     if (!eventId) {
       alert('קישור לא תקין');
@@ -84,16 +80,46 @@ function LandingPageContent() {
 
     saved[guestIndex].confirmed = count;
     saved[guestIndex].confirmedCount = count;
-    saved[guestIndex].arrivedCount = count;
+    saved[guestIndex].count = count;
 
     const key = `guests_event_${eventId}`;
     localStorage.setItem(key, JSON.stringify(saved));
 
     setRsvpCount(count);
     setRsvpStatus('confirmed');
+
+    // אם יש הפרדה – מעביר לדף ההפרדה
+    if (event?.hasSeparation === 'כן') {
+      setTimeout(() => {
+        window.location.href = `/separation?eventId=${eventId}&guestId=${saved[guestIndex].id}`;
+      }, 1500);
+    }
   };
 
-  // כפתור "לא יודע כרגע"
+  const handleNotComing = () => {
+    if (!eventId || !code) {
+      setRsvpStatus('general');
+      return;
+    }
+
+    let saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, code);
+
+    if (guestIndex === -1) {
+      setRsvpStatus('notFound');
+      return;
+    }
+
+    saved[guestIndex].confirmed = 'לא מגיע';
+    saved[guestIndex].confirmedCount = 0;
+    saved[guestIndex].count = 0;
+
+    const key = `guests_event_${eventId}`;
+    localStorage.setItem(key, JSON.stringify(saved));
+
+    setRsvpStatus('notComing');
+  };
+
   const handleUnknown = () => {
     if (!eventId || !code) {
       setRsvpStatus('general');
@@ -139,6 +165,11 @@ function LandingPageContent() {
     setPersonalNote('');
     setRsvpStatus('confirmed');
   };
+
+  // סוג הכפתורים לפי סוג האירוע
+  const eventType = event?.eventType || '';
+  const isTwoButtons = eventType === '2 כפתורים' || eventType === 'אחר';
+  const isThreeButtons = eventType === '3 כפתורים' || eventType === 'אחר 2';
 
   if (!eventId) {
     return (
@@ -190,7 +221,7 @@ function LandingPageContent() {
         {/* פרטי האירוע */}
         <div className="mb-10 text-[#3f2a1e]">
           <div className="text-4xl font-semibold mb-3 tracking-wide">
-            {formatDate(event?.fullDate || event?.date)}
+            {formatDate(event?.fullDate || event?.eventDate || event?.date)}
           </div>
           <div className="text-2xl mb-1.5">{event?.hallName}</div>
           {event?.city && <div className="text-xl mb-1.5">{event.city}</div>}
@@ -201,61 +232,113 @@ function LandingPageContent() {
           נשמח מאוד לראותכם בשמחתנו!
         </h2>
 
-        {/* בחירת כמות */}
+        {/* ===== בחירת כמות ===== */}
         {rsvpStatus === 'none' && (
           <div className="space-y-6">
-            <p className="text-xl">כמה אורחים תגיעו?</p>
 
-            <div className="flex flex-wrap gap-4 justify-center">
-              {[1,2,3,4,5].map(num => (
+            {/* ===== 2 כפתורים ===== */}
+            {isTwoButtons && (
+              <div className="flex flex-col sm:flex-row gap-5 justify-center">
                 <button
-                  key={num}
-                  onClick={() => handleRsvp(num)}
-                  className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
+                  onClick={() => handleRsvp(1)}
+                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
                 >
-                  {num}
+                  מגיע
                 </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
-            >
-              יותר מ-5
-            </button>
-
-            {showMore && (
-              <div className="flex flex-wrap gap-4 justify-center pt-4 border-t">
-                {[6,7,8,9,10].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => handleRsvp(num)}
-                    className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
-                  >
-                    {num}
-                  </button>
-                ))}
+                <button
+                  onClick={handleNotComing}
+                  className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                >
+                  לא מגיע
+                </button>
               </div>
             )}
 
-            {/* כפתור "לא יודע כרגע" */}
-            <div className="pt-4">
-              <button
-                onClick={handleUnknown}
-                className="w-full max-w-md mx-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
-              >
-                לא יודע כרגע, צרו איתי קשר בעוד מספר ימים
-              </button>
-            </div>
+            {/* ===== 3 כפתורים ===== */}
+            {isThreeButtons && (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => handleRsvp(1)}
+                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                >
+                  מגיע 1
+                </button>
+                <button
+                  onClick={() => handleRsvp(2)}
+                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                >
+                  נגיע 2
+                </button>
+                <button
+                  onClick={handleNotComing}
+                  className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                >
+                  לא מגיע
+                </button>
+              </div>
+            )}
 
-            {/* כפתור הערה אישית */}
-            <button
-              onClick={() => setShowPersonalNote(true)}
-              className="mt-4 px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
-            >
-              מעוניין לענות בנוסח אישי
-            </button>
+            {/* ===== כפתורים רגילים (1-10) ===== */}
+            {!isTwoButtons && !isThreeButtons && (
+              <>
+                <p className="text-xl">כמה אורחים תגיעו?</p>
+
+                <div className="flex flex-wrap gap-4 justify-center">
+                  {[1,2,3,4,5].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleRsvp(num)}
+                      className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setShowMore(!showMore)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
+                >
+                  יותר מ-5
+                </button>
+
+                {showMore && (
+                  <div className="flex flex-wrap gap-4 justify-center pt-4 border-t">
+                    {[6,7,8,9,10].map(num => (
+                      <button
+                        key={num}
+                        onClick={() => handleRsvp(num)}
+                        className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-4">
+                  <button
+                    onClick={handleNotComing}
+                    className="w-full max-w-md mx-auto bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all mb-3"
+                  >
+                    לא מגיע
+                  </button>
+                  <button
+                    onClick={handleUnknown}
+                    className="w-full max-w-md mx-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                  >
+                    לא יודע כרגע, צרו איתי קשר בעוד מספר ימים
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowPersonalNote(true)}
+                  className="mt-4 px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
+                >
+                  מעוניין לענות בנוסח אישי
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -265,6 +348,18 @@ function LandingPageContent() {
             <div className="text-7xl mb-6">🎉</div>
             <h3 className="text-3xl font-bold text-green-800 mb-2">תודה רבה!</h3>
             <p className="text-xl text-green-700">אישרת הגעה ל-{rsvpCount} אורחים</p>
+            {event?.hasSeparation === 'כן' && (
+              <p className="text-sm text-green-600 mt-3">מעביר אותך לבחירת הפרדה...</p>
+            )}
+          </div>
+        )}
+
+        {/* לא מגיע */}
+        {rsvpStatus === 'notComing' && (
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-12">
+            <div className="text-6xl mb-6">😔</div>
+            <h3 className="text-3xl font-bold text-red-800 mb-3">מצטערים שלא תוכלו להגיע</h3>
+            <p className="text-xl text-red-700">תודה על העדכון</p>
           </div>
         )}
 
