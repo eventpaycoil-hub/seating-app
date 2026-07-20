@@ -15,11 +15,17 @@ export default function EditGuestPage() {
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
+  const [isClientMode, setIsClientMode] = useState(false);
 
-  // מגדר
   const [genderMode, setGenderMode] = useState<'simple' | 'custom'>('simple');
   const [menCount, setMenCount] = useState(0);
   const [womenCount, setWomenCount] = useState(0);
+
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const clientMode = localStorage.getItem('clientMode') === 'true';
+    setIsClientMode(role === 'client' || clientMode);
+  }, []);
 
   useEffect(() => {
     const guestsKey = `guests_event_${eventId}`;
@@ -39,7 +45,6 @@ export default function EditGuestPage() {
       }
       setGuest(foundGuest);
 
-      // טעינת מגדר קיים
       const sep = (foundGuest.separation || '').toString().trim();
       if (sep && sep !== 'גבר' && sep !== 'אישה' && sep !== 'זוג') {
         setGenderMode('custom');
@@ -60,7 +65,6 @@ export default function EditGuestPage() {
       setHasTransport(currentEvent.hasTransport === 'כן');
     }
 
-    // טעינת הסעות
     const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
     if (savedTransport) {
       try {
@@ -109,7 +113,6 @@ export default function EditGuestPage() {
     saveGuestField({ ...guest, transportation: value });
   };
 
-  // ===== מגדר =====
   const handleGenderSimple = (value: string) => {
     setGenderMode('simple');
     saveGuestField({ ...guest, separation: value });
@@ -162,6 +165,141 @@ export default function EditGuestPage() {
   const currentTransport = guest.transportation || guest.transport || '';
   const currentGender = guest.separation || '';
 
+  // ===== תצוגת לקוח מצומצמת =====
+  if (isClientMode) {
+    return (
+      <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
+        <div className="max-w-xl mx-auto">
+          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm mb-6 inline-block">
+            ← חזרה לרשימה
+          </Link>
+
+          <div className="bg-white rounded-3xl p-8 shadow space-y-5">
+            <h1 className="text-2xl font-bold mb-2">עריכת מוזמן</h1>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">שם</label>
+              <input
+                value={guest.name || ''}
+                onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">טלפון</label>
+              <input
+                value={guest.phone || ''}
+                onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">קבוצה</label>
+              <input
+                value={guest.group || ''}
+                onChange={(e) => setGuest({ ...guest, group: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">צפי לקוח</label>
+              <input
+                value={guest.customerExpectation || ''}
+                onChange={(e) => setGuest({ ...guest, customerExpectation: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-2">אישור הגעה</label>
+              <div className="flex gap-3 mb-3">
+                <button
+                  type="button"
+                  onClick={resetToUnknown}
+                  className={`flex-1 py-3 rounded-2xl font-bold border-2 ${
+                    guest.confirmed === 'לא ידוע'
+                      ? 'bg-amber-500 text-white border-amber-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  לא ידוע
+                </button>
+                <button
+                  type="button"
+                  onClick={markAsNotComing}
+                  className={`flex-1 py-3 rounded-2xl font-bold border-2 ${
+                    guest.confirmed === 'לא מגיע'
+                      ? 'bg-red-500 text-white border-red-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  לא מגיע
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: 16 }, (_, i) => i + 1).map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setCountAndConfirm(num)}
+                    className={`w-12 h-12 rounded-full font-bold border-2 ${
+                      String(guest.count) === String(num) || guest.confirmed === String(num)
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {hasTransport && (
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">הסעה</label>
+                <select
+                  value={currentTransport}
+                  onChange={(e) => handleTransportChange(e.target.value)}
+                  className="w-full p-3 border rounded-2xl"
+                >
+                  <option value="">בחר הסעה...</option>
+                  {transportOptions.map((opt) => (
+                    <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>
+                      {opt.name}{opt.time ? ` (${opt.time})` : ''}
+                    </option>
+                  ))}
+                  <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">הערות</label>
+              <textarea
+                value={guest.notes || ''}
+                onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
+                className="w-full h-24 p-3 border rounded-2xl"
+                placeholder="הערות..."
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={saveAndGoBack}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-xl font-bold"
+            >
+              עדכן!
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== תצוגת מנהל מלאה =====
   return (
     <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
@@ -235,7 +373,6 @@ export default function EditGuestPage() {
 
           <div className="lg:col-span-3 space-y-5">
 
-            {/* ===== הסעה (רק אם מסומן) ===== */}
             {hasTransport && (
               <div className="bg-white rounded-3xl p-5 shadow">
                 <label className="block text-sm text-gray-500 mb-2">הסעה</label>
@@ -255,7 +392,6 @@ export default function EditGuestPage() {
               </div>
             )}
 
-            {/* ===== מגדר (רק אם הפרדה) ===== */}
             {hasSeparation && (
               <div className="bg-white rounded-3xl p-5 shadow">
                 <label className="block text-sm text-gray-500 mb-3">בחר מגדר</label>

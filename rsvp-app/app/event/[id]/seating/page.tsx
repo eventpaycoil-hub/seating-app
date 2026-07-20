@@ -53,10 +53,26 @@ export default function SeatingPage() {
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
   const [selectedSeatedGuests, setSelectedSeatedGuests] = useState<Set<string>>(new Set());
     const [isAdmin, setIsAdmin] = useState(false);
+  const [seatingPerms, setSeatingPerms] = useState({
+    addTables: false,
+    deleteTable: false,
+    rotateTable: false,
+    moveTables: false,
+    specialItems: false,
+    resetSketch: false,
+    editTableInfo: false,
+  });
 
   useEffect(() => {
     setIsAdmin(localStorage.getItem('userRole') === 'admin');
-  }, []);
+    const saved = localStorage.getItem(`permissions_seating_${eventId}`);
+    if (saved) {
+      setSeatingPerms(prev => ({ ...prev, ...JSON.parse(saved) }));
+    }
+  }, [eventId]);
+
+  // מנהל תמיד יכול הכל, לקוח לפי ההגדרות
+  const can = (key: keyof typeof seatingPerms) => isAdmin || seatingPerms[key];
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -367,7 +383,7 @@ const ry = tableH * 0.51;
       {/* כותרת */}
       <div className="px-4 py-2.5 flex items-center gap-3 flex-wrap" style={{ background: '#0f172a' }}>
                 <div className="flex gap-2">
-          {isAdmin && (
+          {can('resetSketch') && (
             <button
               onClick={returnAllGuests}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
@@ -375,7 +391,7 @@ const ry = tableH * 0.51;
               אפס סקיצה
             </button>
           )}
-          {isAdmin && (
+          {can('addTables') && (
             <button
               onClick={() => setShowAddModal(true)}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold"
@@ -395,7 +411,6 @@ const ry = tableH * 0.51;
           <div className="text-white font-bold text-lg">{eventTitle || 'אירוע'}</div>
         </div>
       </div>
-
       {/* 3 פאנלים – LTR כדי ששמאל=פרטים, ימין=מוזמנים */}
       <div className="flex flex-1 overflow-hidden" style={{ direction: 'ltr' }}>
 
@@ -593,7 +608,7 @@ if (table.isSpecial) {
 })}
                 </div>
 
-               {isAdmin && (
+ {can('deleteTable') && (
   <button
     onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
     className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
@@ -602,7 +617,7 @@ if (table.isSpecial) {
   </button>
 )}
 
-{isAdmin && !table.isSpecial && isWide && (
+{can('rotateTable') && !table.isSpecial && isWide && (
   <button
     onClick={(e) => { e.stopPropagation(); rotateTable(table.id); }}
     className="absolute -top-2 -left-2 bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
@@ -668,14 +683,16 @@ if (table.isSpecial) {
             </div>
           </div>
 
-         {isAdmin && (
+        {(can('addTables') || can('specialItems')) && (
           <div className="p-3 border-t border-slate-700 space-y-2">
-            <button
-              onClick={() => setShowTableTypes(v => !v)}
-              className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold"
-            >
-              {showTableTypes ? 'הסתר סוגי שולחנות' : 'הצג סוגי שולחנות'}
-            </button>
+            {can('addTables') && (
+              <button
+                onClick={() => setShowTableTypes(v => !v)}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold"
+              >
+                {showTableTypes ? 'הסתר סוגי שולחנות' : 'הצג סוגי שולחנות'}
+              </button>
+            )}
 
             {showTableTypes && (
               <div className="space-y-1">
@@ -771,15 +788,20 @@ if (table.isSpecial) {
                 className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white"
               />
             </div>
-            <label className="flex items-center gap-2 mb-4 text-sm text-white">
-              <input
-                type="checkbox"
-                checked={!!editingTable.isReserve}
-                onChange={(e) => setEditingTable({ ...editingTable, isReserve: e.target.checked })}
-              />
-              שולחן רזרבה
-            </label>
-            <div className="flex gap-2">
+
+            {/* רזרבה – רק למנהל */}
+            {isAdmin && (
+              <label className="flex items-center gap-2 mb-4 text-sm text-white">
+                <input
+                  type="checkbox"
+                  checked={!!editingTable.isReserve}
+                  onChange={(e) => setEditingTable({ ...editingTable, isReserve: e.target.checked })}
+                />
+                שולחן רזרבה
+              </label>
+            )}
+
+                        <div className="flex gap-2">
               <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 border border-slate-600 rounded-xl text-sm text-slate-300">ביטול</button>
               <button onClick={saveEdit} className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">שמור</button>
             </div>

@@ -152,7 +152,21 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
 
-  return (
+ const [visibleActions, setVisibleActions] = useState<string[]>([]);
+const [isClientMode, setIsClientMode] = useState(false);
+
+useEffect(() => {
+  const role = localStorage.getItem('userRole');
+  const clientMode = localStorage.getItem('clientMode') === 'true';
+  setIsClientMode(role === 'client' || clientMode);
+
+  const saved = localStorage.getItem(`visibleActions_${eventId}`);
+  if (saved) {
+    setVisibleActions(JSON.parse(saved));
+  }
+}, [eventId]);
+
+return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -164,28 +178,35 @@ export default function GuestsPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
-              { href: "/", label: "עמוד הבית", icon: "🏠" },
-              { href: "/videos", label: "וידאו האירוע", icon: "🎥" },
-              { href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
-              { href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
-              { href: "/venue", label: "רשומות WAZE", icon: "📍" },
-              { href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
-              { href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
-              { href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
-              { href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
-              { href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
-              { href: "/pricing", label: "הצעות מחיר", icon: "💰" },
-              { href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
-              { href: "/events", label: "רשימת אירועים", icon: "📅" },
-              { href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
-              { href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
-              { href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
-              { href: `/landing?eventId=${eventId}`, label: "דף נחיתה", icon: "🌐" },
-              { href: `/event/${eventId}/whatsapp-templates/manage`, label: "ניהול תבניות ווטסאפ", icon: "⚙️" },
-              { href: `/transport?eventId=${eventId}`, label: "הסעות", icon: "🚌" },
-              { href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
-              { href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
-            ].map((item, index) => (
+              { id: 'home', href: "/", label: "עמוד הבית", icon: "🏠" },
+              { id: 'video', href: "/videos", label: "וידאו האירוע", icon: "🎥" },
+              { id: 'photo', href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
+              { id: 'groups', href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
+              { id: 'waze', href: "/venue", label: "רשומות WAZE", icon: "📍" },
+              { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
+              { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
+              { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
+              { id: 'arrived', href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
+              { id: 'add-tables', href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
+              { id: 'pricing', href: "/pricing", label: "הצעות מחיר", icon: "💰" },
+              { id: 'pricing-view', href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
+              { id: 'events-list', href: "/events", label: "רשימת אירועים", icon: "📅" },
+              { id: 'edit-event', href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
+              { id: 'sms', href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
+              { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
+              { id: 'landing', href: `/landing?eventId=${eventId}`, label: "דף נחיתה", icon: "🌐" },
+              { id: 'whatsapp-manage', href: `/event/${eventId}/whatsapp-templates/manage`, label: "ניהול תבניות ווטסאפ", icon: "⚙️" },
+              { id: 'transport', href: `/transport?eventId=${eventId}`, label: "הסעות", icon: "🚌" },
+              { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: "סקיצה אולם", icon: "🪑" },
+              { id: 'new-event', href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
+              { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: "הגדרות מנהל", icon: "🔐" },
+            ]
+            .filter((item) => {
+              if (!isClientMode) return true;
+              if (item.id === 'admin-settings') return false;
+              return visibleActions.includes(item.id);
+            })
+            .map((item, index) => (
               <Link key={index} href={item.href} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center">
                 <div className="text-4xl">{item.icon}</div>
                 <div className="text-sm font-medium text-gray-700">{item.label}</div>
@@ -194,6 +215,7 @@ export default function GuestsPage() {
           </div>
         </div>
       </div>
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
 
@@ -279,15 +301,19 @@ export default function GuestsPage() {
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
             />
-            <button onClick={sendSMS} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap">
-              📩 SMS
-            </button>
-            <button onClick={sendWhatsApp} className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap">
-              💬 ווטסאפ
-            </button>
-            <button onClick={deleteSelected} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap">
-              🗑 מחק מסומנים
-            </button>
+            {!isClientMode && (
+              <>
+                <button onClick={sendSMS} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap">
+                  📩 SMS
+                </button>
+                <button onClick={sendWhatsApp} className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap">
+                  💬 ווטסאפ
+                </button>
+                <button onClick={deleteSelected} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap">
+                  🗑 מחק מסומנים
+                </button>
+              </>
+            )}
           </div>
         </div>
 
