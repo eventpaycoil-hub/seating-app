@@ -87,7 +87,12 @@ function AddGuestsContent() {
     const existing = getGuests(eventId);
 
     // נרמל את המוזמנים החדשים (id + inviteCode אוטומטית)
-    const normalizedNew = validGuests.map(g => normalizeGuest(g));
+    const normalizedNew = validGuests.map(g =>
+  normalizeGuest({
+    ...g,
+    group: (g.group || '').trim() || selectedGroup || '',
+  })
+);
 
     // שמור הכל דרך הפונקציה המרכזית
     saveGuests(eventId, [...existing, ...normalizedNew]);
@@ -123,10 +128,28 @@ function AddGuestsContent() {
         </div>
         <div className="flex items-center gap-2">
           <span>בחר קבוצה קיימת:</span>
-          <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)} className="border border-slate-300 rounded-xl px-4 py-2 text-sm">
-            <option value="">— בחר —</option>
-            {groups.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
+          <select
+  value={selectedGroup}
+  onChange={(e) => {
+    const val = e.target.value;
+    setSelectedGroup(val);
+    if (val) {
+      setGuests(prev =>
+        prev.map(g => {
+          const hasData = g.name.trim() !== '' || g.phone.trim() !== '';
+          if (hasData && g.group.trim() === '') {
+            return { ...g, group: val };
+          }
+          return g;
+        })
+      );
+    }
+  }}
+  className="border border-slate-300 rounded-xl px-4 py-2 text-sm"
+>
+  <option value="">— בחר —</option>
+  {groups.map(g => <option key={g} value={g}>{g}</option>)}
+</select>
         </div>
         <button onClick={uploadToEvent} className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-semibold">
           העלה לאירוע

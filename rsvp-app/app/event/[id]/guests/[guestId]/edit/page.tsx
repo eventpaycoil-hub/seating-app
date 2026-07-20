@@ -20,6 +20,7 @@ export default function EditGuestPage() {
   const [genderMode, setGenderMode] = useState<'simple' | 'custom'>('simple');
   const [menCount, setMenCount] = useState(0);
   const [womenCount, setWomenCount] = useState(0);
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -37,11 +38,13 @@ export default function EditGuestPage() {
       const isNumber = status && !isNaN(Number(status)) && Number(status) >= 1 && Number(status) <= 16;
 
       if (!status || status === '' || status === 'לא מגיע' || !isNumber) {
-        foundGuest = { ...foundGuest, confirmed: 'לא ידוע', count: 0 };
-        const updated = savedGuests.map((g: any) =>
-          g.id.toString() === guestId ? foundGuest : g
-        );
-        localStorage.setItem(guestsKey, JSON.stringify(updated));
+        if (status !== 'לא מגיע' && status !== 'לא ידוע' && !isNumber) {
+          foundGuest = { ...foundGuest, confirmed: 'לא ידוע', count: 0 };
+          const updated = savedGuests.map((g: any) =>
+            g.id.toString() === guestId ? foundGuest : g
+          );
+          localStorage.setItem(guestsKey, JSON.stringify(updated));
+        }
       }
       setGuest(foundGuest);
 
@@ -72,6 +75,29 @@ export default function EditGuestPage() {
         setTransportOptions(parsed.filter((o: any) => o.name && o.name.trim() !== ''));
       } catch {}
     }
+
+        // טעינת קבוצות קיימות
+    const allGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    const fromGuests = allGuests
+      .map((g: any) => (g.group || '').toString().trim())
+      .filter((g: string) => g !== '');
+
+    let fromStorage: string[] = [];
+    try {
+      const saved = localStorage.getItem(`groups_event_${eventId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        fromStorage = (Array.isArray(parsed) ? parsed : []).map((item: any) => {
+          if (typeof item === 'string') return item.trim();
+          if (item && typeof item === 'object') return (item.name || item.title || item.label || '').toString().trim();
+          return '';
+        }).filter(Boolean);
+      }
+    } catch {}
+
+    const defaults = ['משפחה', 'חברים', 'עבודה', 'שכנים', 'חברי ילדות', 'לקוחות'];
+    const unique = Array.from(new Set([...defaults, ...fromStorage, ...fromGuests])).filter(Boolean);
+    setAvailableGroups(unique);
   }, [eventId, guestId]);
 
   const saveGuestField = (updatedGuest: any) => {
@@ -197,11 +223,16 @@ export default function EditGuestPage() {
 
             <div>
               <label className="block text-sm text-gray-500 mb-1">קבוצה</label>
-              <input
+              <select
                 value={guest.group || ''}
                 onChange={(e) => setGuest({ ...guest, group: e.target.value })}
                 className="w-full p-3 border rounded-2xl"
-              />
+              >
+                <option value="">בחר קבוצה...</option>
+                {availableGroups.map((g) => (
+  <option key={String(g)} value={String(g)}>{String(g)}</option>
+))}
+              </select>
             </div>
 
             <div>
@@ -364,7 +395,7 @@ export default function EditGuestPage() {
 
             <div className="flex flex-wrap gap-2">
               {Array.from({ length: 16 }, (_, i) => i + 1).map(num => (
-                <button key={num} onClick={() => setCountAndConfirm(num)} className={`w-14 h-14 rounded-full text-xl font-bold border-2 transition ${guest.count === num ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-gray-300'}`}>
+                <button key={num} onClick={() => setCountAndConfirm(num)} className={`w-14 h-14 rounded-full text-xl font-bold border-2 transition ${guest.count === num || guest.confirmed === String(num) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-gray-300'}`}>
                   {num}
                 </button>
               ))}
@@ -372,6 +403,21 @@ export default function EditGuestPage() {
           </div>
 
           <div className="lg:col-span-3 space-y-5">
+
+            {/* קבוצה */}
+            <div className="bg-white rounded-3xl p-5 shadow">
+              <label className="block text-sm text-gray-500 mb-2">קבוצה</label>
+              <select
+                value={guest.group || ''}
+                onChange={(e) => saveGuestField({ ...guest, group: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              >
+                <option value="">בחר קבוצה...</option>
+                {availableGroups.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
 
             {hasTransport && (
               <div className="bg-white rounded-3xl p-5 shadow">
