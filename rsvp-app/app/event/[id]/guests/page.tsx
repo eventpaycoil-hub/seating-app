@@ -5,6 +5,74 @@ import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
 
+function normalizePhone(raw: string): string {
+  if (!raw) return '';
+  let p = raw.toString().trim().replace(/[^\d+]/g, '');
+
+  // מספר בינלאומי (לא ישראל) – שומרים עם +
+  if (p.startsWith('+') && !p.startsWith('+972')) {
+    const digits = p.slice(1).replace(/\D/g, '');
+    if (digits.length >= 8 && digits.length <= 15) {
+      return '+' + digits;
+    }
+  }
+
+  // ישראל: +972 / 972
+  if (p.startsWith('+972')) p = p.slice(4);
+  else if (p.startsWith('972')) p = p.slice(3);
+
+  p = p.replace(/\D/g, '');
+
+  // 9 ספרות שמתחילות ב-5 → הוסף 0
+  if (p.length === 9 && p.startsWith('5')) {
+    p = '0' + p;
+  }
+
+  return p;
+}
+
+function isValidPhone(phone: string): boolean {
+  if (!phone || !phone.trim()) return true; // ריק = בסדר
+  const p = phone.trim();
+
+  // בינלאומי עם +
+  if (p.startsWith('+')) {
+    const digits = p.slice(1).replace(/\D/g, '');
+    return digits.length >= 8 && digits.length <= 15;
+  }
+
+  // ישראלי
+  const local = normalizePhone(p);
+  return local.length === 10 && local.startsWith('05');
+}
+
+function getPhoneFlag(phone: string): string {
+  if (!phone) return '';
+  const p = phone.trim();
+
+  if (p.startsWith('05') || p.startsWith('+972') || p.startsWith('972')) return '🇮🇱';
+  if (p.startsWith('+1')) return '🇺🇸';
+  if (p.startsWith('+44')) return '🇬🇧';
+  if (p.startsWith('+33')) return '🇫🇷';
+  if (p.startsWith('+49')) return '🇩🇪';
+  if (p.startsWith('+39')) return '🇮🇹';
+  if (p.startsWith('+34')) return '🇪🇸';
+  if (p.startsWith('+7')) return '🇷🇺';
+  if (p.startsWith('+380')) return '🇺🇦';
+  if (p.startsWith('+31')) return '🇳🇱';
+  if (p.startsWith('+32')) return '🇧🇪';
+  if (p.startsWith('+41')) return '🇨🇭';
+  if (p.startsWith('+43')) return '🇦🇹';
+  if (p.startsWith('+48')) return '🇵🇱';
+  if (p.startsWith('+90')) return '🇹🇷';
+  if (p.startsWith('+20')) return '🇪🇬';
+  if (p.startsWith('+962')) return '🇯🇴';
+  if (p.startsWith('+961')) return '🇱🇧';
+  if (p.startsWith('+970')) return '🇵🇸';
+  if (p.startsWith('+')) return '🌐';
+  return '';
+}
+
 export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
@@ -24,7 +92,7 @@ export default function GuestsPage() {
 
     const allGuests = getGuests(String(eventId));
     const validGuests = allGuests.filter(
-      (g: any) => g.name && g.name.trim() !== '' && g.phone && g.phone.trim() !== ''
+      (g: any) => g.name && g.name.trim() !== ''
     );
     setGuests(validGuests);
 
@@ -104,7 +172,9 @@ export default function GuestsPage() {
     .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
 
   const filteredGuests = guests.filter((g: any) => {
-    const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.phone.includes(searchTerm);
+    const matchesSearch =
+      (g.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (g.phone || '').includes(searchTerm);
     if (activeFilter === 'yes') return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
     if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
     if (activeFilter === 'unknown') {
@@ -152,21 +222,21 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
 
- const [visibleActions, setVisibleActions] = useState<string[]>([]);
-const [isClientMode, setIsClientMode] = useState(false);
+  const [visibleActions, setVisibleActions] = useState<string[]>([]);
+  const [isClientMode, setIsClientMode] = useState(false);
 
-useEffect(() => {
-  const role = localStorage.getItem('userRole');
-  const clientMode = localStorage.getItem('clientMode') === 'true';
-  setIsClientMode(role === 'client' || clientMode);
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const clientMode = localStorage.getItem('clientMode') === 'true';
+    setIsClientMode(role === 'client' || clientMode);
 
-  const saved = localStorage.getItem(`visibleActions_${eventId}`);
-  if (saved) {
-    setVisibleActions(JSON.parse(saved));
-  }
-}, [eventId]);
+    const saved = localStorage.getItem(`visibleActions_${eventId}`);
+    if (saved) {
+      setVisibleActions(JSON.parse(saved));
+    }
+  }, [eventId]);
 
-return (
+  return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -216,9 +286,7 @@ return (
         </div>
       </div>
 
-
       <div className="max-w-7xl mx-auto px-4 py-8">
-
         <div className="flex items-center gap-4 mb-6">
           <div className="text-3xl font-bold">רשימת מוזמנים</div>
           <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
@@ -227,7 +295,6 @@ return (
           </div>
         </div>
 
-        {/* ===== סיכום הסעות – רק אם מסומן ===== */}
         {hasTransport && (
           <div className="flex flex-wrap gap-3 mb-6">
             {transportOptions
@@ -252,7 +319,6 @@ return (
           </div>
         )}
 
-        {/* ===== סיכום הפרדה – רק אם מסומן ===== */}
         {hasSeparation && (
           <div className="flex flex-wrap gap-4 mb-6">
             <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
@@ -272,7 +338,6 @@ return (
           </div>
         )}
 
-        {/* כפתורי סינון */}
         <div className="flex flex-wrap gap-3 mb-6">
           <button onClick={() => setActiveFilter('all')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}>
             כל המוזמנים ({guests.length})
@@ -291,15 +356,14 @@ return (
           </button>
         </div>
 
-        {/* חיפוש + כפתורים */}
         <div className="sticky top-0 z-50 bg-white py-4 border-b shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            <input 
-              type="text" 
-              placeholder="חיפוש..." 
-              className="flex-1 p-4 border border-gray-300 rounded-2xl" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
+            <input
+              type="text"
+              placeholder="חיפוש..."
+              className="flex-1 p-4 border border-gray-300 rounded-2xl"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             {!isClientMode && (
               <>
@@ -317,17 +381,16 @@ return (
           </div>
         </div>
 
-        {/* טבלה */}
         <div className="bg-white rounded-3xl shadow overflow-x-auto">
           <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="px-6 py-5 text-center w-12">
-                  <input 
-                    type="checkbox" 
-                    checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length} 
-                    onChange={toggleSelectAll} 
-                    className="w-5 h-5 accent-blue-600" 
+                  <input
+                    type="checkbox"
+                    checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length}
+                    onChange={toggleSelectAll}
+                    className="w-5 h-5 accent-blue-600"
                   />
                 </th>
                 <th className="px-6 py-5 text-center">#</th>
@@ -347,21 +410,38 @@ return (
               {filteredGuests.map((guest: any, index: number) => {
                 const transportDisplay = getTransportDisplay(guest);
                 const isWaitingForTransport = transportDisplay === 'לא השיב לשאלת ההסעה';
+                const phone = guest.phone || '';
+                const phoneValid = isValidPhone(phone);
+                const flag = getPhoneFlag(phone);
 
                 return (
                   <tr key={`${guest.id}-${index}`} className="border-b hover:bg-gray-50">
                     <td className="px-6 py-5 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedGuests.includes(guest.id)} 
-                        onChange={() => toggleGuest(guest.id)} 
-                        className="w-5 h-5 accent-blue-600" 
+                      <input
+                        type="checkbox"
+                        checked={selectedGuests.includes(guest.id)}
+                        onChange={() => toggleGuest(guest.id)}
+                        className="w-5 h-5 accent-blue-600"
                       />
                     </td>
                     <td className="px-6 py-5 text-center text-gray-500 font-medium">{index + 1}</td>
                     <td className="px-6 py-5 text-center text-blue-600 font-medium">{eventTitle}</td>
                     <td className="px-6 py-5 font-medium">{guest.name}</td>
-                    <td className="px-6 py-5 text-gray-600 font-mono">{guest.phone}</td>
+                    <td className="px-6 py-5">
+                      {!phone.trim() ? (
+                        <span className="text-slate-400 text-sm">—</span>
+                      ) : (
+                        <div>
+                          <div className={`flex items-center gap-2 font-mono ${!phoneValid ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                            {flag && <span className="text-base">{flag}</span>}
+                            <span dir="ltr">{phone}</span>
+                          </div>
+                          {!phoneValid && (
+                            <div className="text-[11px] text-red-500 mt-0.5">מס לא תקין</div>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-5">{guest.group}</td>
                     <td className="px-6 py-5 text-center font-bold">{guest.quantity}</td>
 
@@ -399,14 +479,14 @@ return (
                     <td className="px-6 py-5 text-center">
                       <div className="flex gap-2 justify-center">
                         <Link href={`/event/${eventId}/guests/${guest.id}/edit`} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium">✏️ ערוך</Link>
-                        <button 
+                        <button
                           onClick={() => {
                             if (confirm(`למחוק את ${guest.name}?`)) {
                               const updated = guests.filter((g: any) => g.id !== guest.id);
                               saveGuests(eventId, updated);
                               setGuests(updated);
                             }
-                          }} 
+                          }}
                           className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
                         >
                           🗑 מחק

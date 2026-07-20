@@ -30,13 +30,54 @@ export default function WhatsAppTemplatesPage() {
     },
   ];
 
+    /** המרה לפורמט WhatsApp: רק ספרות + קידומת מדינה */
+  const toWhatsAppNumber = (phone: string): string => {
+    if (!phone) return '';
+    let p = phone.trim();
+
+    // בינלאומי עם +
+    if (p.startsWith('+')) {
+      return p.slice(1).replace(/\D/g, '');
+    }
+
+    // רק ספרות
+    p = p.replace(/\D/g, '');
+
+    // ישראלי שמתחיל ב-0 → 972...
+    if (p.startsWith('0')) {
+      return '972' + p.slice(1);
+    }
+
+    // כבר עם 972
+    if (p.startsWith('972')) {
+      return p;
+    }
+
+    // 9 ספרות שמתחילות ב-5 (בלי 0)
+    if (p.length === 9 && p.startsWith('5')) {
+      return '972' + p;
+    }
+
+    return p;
+  };
+
   const sendToWhatsApp = (phone: string, message: string) => {
-    if (!message) {
-      alert("הזן הודעה");
+    if (!phone.trim()) {
+      alert('הזן מספר טלפון');
       return;
     }
-    const cleanPhone = phone.replace(/\D/g, '');
-    const whatsappUrl = `https://wa.me/972${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(message)}`;
+    if (!message) {
+      alert('הזן הודעה');
+      return;
+    }
+
+    const waNumber = toWhatsAppNumber(phone);
+    if (!waNumber || waNumber.length < 8) {
+      alert('מספר טלפון לא תקין');
+      return;
+    }
+
+    const whatsappUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -81,7 +122,7 @@ export default function WhatsAppTemplatesPage() {
                   
                   <input
                     type="tel"
-                    placeholder="מספר טלפון (050-...)"
+                    placeholder="מספר טלפון (050... או +1...)"
                     value={customPhone}
                     onChange={(e) => setCustomPhone(e.target.value)}
                     className="w-full border rounded-2xl px-5 py-4 mb-3"
