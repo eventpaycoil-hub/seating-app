@@ -249,6 +249,7 @@ export default function GuestsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
               { id: 'home', href: "/", label: "עמוד הבית", icon: "🏠" },
+              { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: "תיקון מספרים", icon: "📞" },
               { id: 'video', href: "/videos", label: "וידאו האירוע", icon: "🎥" },
               { id: 'photo', href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
               { id: 'groups', href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
@@ -257,6 +258,7 @@ export default function GuestsPage() {
               { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
               { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
               { id: 'arrived', href: "/guests-arrived", label: "אורחים שהגיעו", icon: "✅" },
+              { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: "מספרים כפולים", icon: "🔁" },
               { id: 'add-tables', href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
               { id: 'pricing', href: "/pricing", label: "הצעות מחיר", icon: "💰" },
               { id: 'pricing-view', href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
@@ -271,7 +273,9 @@ export default function GuestsPage() {
               { id: 'new-event', href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: "הגדרות מנהל", icon: "🔐" },
             ]
-            .filter((item) => {
+               .filter((item) => {
+              if (item.id === 'fix-phones') return true;
+              if (item.id === 'duplicate-phones') return true;
               if (!isClientMode) return true;
               if (item.id === 'admin-settings') return false;
               return visibleActions.includes(item.id);
