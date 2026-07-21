@@ -12,15 +12,21 @@ export default function SeatingArrivalPage() {
 
   const [allGuests, setAllGuests] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedTerm, setDebouncedTerm] = useState('');
   const [forceEmptyList, setForceEmptyList] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [tableMapVersion, setTableMapVersion] = useState(0);
 
-  // מודל הוספת מוזמן בלייב
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
+
+  // debounce – מחכים 300ms אחרי הקלדה
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedTerm(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   const tableMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -78,23 +84,15 @@ export default function SeatingArrivalPage() {
     setAllGuests(guestsWithData);
   }, [eventId]);
 
-  /** אישרו = רק מרשימת המוזמנים (לא מושפע מסימון הגעה!) */
   const getConfirmedQty = (g: any) => {
     const status = String(g.confirmed ?? '').trim();
-    if (status === 'לא מגיע' || status === 'לא ידוע' || status === 'ממתין' || status === '') {
-      // אם יש confirmedCount/quantity מספרי – נשתמש בו רק כשאין סטטוס שלילי
-      if (status === 'לא מגיע') return 0;
-    }
+    if (status === 'לא מגיע') return 0;
+    if (status === 'לא ידוע' || status === 'ממתין' || status === '') return 0;
     const n =
       Number(g.confirmedCount) ||
       (Number(status) > 0 ? Number(status) : 0) ||
       Number(g.quantity) ||
       0;
-    if (status === 'לא מגיע') return 0;
-    if (status === 'לא ידוע' || status === 'ממתין' || status === '') {
-      // ממתין / לא ידוע – לא נספרים ב"אישרו"
-      return 0;
-    }
     return n > 0 ? n : 0;
   };
 
@@ -102,15 +100,17 @@ export default function SeatingArrivalPage() {
   const arrivedCount = allGuests.reduce((sum, g) => sum + (Number(g.arrivedCount) || 0), 0);
   const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
 
+  // חיפוש רק מ-3 תווים + רשימה ריקה כברירת מחדל
   const filteredGuests = useMemo(() => {
     if (forceEmptyList) return [];
-    if (!searchTerm.trim()) return allGuests;
-    const term = searchTerm.toLowerCase().trim();
+    const term = debouncedTerm.trim();
+    if (term.length < 2) return [];
+    const lower = term.toLowerCase();
     return allGuests.filter(
       (g: any) =>
-        g.name?.toLowerCase().includes(term) || g.phone?.includes(searchTerm.trim())
+        g.name?.toLowerCase().includes(lower) || g.phone?.includes(term)
     );
-  }, [allGuests, searchTerm, forceEmptyList]);
+  }, [allGuests, debouncedTerm, forceEmptyList]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -124,23 +124,25 @@ export default function SeatingArrivalPage() {
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
     setSearchTerm('');
+    setDebouncedTerm('');
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
   const clearSearch = () => {
     setSearchTerm('');
+    setDebouncedTerm('');
     setForceEmptyList(false);
   };
 
   const refresh = () => {
     setSearchTerm('');
+    setDebouncedTerm('');
     setForceEmptyList(false);
     setTableMapVersion((prev) => prev + 1);
   };
 
-  /** הוספת מוזמן בלייב – בלי הושבה, נספר באישרו */
-    const addLiveGuest = () => {
+  const addLiveGuest = () => {
     const name = newName.trim();
     if (!name) {
       alert('נא להזין שם');
@@ -154,7 +156,7 @@ export default function SeatingArrivalPage() {
       quantity: String(qty),
       confirmed: String(qty),
       confirmedCount: qty,
-      arrivedCount: qty, // ← גם הגיע (נוסף בלייב באולם)
+      arrivedCount: qty,
       notes: 'נוסף בלייב – ללא הושבה',
       group: '',
       transportation: '',
@@ -167,11 +169,11 @@ export default function SeatingArrivalPage() {
     setNewQty(1);
     setShowAddModal(false);
     setSearchTerm('');
+    setDebouncedTerm('');
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
-  /** PDF – קוביות לפי שולחן + שמות עם (1)/(2) */
   const printPage = () => {
     let seatingData: any[] = [];
     try {
@@ -184,7 +186,6 @@ export default function SeatingArrivalPage() {
       .filter((t) => Number(t.seats) > 0)
       .sort((a, b) => Number(a.tableNumber) - Number(b.tableNumber));
 
-    // מיפוי שם → כמות שאישר
     const qtyByName = new Map<string, number>();
     allGuests.forEach((g) => {
       const q = getConfirmedQty(g);
@@ -206,9 +207,10 @@ export default function SeatingArrivalPage() {
                 })
                 .join('');
 
-        const title = t.name && t.name !== 'שם השולחן'
-          ? `שולחן מספר ${t.tableNumber} ("${t.name}")`
-          : `שולחן מספר ${t.tableNumber} ("שם השולחן")`;
+        const title =
+          t.name && t.name !== 'שם השולחן'
+            ? `שולחן מספר ${t.tableNumber} ("${t.name}")`
+            : `שולחן מספר ${t.tableNumber} ("שם השולחן")`;
 
         return `
           <div style="
@@ -240,15 +242,8 @@ export default function SeatingArrivalPage() {
   <style>
     body { font-family: Arial, Helvetica, sans-serif; padding: 16px; color: #111; }
     h1 { text-align: center; font-size: 20px; margin-bottom: 16px; }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media print {
-      body { padding: 8px; }
-      .no-print { display: none; }
-    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media print { body { padding: 8px; } .no-print { display: none; } }
   </style>
 </head>
 <body>
@@ -261,6 +256,15 @@ export default function SeatingArrivalPage() {
 </html>`);
     w.document.close();
   };
+
+  const searchHint = (() => {
+    if (forceEmptyList) return 'הרשימה נוקתה. חפש מוזמן חדש...';
+    const len = searchTerm.trim().length;
+    if (len === 0) return 'הקלד לפחות 2 תווים לחיפוש מוזמן...';
+     if (len < 2) return `הקלד עוד ${2 - len} תווים לחיפוש...`;
+    if (filteredGuests.length === 0) return 'לא נמצאו תוצאות';
+    return '';
+  })();
 
   return (
     <div className="min-h-screen bg-[#f5e8c7] p-8" dir="rtl">
@@ -299,7 +303,7 @@ export default function SeatingArrivalPage() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="חיפוש שם או טלפון..."
+              placeholder="חיפוש שם או טלפון (לפחות 2 תווים)..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full pl-16 pr-6 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
@@ -428,7 +432,7 @@ export default function SeatingArrivalPage() {
               ) : (
                 <tr>
                   <td colSpan={5} className="py-20 text-center text-gray-500 text-xl">
-                    {forceEmptyList ? 'הרשימה נוקתה. חפש מוזמן חדש...' : 'לא נמצאו תוצאות'}
+                    {searchHint}
                   </td>
                 </tr>
               )}
@@ -437,7 +441,6 @@ export default function SeatingArrivalPage() {
         </div>
       </div>
 
-      {/* מודל הוסף מוזמן */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
