@@ -76,7 +76,6 @@ export default function SMSPage() {
   };
 
   const getBaseUrl = () => {
-    if (typeof window !== 'undefined') return window.location.origin;
     return 'https://seating-app-dusky.vercel.app';
   };
 
@@ -92,10 +91,10 @@ export default function SMSPage() {
 
     if (template.id === 1 || template.id === 6) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = activeGuest?.inviteCode || 'TEST123';
+      const guestCode = activeGuest?.inviteCode || activeGuest?.id || 'TEST123';
       const rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
 
-      message = message.replace(/\*guestId\*/g, guestCode);
+      message = message.replace(/\*guestId\*/g, String(guestCode));
       message = message.replace(/\*RSVP_LINK\*/g, rsvplink);
       message = message.replace(/ref=\*guestId\*/g, `ref=${guestCode}`);
     }
@@ -152,6 +151,11 @@ export default function SMSPage() {
       message = message.replace(/\*WAZE_LINK\*/g, wazeLink);
     }
 
+    if (template.id === 5) {
+      const guestCode = activeGuest?.inviteCode || activeGuest?.id || 'TEST123';
+      message = message.replace(/\*guestId\*/g, String(guestCode));
+    }
+
     return message;
   };
 
@@ -165,19 +169,20 @@ export default function SMSPage() {
     const time = currentEvent?.time || '';
     const groom = currentEvent?.groomParents || '';
     const bride = currentEvent?.brideParents || '';
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://seating-app-dusky.vercel.app';
+    const base =
+      typeof window !== 'undefined' ? window.location.origin : 'https://seating-app-dusky.vercel.app';
 
     if (isEnglishEvent) {
       return [
         {
           id: 1,
           title: 'Message 1 – RSVP',
-          content: `Hi *name*,\n\nYou are invited to the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm attendance:\n\n👉 Confirm: *RSVP_LINK*`,
+          content: `Hi *name*,\n\nYou are invited to the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm attendance:\n\n👉 Confirm here:\n*RSVP_LINK*`,
         },
         {
           id: 2,
           title: 'Message 2 – Reminder',
-          content: `Hi *name*,\n\nTonight we celebrate the wedding of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK**CREDIT_LINK*`,
+          content: `Hi *name*,\n\nTonight we celebrate the wedding of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK*\n*CREDIT_LINK*`,
         },
         {
           id: 3,
@@ -187,17 +192,17 @@ export default function SMSPage() {
         {
           id: 4,
           title: 'Message 4 – Transport',
-          content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n\nChoose ride: ${base}/transport?eventId=${eventId}`,
+          content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n${base}/transport?eventId=${eventId}`,
         },
         {
           id: 5,
           title: 'Message 5 – QR code',
-          content: `For quick check-in at the wedding of ${owners}:\n\nShow entrance QR: ${base}/qr/${eventId}?guest=*guestId*`,
+          content: `For quick check-in at the wedding of ${owners}:\n\nShow entrance QR:\n${base}/qr/${eventId}?guest=*guestId*`,
         },
         {
           id: 6,
           title: 'Message 6 – Not yet confirmed',
-          content: `Hi *name*,\n\nYou have not yet confirmed attendance at the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm:\n\nConfirm: *RSVP_LINK*`,
+          content: `Hi *name*,\n\nYou have not yet confirmed attendance at the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm:\n\n👉 Confirm here:\n*RSVP_LINK*`,
         },
       ];
     }
@@ -206,12 +211,12 @@ export default function SMSPage() {
       {
         id: 1,
         title: 'הודעה מס 1 אישור הגעה',
-        content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 אישור הגעה: *RSVP_LINK*`,
+        content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 לאישור הגעה לחצו על הקישור:\n*RSVP_LINK*`,
       },
       {
         id: 2,
         title: 'הודעה מס 2 תזכורת',
-        content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK**CREDIT_LINK*`,
+        content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK*\n*CREDIT_LINK*`,
       },
       {
         id: 3,
@@ -221,22 +226,21 @@ export default function SMSPage() {
       {
         id: 4,
         title: 'הודעה מס 4 הסעה',
-        content: `אישרתם הגעה לחתונה של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n\nבחר הסעה: ${base}/transport?eventId=${eventId}`,
+        content: `אישרתם הגעה לחתונה של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n${base}/transport?eventId=${eventId}`,
       },
       {
         id: 5,
         title: 'הודעה מס 5 ברקוד',
-        content: `לרישום מהיר בכניסה לאולם בחתונה של ${owners}:\n\nהצג QR כניסה: ${base}/qr/${eventId}?guest=*guestId*`,
+        content: `לרישום מהיר בכניסה לאולם בחתונה של ${owners}:\n\nהצג QR כניסה:\n${base}/qr/${eventId}?guest=*guestId*`,
       },
       {
         id: 6,
         title: 'הודעה מס 6 טרם אישרת',
-        content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה:\n\nאישור הגעה: *RSVP_LINK*`,
+        content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה:\n\n👉 לאישור הגעה לחצו על הקישור:\n*RSVP_LINK*`,
       },
     ];
   }, [currentEvent, eventId, isEnglishEvent]);
 
-  // כשמשנים שפה / תבניות – מאפסים בחירה כדי לא לערבב עברית/אנגלית
   useEffect(() => {
     setSelectedTemplate(null);
     setEditedMessage('');
