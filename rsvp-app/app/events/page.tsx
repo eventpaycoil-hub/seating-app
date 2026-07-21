@@ -1,5 +1,6 @@
 // @ts-nocheck
 'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -7,7 +8,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('יולי');
 
-  const months = ["יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+  const months = ['יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -22,30 +23,68 @@ export default function EventsPage() {
       return;
     }
 
-    // מחיקת האירוע
     const updated = events.filter((ev) => ev.id.toString() !== eventId.toString());
     localStorage.setItem('myEvents', JSON.stringify(updated));
     setEvents(updated);
-
-    // מחיקת מוזמנים
     localStorage.removeItem(`guests_event_${eventId}`);
-
-    // מחיקת קבוצות (אם קיימות)
     localStorage.removeItem(`groups_event_${eventId}`);
-
     alert('✅ האירוע נמחק');
   };
 
-  const filteredEvents = events.filter(event => {
-    const monthIndex = parseInt(event.date?.split('/')[1] || '7') - 1;
-    const monthName = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"][monthIndex];
-    return monthName === selectedMonth;
-  });
+  const getMonthName = (event) => {
+    // תומך ב-date כמו 04/08 או fullDate כמו 2026-08-04
+    let monthNum = null;
+    if (event.fullDate && event.fullDate.includes('-')) {
+      monthNum = parseInt(event.fullDate.split('-')[1], 10);
+    } else if (event.date && event.date.includes('/')) {
+      const parts = event.date.split('/');
+      monthNum = parseInt(parts[1] || parts[0], 10);
+    } else if (event.month) {
+      return event.month;
+    }
+    const names = [
+      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+    ];
+    return monthNum >= 1 && monthNum <= 12 ? names[monthNum - 1] : '';
+  };
+
+  const formatShortDate = (event) => {
+    if (event.date && event.date.includes('/')) {
+      const parts = event.date.split('/');
+      if (parts.length >= 2) return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}`;
+      return event.date;
+    }
+    if (event.fullDate && event.fullDate.includes('-')) {
+      const [y, m, d] = event.fullDate.split('-');
+      return `${d}/${m}`;
+    }
+    return '';
+  };
+
+  const hasSeating = (event) =>
+    event.seatingArrangement === 'כן' ||
+    event.seatingArrangement === true ||
+    event.showSeatingLink === 'כן';
+
+  const isNufar = (event) =>
+    event.nufarEvent === 'כן' || event.nufarEvent === true;
+
+  const filteredEvents = events
+    .filter((event) => getMonthName(event) === selectedMonth)
+    .sort((a, b) => {
+      const da = formatShortDate(a);
+      const db = formatShortDate(b);
+      // מיון לפי יום
+      const dayA = parseInt(da.split('/')[0] || '0', 10);
+      const dayB = parseInt(db.split('/')[0] || '0', 10);
+      return dayA - dayB;
+    });
 
   return (
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">רשימת האירועים</h1>
           <Link href="/create-event">
             <button className="bg-green-600 text-white px-8 py-4 rounded-3xl font-bold flex items-center gap-3">
@@ -55,15 +94,15 @@ export default function EventsPage() {
         </div>
 
         {/* כפתורי חודשים */}
-        <div className="flex gap-2 mb-10 overflow-x-auto pb-4">
-          {months.map(month => (
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+          {months.map((month) => (
             <button
               key={month}
               onClick={() => setSelectedMonth(month)}
-              className={`px-8 py-3 rounded-2xl font-medium whitespace-nowrap transition-all ${
-                selectedMonth === month 
-                  ? 'bg-blue-600 text-white shadow' 
-                  : 'bg-white hover:bg-gray-100'
+              className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition-all ${
+                selectedMonth === month
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-white hover:bg-gray-100 text-slate-700'
               }`}
             >
               {month}
@@ -71,46 +110,53 @@ export default function EventsPage() {
           ))}
         </div>
 
-        {/* רשימת אירועים */}
-        <div className="flex flex-wrap gap-6">
+        {/* רשימה בשורה כמו בתמונה */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px]">
           {filteredEvents.length === 0 ? (
-            <p className="text-gray-500 text-center py-20 w-full">אין אירועים בחודש זה</p>
+            <p className="text-gray-400 text-center py-10">אין אירועים בחודש זה</p>
           ) : (
-            filteredEvents.map(event => (
-              <div
-                key={event.id}
-                className="relative bg-white hover:bg-gray-50 px-8 py-6 rounded-2xl shadow-sm hover:shadow transition min-w-[420px]"
-              >
-                {/* כפתור מחיקה */}
-                <button
-                  onClick={(e) => deleteEvent(e, event.id, event.owners)}
-                  className="absolute top-4 left-4 bg-rose-100 hover:bg-rose-500 hover:text-white text-rose-700 px-4 py-2 rounded-xl text-sm font-medium transition"
-                  title="מחק אירוע"
-                >
-                  🗑 מחק
-                </button>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 leading-relaxed">
+              {filteredEvents.map((event) => {
+                const seating = hasSeating(event);
+                const nufar = isNufar(event);
+                const dateStr = formatShortDate(event);
+                const colorClass = seating
+                  ? 'text-red-600 hover:text-red-800'
+                  : 'text-blue-600 hover:text-blue-800';
 
-                <Link href={`/event/${event.id}/guests`}>
-                  {/* שם בעלי השמחה */}
-                  <div className="text-3xl font-bold text-blue-700 mb-1 pr-2">
-                    {event.owners}
-                  </div>
-
-                  {/* אולם + תאריך */}
-                  <div className="text-xl text-gray-600 mb-4">
-                    {event.hallName} • {event.date}
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-500">{event.type}</div>
-                    <div className="text-sm px-3 py-1 bg-gray-100 rounded-full text-gray-600">
-                      {event.city}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            ))
+                return (
+                  <span key={event.id} className="inline-flex items-center gap-1.5 group">
+                    <span className="text-amber-500 text-lg leading-none">★</span>
+                    <Link
+                      href={`/event/${event.id}/guests`}
+                      className={`${colorClass} font-medium underline underline-offset-2 decoration-1 text-[15px]`}
+                    >
+                      {event.owners || 'ללא שם'}
+                      {dateStr ? ` (${dateStr})` : ''}
+                      {nufar ? ' (נופר)' : ''}
+                    </Link>
+                    <button
+                      onClick={(e) => deleteEvent(e, event.id, event.owners)}
+                      className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 text-xs mr-1 transition"
+                      title="מחק"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
           )}
+        </div>
+
+        <div className="mt-4 text-sm text-slate-500 flex flex-wrap gap-4">
+          <span>
+            <span className="text-red-600 font-medium">אדום</span> = עם סידורי הושבה
+          </span>
+          <span>
+            <span className="text-blue-600 font-medium">כחול</span> = בלי הושבה
+          </span>
+          <span>(נופר) = אירוע של נופר</span>
         </div>
       </div>
     </div>
