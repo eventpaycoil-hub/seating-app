@@ -1,42 +1,30 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
 
 function normalizePhone(raw: string): string {
   if (!raw) return '';
   let p = raw.toString().trim().replace(/[^\d+]/g, '');
-
   if (p.startsWith('+') && !p.startsWith('+972')) {
     const digits = p.slice(1).replace(/\D/g, '');
-    if (digits.length >= 8 && digits.length <= 15) {
-      return '+' + digits;
-    }
+    if (digits.length >= 8 && digits.length <= 15) return '+' + digits;
   }
-
   if (p.startsWith('+972')) p = p.slice(4);
   else if (p.startsWith('972')) p = p.slice(3);
-
   p = p.replace(/\D/g, '');
-
-  if (p.length === 9 && p.startsWith('5')) {
-    p = '0' + p;
-  }
-
+  if (p.length === 9 && p.startsWith('5')) p = '0' + p;
   return p;
 }
 
 function isValidPhone(phone: string): boolean {
   if (!phone || !phone.trim()) return true;
   const p = phone.trim();
-
   if (p.startsWith('+')) {
     const digits = p.slice(1).replace(/\D/g, '');
     return digits.length >= 8 && digits.length <= 15;
   }
-
   const local = normalizePhone(p);
   return local.length === 10 && local.startsWith('05');
 }
@@ -44,7 +32,6 @@ function isValidPhone(phone: string): boolean {
 function getPhoneFlag(phone: string): string {
   if (!phone) return '';
   const p = phone.trim();
-
   if (p.startsWith('05') || p.startsWith('+972') || p.startsWith('972')) return '🇮🇱';
   if (p.startsWith('+1')) return '🇺🇸';
   if (p.startsWith('+44')) return '🇬🇧';
@@ -83,13 +70,14 @@ export default function GuestsPage() {
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
+  const [visibleActions, setVisibleActions] = useState<string[]>([]);
+  const [isClientMode, setIsClientMode] = useState(false);
+  const [jumpGroup, setJumpGroup] = useState('');
 
   useEffect(() => {
     if (!eventId) return;
-
     const allGuests = getGuests(String(eventId));
-    const validGuests = allGuests.filter((g: any) => g.name && g.name.trim() !== '');
-    setGuests(validGuests);
+    setGuests(allGuests.filter((g: any) => g.name && g.name.trim() !== ''));
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
@@ -107,6 +95,18 @@ export default function GuestsPage() {
     }
   }, [eventId]);
 
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const clientMode = localStorage.getItem('clientMode') === 'true';
+    setIsClientMode(role === 'client' || clientMode);
+    const saved = localStorage.getItem(`visibleActions_${eventId}`);
+    if (saved) {
+      try {
+        setVisibleActions(JSON.parse(saved));
+      } catch {}
+    }
+  }, [eventId]);
+
   const getTransportDisplay = (guest: any) => {
     const value = (guest.transportation || guest.transport || '').toString().trim();
     if (!value) return '-';
@@ -117,12 +117,10 @@ export default function GuestsPage() {
     return value;
   };
 
-  const getTransportCount = (optionName: string) => {
-    return guests.filter((g: any) => {
-      const value = (g.transportation || g.transport || '').toString();
-      return value.includes(optionName);
-    }).length;
-  };
+  const getTransportCount = (optionName: string) =>
+    guests.filter((g: any) =>
+      (g.transportation || g.transport || '').toString().includes(optionName)
+    ).length;
 
   const countSeparation = () => {
     let men = 0;
@@ -130,11 +128,9 @@ export default function GuestsPage() {
     guests.forEach((g: any) => {
       const sep = (g.separation || '').toString().trim();
       if (!sep) return;
-      if (sep === 'גבר') {
-        men += 1;
-      } else if (sep === 'אישה') {
-        women += 1;
-      } else if (sep === 'זוג') {
+      if (sep === 'גבר') men += 1;
+      else if (sep === 'אישה') women += 1;
+      else if (sep === 'זוג') {
         men += 1;
         women += 1;
       } else {
@@ -191,7 +187,6 @@ export default function GuestsPage() {
     return matchesSearch;
   });
 
-  // ===== קיבוץ לפי קבוצה =====
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     filteredGuests.forEach((g) => {
@@ -201,6 +196,24 @@ export default function GuestsPage() {
     });
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'he'));
   }, [filteredGuests]);
+
+  const allGroupNames = useMemo(() => {
+    const set = new Set<string>();
+    guests.forEach((g: any) => {
+      const key = (g.group && String(g.group).trim()) || 'ללא קבוצה';
+      set.add(key);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
+  }, [guests]);
+
+  const scrollToGroup = (groupName: string) => {
+    setJumpGroup(groupName);
+    if (!groupName) return;
+    setTimeout(() => {
+      const el = document.getElementById(`group-header-${groupName}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const isConfirmedGuest = (g: any) =>
     g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
@@ -222,11 +235,8 @@ export default function GuestsPage() {
   const toggleGroup = (groupGuests: any[]) => {
     const ids = groupGuests.map((g) => g.id);
     const allIn = ids.length > 0 && ids.every((id) => selectedGuests.includes(id));
-    if (allIn) {
-      setSelectedGuests((prev) => prev.filter((id) => !ids.includes(id)));
-    } else {
-      setSelectedGuests((prev) => Array.from(new Set([...prev, ...ids])));
-    }
+    if (allIn) setSelectedGuests((prev) => prev.filter((id) => !ids.includes(id)));
+    else setSelectedGuests((prev) => Array.from(new Set([...prev, ...ids])));
   };
 
   const deleteSelected = () => {
@@ -250,38 +260,22 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
 
-  const [visibleActions, setVisibleActions] = useState<string[]>([]);
-  const [isClientMode, setIsClientMode] = useState(false);
-
-  useEffect(() => {
-    const role = localStorage.getItem('userRole');
-    const clientMode = localStorage.getItem('clientMode') === 'true';
-    setIsClientMode(role === 'client' || clientMode);
-
-    const saved = localStorage.getItem(`visibleActions_${eventId}`);
-    if (saved) {
-      setVisibleActions(JSON.parse(saved));
-    }
-  }, [eventId]);
-
-  const colSpan = 10 + (hasTransport ? 1 : 0) + (hasSeparation ? 1 : 0);
-
-  return (
+  const baseCols = isClientMode ? 9 : 10;
+  const colSpan = baseCols + (hasTransport ? 1 : 0) + (hasSeparation ? 1 : 0);
+    return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xl font-bold text-gray-800">
-              {eventId === '1' ? 'מנהל' : eventTitle}
-            </div>
+          <div className="text-xl font-bold text-gray-800">
+            {eventId === '1' ? 'מנהל' : eventTitle}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
               { id: 'home', href: '/', label: 'עמוד הבית', icon: '🏠' },
               { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: '📞' },
-              { id: 'video', href: `/videos?eventId=${eventId}`, label: "וידאו האירוע", icon: "🎥" },
-              { id: 'photo', href: `/gallery?eventId=${eventId}`, label: "תמונות האירוע", icon: "🖼" },
+              { id: 'video', href: `/videos?eventId=${eventId}`, label: 'וידאו האירוע', icon: '🎥' },
+              { id: 'photo', href: `/gallery?eventId=${eventId}`, label: 'תמונות האירוע', icon: '🖼' },
               { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: '👥' },
               { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
               { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },
@@ -305,8 +299,7 @@ export default function GuestsPage() {
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
               .filter((item) => {
-                if (item.id === 'fix-phones') return true;
-                if (item.id === 'duplicate-phones') return true;
+                if (item.id === 'fix-phones' || item.id === 'duplicate-phones') return true;
                 if (!isClientMode) return true;
                 if (item.id === 'admin-settings') return false;
                 return visibleActions.includes(item.id);
@@ -327,7 +320,7 @@ export default function GuestsPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <div className="text-3xl font-bold">רשימת מוזמנים</div>
+          <div className="text-3xl font-bold text-slate-800">רשימת מוזמנים</div>
           <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
             <div className="text-sm opacity-90">סה״כ אישרו</div>
             <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
@@ -349,9 +342,7 @@ export default function GuestsPage() {
                     <span className="text-lg">🚌</span>
                     <span>{opt.name}</span>
                     {opt.time && <span className="text-indigo-500">({opt.time})</span>}
-                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">
-                      {count}
-                    </span>
+                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">{count}</span>
                   </div>
                 );
               })}
@@ -363,321 +354,267 @@ export default function GuestsPage() {
             <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
               <span className="text-2xl">👨</span>
               <span className="text-lg">גברים</span>
-              <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">
-                {menCount}
-              </span>
+              <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">{menCount}</span>
             </div>
             <div className="bg-pink-50 border border-pink-200 text-pink-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
               <span className="text-2xl">👩</span>
               <span className="text-lg">נשים</span>
-              <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">
-                {womenCount}
-              </span>
+              <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">{womenCount}</span>
             </div>
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3 mb-6">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
-              activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            כל המוזמנים ({guests.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('yes')}
-            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
-              activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'
-            }`}
-          >
-            יגיעו ({yesCount})
-          </button>
-          <button
-            onClick={() => setActiveFilter('no')}
-            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
-              activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white hover:bg-red-600'
-            }`}
-          >
-            לא יגיעו ({noCount})
-          </button>
-          <button
-            onClick={() => setActiveFilter('unknown')}
-            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
-              activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
-            }`}
-          >
-            לא ידוע ({unknownWithNoteCount})
-          </button>
-          <button
-            onClick={() => setActiveFilter('unknownEmpty')}
-            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
-              activeFilter === 'unknownEmpty'
-                ? 'bg-orange-600 text-white'
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-            }`}
-          >
-            לא ידוע ({unknownEmptyCount})
-          </button>
+        {/* סינון סטטוס — משמאל */}
+        <div className="flex flex-wrap gap-3 mb-4 justify-start">
+          {[
+            { key: 'all', label: `כל המוזמנים (${guests.length})`, active: 'bg-blue-600', idle: 'bg-blue-500 hover:bg-blue-600' },
+            { key: 'yes', label: `יגיעו (${yesCount})`, active: 'bg-emerald-600', idle: 'bg-emerald-500 hover:bg-emerald-600' },
+            { key: 'no', label: `לא יגיעו (${noCount})`, active: 'bg-red-600', idle: 'bg-red-500 hover:bg-red-600' },
+            { key: 'unknown', label: `לא ידוע (${unknownWithNoteCount})`, active: 'bg-gray-700', idle: 'bg-gray-500 hover:bg-gray-600' },
+            { key: 'unknownEmpty', label: `לא ידוע (${unknownEmptyCount})`, active: 'bg-orange-600', idle: 'bg-orange-500 hover:bg-orange-600' },
+          ].map((btn) => (
+            <button
+              key={btn.key}
+              onClick={() => setActiveFilter(btn.key as any)}
+              className={`px-5 py-2.5 rounded-2xl font-medium text-sm text-white transition-all ${
+                activeFilter === btn.key ? btn.active : btn.idle
+              }`}
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
 
-        <div className="sticky top-0 z-50 bg-white py-4 border-b shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="חיפוש..."
-              className="flex-1 p-4 border border-gray-300 rounded-2xl"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {!isClientMode && (
-              <>
-                <button
-                  onClick={sendSMS}
-                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
-                >
-                  📩 SMS
-                </button>
-                <button
-                  onClick={sendWhatsApp}
-                  className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
-                >
-                  💬 ווטסאפ
-                </button>
-                <button
-                  onClick={deleteSelected}
-                  className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
-                >
-                  🗑 מחק מסומנים
-                </button>
-              </>
+        {/* חיפוש + כפתורי פעולה */}
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch">
+              <input
+                type="text"
+                placeholder="חיפוש לפי שם או טלפון..."
+                className="flex-1 p-4 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {!isClientMode && (
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={sendSMS} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap">
+                    📩 SMS
+                  </button>
+                  <button onClick={sendWhatsApp} className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap">
+                    💬 ווטסאפ
+                  </button>
+                  <button onClick={deleteSelected} className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap">
+                    🗑 מחק
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* גלילת קבוצות — בין חיפוש לכפתורים / מתחת לחיפוש */}
+            {allGroupNames.length > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-slate-600 whitespace-nowrap">קבוצות:</span>
+                <div className="flex-1 overflow-x-auto pb-1">
+                  <div className="flex gap-2 min-w-max">
+                    {allGroupNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => scrollToGroup(name)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-all ${
+                          jumpGroup === name
+                            ? 'bg-amber-500 text-white border-amber-600 shadow'
+                            : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-6 py-5 text-center w-12">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length
-                    }
-                    onChange={toggleSelectAll}
-                    className="w-5 h-5 accent-blue-600"
-                    title="סמן את כל הקבוצות"
-                  />
-                </th>
-                <th className="px-6 py-5 text-center">#</th>
-                <th className="px-6 py-5 text-center">אירוע</th>
-                <th className="px-6 py-5 text-right">שם</th>
-                <th className="px-6 py-5 text-right">טלפון</th>
-                <th className="px-6 py-5 text-right">קבוצה</th>
-                <th className="px-6 py-5 text-center">צפי</th>
-                {hasTransport && <th className="px-6 py-5 text-center">הסעה</th>}
-                {hasSeparation && <th className="px-6 py-5 text-center">מגדר</th>}
-                <th className="px-6 py-5 text-center">סטטוס</th>
-                <th className="px-6 py-5 text-center">הערה</th>
-                <th className="px-6 py-5 text-center">פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.length === 0 && (
-                <tr>
-                  <td colSpan={colSpan} className="py-16 text-center text-gray-400 text-lg">
-                    אין מוזמנים להצגה
-                  </td>
+        {/* טבלה */}
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-300 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse">
+              <thead>
+                <tr className="bg-slate-200">
+                  {!isClientMode && (
+                    <th className="px-4 py-4 text-center w-12 text-xs font-bold text-slate-700 border border-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length}
+                        onChange={toggleSelectAll}
+                        className="w-5 h-5 accent-blue-600"
+                      />
+                    </th>
+                  )}
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">#</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">אירוע</th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">שם</th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">טלפון</th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">קבוצה</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">צפי</th>
+                  {hasTransport && (
+                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">הסעה</th>
+                  )}
+                  {hasSeparation && (
+                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">מגדר</th>
+                  )}
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">סטטוס</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">הערה</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">פעולות</th>
                 </tr>
-              )}
+              </thead>
+              <tbody>
+                {grouped.length === 0 && (
+                  <tr>
+                    <td colSpan={colSpan} className="py-16 text-center text-gray-400 text-lg border border-slate-200">
+                      אין מוזמנים להצגה
+                    </td>
+                  </tr>
+                )}
 
-              {grouped.map(([groupName, groupGuests]) => {
-                const groupIds = groupGuests.map((g) => g.id);
-                const groupAllSelected =
-                  groupIds.length > 0 && groupIds.every((id) => selectedGuests.includes(id));
-                const confirmedInGroup = groupGuests
-                  .filter(isConfirmedGuest)
-                  .reduce(
-                    (sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1),
-                    0
-                  );
+                {grouped.map(([groupName, groupGuests]) => {
+                  const groupIds = groupGuests.map((g) => g.id);
+                  const groupAllSelected =
+                    groupIds.length > 0 && groupIds.every((id) => selectedGuests.includes(id));
+                  const confirmedInGroup = groupGuests
+                    .filter(isConfirmedGuest)
+                    .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
 
-                return (
-                  <>
-                    {/* כותרת קבוצה */}
-                    <tr key={`header-${groupName}`} className="bg-[#f5e8c7]">
-                      <td className="px-6 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={groupAllSelected}
-                          onChange={() => toggleGroup(groupGuests)}
-                          className="w-5 h-5 accent-amber-600"
-                          title={`סמן את כל ${groupName}`}
-                        />
-                      </td>
-                      <td
-                        colSpan={colSpan - 1}
-                        className="px-6 py-3 text-center font-bold text-xl text-amber-900 tracking-wide"
-                      >
-                        {groupName}
-                      </td>
-                    </tr>
-
-                    {/* מוזמנים בקבוצה */}
-                    {groupGuests.map((guest: any, index: number) => {
-                      const transportDisplay = getTransportDisplay(guest);
-                      const isWaitingForTransport =
-                        transportDisplay === 'לא השיב לשאלת ההסעה';
-                      const phone = guest.phone || '';
-                      const phoneValid = isValidPhone(phone);
-                      const flag = getPhoneFlag(phone);
-
-                      return (
-                        <tr
-                          key={`${guest.id}-${index}`}
-                          className="border-b hover:bg-gray-50"
-                        >
-                          <td className="px-6 py-5 text-center">
+                  return (
+                    <>
+                      <tr key={`header-${groupName}`} id={`group-header-${groupName}`}>
+                        {!isClientMode && (
+                          <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
                               type="checkbox"
-                              checked={selectedGuests.includes(guest.id)}
-                              onChange={() => toggleGuest(guest.id)}
-                              className="w-5 h-5 accent-blue-600"
+                              checked={groupAllSelected}
+                              onChange={() => toggleGroup(groupGuests)}
+                              className="w-5 h-5 accent-amber-700"
                             />
                           </td>
-                          <td className="px-6 py-5 text-center text-gray-500 font-medium">
-                            {index + 1}
-                          </td>
-                          <td className="px-6 py-5 text-center text-blue-600 font-medium">
-                            {eventTitle}
-                          </td>
-                          <td className="px-6 py-5 font-medium">{guest.name}</td>
-                          <td className="px-6 py-5">
-                            {!phone.trim() ? (
-                              <span className="text-slate-400 text-sm">—</span>
-                            ) : (
-                              <div>
-                                <div
-                                  className={`flex items-center gap-2 font-mono ${
-                                    !phoneValid
-                                      ? 'text-red-600 font-semibold'
-                                      : 'text-gray-600'
-                                  }`}
-                                >
-                                  {flag && <span className="text-base">{flag}</span>}
-                                  <span dir="ltr">{phone}</span>
-                                </div>
-                                {!phoneValid && (
-                                  <div className="text-[11px] text-red-500 mt-0.5">
-                                    מס לא תקין
+                        )}
+                        <td
+                          colSpan={isClientMode ? colSpan : colSpan - 1}
+                          className="bg-amber-200 border border-amber-300 px-4 py-3 text-center font-bold text-lg text-amber-950"
+                        >
+                          {groupName}
+                        </td>
+                      </tr>
+
+                      {groupGuests.map((guest: any, index: number) => {
+                        const transportDisplay = getTransportDisplay(guest);
+                        const isWaitingForTransport = transportDisplay === 'לא השיב לשאלת ההסעה';
+                        const phone = guest.phone || '';
+                        const phoneValid = isValidPhone(phone);
+                        const flag = getPhoneFlag(phone);
+                        const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-100';
+
+                        return (
+                          <tr key={`${guest.id}-${index}`} className={`${rowBg} hover:bg-blue-50`}>
+                            {!isClientMode && (
+                              <td className="px-4 py-3.5 text-center border border-slate-200">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedGuests.includes(guest.id)}
+                                  onChange={() => toggleGuest(guest.id)}
+                                  className="w-5 h-5 accent-blue-600"
+                                />
+                              </td>
+                            )}
+                            <td className="px-4 py-3.5 text-center text-slate-500 font-medium border border-slate-200">{index + 1}</td>
+                            <td className="px-4 py-3.5 text-center text-blue-700 font-medium border border-slate-200">{eventTitle}</td>
+                            <td className="px-4 py-3.5 font-semibold text-slate-900 border border-slate-200">{guest.name}</td>
+                            <td className="px-4 py-3.5 border border-slate-200">
+                              {!phone.trim() ? (
+                                <span className="text-slate-300">—</span>
+                              ) : (
+                                <div>
+                                  <div className={`flex items-center gap-2 font-mono ${!phoneValid ? 'text-red-600 font-semibold' : 'text-slate-700'}`}>
+                                    {flag && <span>{flag}</span>}
+                                    <span dir="ltr">{phone}</span>
                                   </div>
+                                  {!phoneValid && <div className="text-[11px] text-red-500 mt-0.5">מס לא תקין</div>}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 border border-slate-200">{guest.group}</td>
+                            <td className="px-4 py-3.5 text-center font-bold text-slate-900 border border-slate-200">{guest.quantity}</td>
+                            {hasTransport && (
+                              <td className={`px-4 py-3.5 text-center font-medium border border-slate-200 ${isWaitingForTransport ? 'text-orange-600' : 'text-blue-700'}`}>
+                                {transportDisplay}
+                              </td>
+                            )}
+                            {hasSeparation && (
+                              <td className="px-4 py-3.5 text-center font-medium text-purple-700 border border-slate-200">
+                                {guest.separation || '-'}
+                              </td>
+                            )}
+                            <td className="px-4 py-3.5 text-center border border-slate-200">
+                              {guest.confirmed === 'לא מגיע' ? (
+                                <div className="inline-flex flex-col items-center">
+                                  <div className="bg-red-100 text-red-600 w-11 h-11 rounded-xl flex items-center justify-center text-xl">❌</div>
+                                  <div className="text-red-600 font-bold text-sm mt-1">0</div>
+                                </div>
+                              ) : guest.confirmed && !isNaN(Number(guest.confirmed)) && Number(guest.confirmed) >= 1 ? (
+                                <div className="inline-flex flex-col items-center">
+                                  <div className="bg-emerald-100 text-emerald-700 w-11 h-11 rounded-xl flex items-center justify-center text-xl">✅</div>
+                                  <div className="text-emerald-700 font-bold text-sm mt-1">{guest.count || guest.quantity || 1}</div>
+                                </div>
+                              ) : (
+                                <div className="inline-flex flex-col items-center">
+                                  <div className="text-xl">⏳</div>
+                                  <div className="text-amber-600 font-medium text-xs mt-1">ממתין</div>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-slate-600 border border-slate-200">{guest.notes}</td>
+                            <td className="px-4 py-3.5 text-center border border-slate-200">
+                              <div className="flex gap-2 justify-center">
+                                <Link
+                                  href={`/event/${eventId}/guests/${guest.id}/edit`}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
+                                >
+                                  ✏️ ערוך
+                                </Link>
+                                {!isClientMode && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`למחוק את ${guest.name}?`)) {
+                                        const updated = guests.filter((g: any) => g.id !== guest.id);
+                                        saveGuests(eventId, updated);
+                                        setGuests(updated);
+                                      }
+                                    }}
+                                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-xl text-sm font-medium border border-rose-200"
+                                  >
+                                    🗑 מחק
+                                  </button>
                                 )}
                               </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-5">{guest.group}</td>
-                          <td className="px-6 py-5 text-center font-bold">
-                            {guest.quantity}
-                          </td>
-
-                          {hasTransport && (
-                            <td
-                              className={`px-6 py-5 text-center font-medium ${
-                                isWaitingForTransport
-                                  ? 'text-orange-600'
-                                  : 'text-blue-600'
-                              }`}
-                            >
-                              {transportDisplay}
                             </td>
-                          )}
+                          </tr>
+                        );
+                      })}
 
-                          {hasSeparation && (
-                            <td className="px-6 py-5 text-center font-medium text-purple-700">
-                              {guest.separation || '-'}
-                            </td>
-                          )}
-
-                          <td className="px-6 py-5 text-center">
-                            {guest.confirmed === 'לא מגיע' ? (
-                              <div className="flex flex-col items-center">
-                                <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
-                                  ❌
-                                </div>
-                                <div className="text-red-600 font-semibold text-lg mt-1">
-                                  0
-                                </div>
-                              </div>
-                            ) : guest.confirmed &&
-                              !isNaN(Number(guest.confirmed)) &&
-                              Number(guest.confirmed) >= 1 ? (
-                              <div className="flex flex-col items-center">
-                                <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
-                                  ✅
-                                </div>
-                                <div className="text-emerald-700 font-semibold text-lg mt-1">
-                                  {guest.count || guest.quantity || 1}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center">
-                                <div className="text-4xl">⏳</div>
-                                <div className="text-amber-600 font-medium text-sm mt-1">
-                                  ממתין
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-5 text-gray-600 text-sm">
-                            {guest.notes}
-                          </td>
-                          <td className="px-6 py-5 text-center">
-                            <div className="flex gap-2 justify-center">
-                              <Link
-                                href={`/event/${eventId}/guests/${guest.id}/edit`}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium"
-                              >
-                                ✏️ ערוך
-                              </Link>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`למחוק את ${guest.name}?`)) {
-                                    const updated = guests.filter(
-                                      (g: any) => g.id !== guest.id
-                                    );
-                                    saveGuests(eventId, updated);
-                                    setGuests(updated);
-                                  }
-                                }}
-                                className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
-                              >
-                                🗑 מחק
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* סיכום קבוצה */}
-                    <tr key={`footer-${groupName}`} className="bg-slate-50 border-b-2 border-slate-200">
-                      <td
-                        colSpan={colSpan}
-                        className="px-6 py-3 text-left text-slate-600 font-medium"
-                      >
-                        סה״כ אורחים שאישרו הגעתם בקבוצה זו:{' '}
-                        <span className="text-emerald-700 font-bold text-lg">
-                          {confirmedInGroup}
-                        </span>
-                      </td>
-                    </tr>
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
+                      <tr key={`footer-${groupName}`}>
+                        <td colSpan={colSpan} className="px-4 py-2.5 bg-slate-200 border border-slate-300 text-left text-slate-700 text-sm font-medium">
+                          סה״כ אורחים שאישרו בקבוצה:{' '}
+                          <span className="text-emerald-700 font-bold text-base">{confirmedInGroup}</span>
+                        </td>
+                      </tr>
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
