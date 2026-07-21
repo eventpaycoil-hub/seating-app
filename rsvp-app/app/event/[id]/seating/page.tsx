@@ -75,6 +75,8 @@ export default function SeatingPage() {
 
   const floorRef = useRef<HTMLDivElement>(null);
   const touchDragRef = useRef<{ id: number; offsetX: number; offsetY: number } | null>(null);
+  // שמירת קבוצה מקורית לכל מוזמן – כדי שלא יאבד בהחזרה לשולחן
+  const guestMetaRef = useRef<Record<string, { group: string }>>({});
 
   useEffect(() => {
     setIsAdmin(localStorage.getItem('userRole') === 'admin');
@@ -102,16 +104,25 @@ export default function SeatingPage() {
     const assigned = new Set<string>();
     tables.forEach((t) => (t.assignedGuests || []).forEach((name: string) => assigned.add(name)));
 
+    const meta: Record<string, { group: string }> = {};
     savedGuests.forEach((g: any) => {
       if (!g.name || !g.name.trim()) return;
       const status = (g.confirmed ?? '').toString().trim();
-      const num = Number(status);
-      if (isNaN(num) || num < 1 || num > 16) return;
+      const confirmedNum = Number(status);
+      // רק מי שאישר הגעה (מספר 1–16)
+      if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
+
+      // אותה לוגיקה כמו בדף רשימת המוזמנים
+      const num = Number(g.count) || Number(g.quantity) || confirmedNum || 1;
+
+      const group = (g.group || '').trim() || 'ללא קבוצה';
+      meta[g.name] = { group };
       qtyMap[g.name] = num;
       if (!assigned.has(g.name)) {
-        list.push({ name: g.name, qty: num, group: (g.group || '').trim() || 'ללא קבוצה' });
+        list.push({ name: g.name, qty: num, group });
       }
     });
+    guestMetaRef.current = meta;
     setGuestQtyMap(qtyMap);
     setGuests(list);
   }, [eventId]);
@@ -144,6 +155,10 @@ export default function SeatingPage() {
       (sum, name) => sum + (table.guestSeats?.[name] ?? getGuestQty(name)),
       0
     );
+
+  // מחזיר קבוצה שמורה – לא מאבד בהחזרה מהשולחן
+  const getGuestGroup = (name: string, fallback?: string) =>
+    guestMetaRef.current[name]?.group || fallback || 'ללא קבוצה';
 
   const snap = (v: number) => Math.round(v / GRID) * GRID;
 
@@ -191,10 +206,13 @@ export default function SeatingPage() {
         table.assignedGuests.forEach((name) => {
           const qty = getSeatedQty(table, name);
           const existing = next.find((g) => g.name === name);
+          const group = getGuestGroup(name, existing?.group);
           if (existing) {
-            next = next.map((g) => (g.name === name ? { ...g, qty: g.qty + qty } : g));
+            next = next.map((g) =>
+              g.name === name ? { ...g, qty: g.qty + qty, group } : g
+            );
           } else {
-            next.push({ name, qty, group: 'ללא קבוצה' });
+            next.push({ name, qty, group });
           }
         });
         return next;
@@ -425,10 +443,13 @@ export default function SeatingPage() {
       names.forEach((name) => {
         const qty = getSeatedQty(table, name);
         const existing = next.find((g) => g.name === name);
+        const group = getGuestGroup(name, existing?.group);
         if (existing) {
-          next = next.map((g) => (g.name === name ? { ...g, qty: g.qty + qty } : g));
+          next = next.map((g) =>
+            g.name === name ? { ...g, qty: g.qty + qty, group } : g
+          );
         } else {
-          next.push({ name, qty, group: 'ללא קבוצה' });
+          next.push({ name, qty, group });
         }
       });
       return next;
@@ -468,10 +489,13 @@ export default function SeatingPage() {
 
     setGuests((prev) => {
       const existing = prev.find((g) => g.name === name);
+      const group = getGuestGroup(name, existing?.group);
       if (existing) {
-        return prev.map((g) => (g.name === name ? { ...g, qty: g.qty + 1 } : g));
+        return prev.map((g) =>
+          g.name === name ? { ...g, qty: g.qty + 1, group } : g
+        );
       }
-      return [...prev, { name, qty: 1, group: 'ללא קבוצה' }];
+      return [...prev, { name, qty: 1, group }];
     });
   };
 
@@ -494,10 +518,13 @@ export default function SeatingPage() {
     );
     setGuests((prev) => {
       const existing = prev.find((g) => g.name === name);
+      const group = getGuestGroup(name, existing?.group);
       if (existing) {
-        return prev.map((g) => (g.name === name ? { ...g, qty: g.qty + qty } : g));
+        return prev.map((g) =>
+          g.name === name ? { ...g, qty: g.qty + qty, group } : g
+        );
       }
-      return [...prev, { name, qty, group: 'ללא קבוצה' }];
+      return [...prev, { name, qty, group }];
     });
     setSelectedSeatedGuests((prev) => {
       const next = new Set(prev);
@@ -515,10 +542,13 @@ export default function SeatingPage() {
       table.assignedGuests.forEach((name) => {
         const qty = getSeatedQty(table, name);
         const existing = next.find((g) => g.name === name);
+        const group = getGuestGroup(name, existing?.group);
         if (existing) {
-          next = next.map((g) => (g.name === name ? { ...g, qty: g.qty + qty } : g));
+          next = next.map((g) =>
+            g.name === name ? { ...g, qty: g.qty + qty, group } : g
+          );
         } else {
-          next.push({ name, qty, group: 'ללא קבוצה' });
+          next.push({ name, qty, group });
         }
       });
       return next;
@@ -538,10 +568,13 @@ export default function SeatingPage() {
         table.assignedGuests.forEach((name) => {
           const qty = getSeatedQty(table, name);
           const existing = next.find((g) => g.name === name);
+          const group = getGuestGroup(name, existing?.group);
           if (existing) {
-            next = next.map((g) => (g.name === name ? { ...g, qty: g.qty + qty } : g));
+            next = next.map((g) =>
+              g.name === name ? { ...g, qty: g.qty + qty, group } : g
+            );
           } else {
-            next.push({ name, qty, group: 'ללא קבוצה' });
+            next.push({ name, qty, group });
           }
         });
       });
@@ -550,8 +583,7 @@ export default function SeatingPage() {
     setPlacedTables([]);
     setSelectedId(null);
   };
-
-  const openEdit = (table: PlacedTable) => {
+    const openEdit = (table: PlacedTable) => {
     if (table.isSpecial) return;
     if (!can('editTableInfo') && !isAdmin) return;
     setEditingTable({ ...table });
@@ -655,7 +687,8 @@ export default function SeatingPage() {
   const toggleGroup = (group: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
   };
-    return (
+
+  return (
     <div className="min-h-screen flex flex-col" dir="rtl" style={{ background: '#1e293b' }}>
       <div className="px-4 py-2.5 flex items-center gap-3 flex-wrap" style={{ background: '#0f172a' }}>
         <div className="flex gap-2">

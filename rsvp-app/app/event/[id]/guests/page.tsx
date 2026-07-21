@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { useParams } from 'next/navigation';
@@ -9,7 +9,6 @@ function normalizePhone(raw: string): string {
   if (!raw) return '';
   let p = raw.toString().trim().replace(/[^\d+]/g, '');
 
-  // מספר בינלאומי (לא ישראל) – שומרים עם +
   if (p.startsWith('+') && !p.startsWith('+972')) {
     const digits = p.slice(1).replace(/\D/g, '');
     if (digits.length >= 8 && digits.length <= 15) {
@@ -17,13 +16,11 @@ function normalizePhone(raw: string): string {
     }
   }
 
-  // ישראל: +972 / 972
   if (p.startsWith('+972')) p = p.slice(4);
   else if (p.startsWith('972')) p = p.slice(3);
 
   p = p.replace(/\D/g, '');
 
-  // 9 ספרות שמתחילות ב-5 → הוסף 0
   if (p.length === 9 && p.startsWith('5')) {
     p = '0' + p;
   }
@@ -32,16 +29,14 @@ function normalizePhone(raw: string): string {
 }
 
 function isValidPhone(phone: string): boolean {
-  if (!phone || !phone.trim()) return true; // ריק = בסדר
+  if (!phone || !phone.trim()) return true;
   const p = phone.trim();
 
-  // בינלאומי עם +
   if (p.startsWith('+')) {
     const digits = p.slice(1).replace(/\D/g, '');
     return digits.length >= 8 && digits.length <= 15;
   }
 
-  // ישראלי
   const local = normalizePhone(p);
   return local.length === 10 && local.startsWith('05');
 }
@@ -76,13 +71,15 @@ function getPhoneFlag(phone: string): string {
 export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
-  const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || "1");
+  const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || '1');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'>('all');
+  const [activeFilter, setActiveFilter] = useState<
+    'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'
+  >('all');
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
@@ -91,9 +88,7 @@ export default function GuestsPage() {
     if (!eventId) return;
 
     const allGuests = getGuests(String(eventId));
-    const validGuests = allGuests.filter(
-      (g: any) => g.name && g.name.trim() !== ''
-    );
+    const validGuests = allGuests.filter((g: any) => g.name && g.name.trim() !== '');
     setGuests(validGuests);
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -154,16 +149,20 @@ export default function GuestsPage() {
 
   const { men: menCount, women: womenCount } = countSeparation();
 
-  const yesCount = guests.filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1).length;
+  const yesCount = guests.filter(
+    (g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
+  ).length;
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
 
   const unknownWithNoteCount = guests.filter((g: any) => {
-    const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+    const isPending =
+      !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
     return isPending && g.notes && g.notes.trim() !== '';
   }).length;
 
   const unknownEmptyCount = guests.filter((g: any) => {
-    const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+    const isPending =
+      !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
     return isPending && (!g.notes || g.notes.trim() === '');
   }).length;
 
@@ -175,34 +174,63 @@ export default function GuestsPage() {
     const matchesSearch =
       (g.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (g.phone || '').includes(searchTerm);
-    if (activeFilter === 'yes') return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
+    if (activeFilter === 'yes')
+      return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
     if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
     if (activeFilter === 'unknown') {
-      const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+      const isPending =
+        !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
       return matchesSearch && isPending && g.notes && g.notes.trim() !== '';
     }
     if (activeFilter === 'unknownEmpty') {
-      const isPending = !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+      const isPending =
+        !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
       return matchesSearch && isPending && (!g.notes || g.notes.trim() === '');
     }
     if (activeFilter === 'noNote') return matchesSearch && (!g.notes || g.notes.trim() === '');
     return matchesSearch;
   });
 
+  // ===== קיבוץ לפי קבוצה =====
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    filteredGuests.forEach((g) => {
+      const key = (g.group && String(g.group).trim()) || 'ללא קבוצה';
+      if (!map[key]) map[key] = [];
+      map[key].push(g);
+    });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'he'));
+  }, [filteredGuests]);
+
+  const isConfirmedGuest = (g: any) =>
+    g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
+
   const toggleGuest = (id: number) => {
-    setSelectedGuests(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+    setSelectedGuests((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
   };
 
   const toggleSelectAll = () => {
-    if (selectedGuests.length === filteredGuests.length) {
+    if (selectedGuests.length === filteredGuests.length && filteredGuests.length > 0) {
       setSelectedGuests([]);
     } else {
       setSelectedGuests(filteredGuests.map((g: any) => g.id));
     }
   };
 
+  const toggleGroup = (groupGuests: any[]) => {
+    const ids = groupGuests.map((g) => g.id);
+    const allIn = ids.length > 0 && ids.every((id) => selectedGuests.includes(id));
+    if (allIn) {
+      setSelectedGuests((prev) => prev.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedGuests((prev) => Array.from(new Set([...prev, ...ids])));
+    }
+  };
+
   const deleteSelected = () => {
-    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
     const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
     saveGuests(eventId, updated);
@@ -211,13 +239,13 @@ export default function GuestsPage() {
   };
 
   const sendSMS = () => {
-    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
     window.location.href = `/event/${eventId}/sms`;
   };
 
   const sendWhatsApp = () => {
-    if (selectedGuests.length === 0) return alert("לא בחרת מוזמנים");
+    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
     window.location.href = `/event/${eventId}/whatsapp-templates`;
   };
@@ -236,58 +264,63 @@ export default function GuestsPage() {
     }
   }, [eventId]);
 
+  const colSpan = 10 + (hasTransport ? 1 : 0) + (hasSeparation ? 1 : 0);
+
   return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="text-xl font-bold text-gray-800">
-              {eventId === "1" ? "מנהל" : eventTitle}
+              {eventId === '1' ? 'מנהל' : eventTitle}
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
-              { id: 'home', href: "/", label: "עמוד הבית", icon: "🏠" },
-              { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: "תיקון מספרים", icon: "📞" },
-              { id: 'video', href: "/videos", label: "וידאו האירוע", icon: "🎥" },
-              { id: 'photo', href: "/gallery", label: "תמונות האירוע", icon: "🖼" },
-              { id: 'groups', href: `/event/${eventId}/groups`, label: "קבוצות מוזמנים", icon: "👥" },
-              { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: "אורחים שהגיעו", icon: "✅" },
-{ id: 'tables-status', href: `/event/${eventId}/tables-status`, label: "מצב שולחנות נוכחי", icon: "🪑" },
-              { id: 'waze', href: "/venue", label: "רשומות WAZE", icon: "📍" },
-              { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: "הוספת מוזמנים", icon: "➕" },
-              { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: "הושבת מוזמנים", icon: "🪑" },
-              { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: "הושבה מהירה", icon: "⚡" },
-              
-              { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: "מספרים כפולים", icon: "🔁" },
-              { id: 'add-tables', href: "/addtable", label: "הוספת שולחנות", icon: "➕" },
-              { id: 'pricing', href: "/pricing", label: "הצעות מחיר", icon: "💰" },
-              { id: 'pricing-view', href: "/pricing-view", label: "צפייה בהצעות", icon: "👀" },
-              { id: 'events-list', href: "/events", label: "רשימת אירועים", icon: "📅" },
-              { id: 'edit-event', href: `/event/${eventId}/edit`, label: "עריכת אירוע", icon: "✏️" },
-              { id: 'sms', href: `/event/${eventId}/sms`, label: "SMS", icon: "📩" },
-              { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: "תבניות ווטסאפ", icon: "💬" },
-              { id: 'landing', href: `/landing?eventId=${eventId}`, label: "דף נחיתה", icon: "🌐" },
-              { id: 'whatsapp-manage', href: `/event/${eventId}/whatsapp-templates/manage`, label: "ניהול תבניות ווטסאפ", icon: "⚙️" },
-              { id: 'transport', href: `/transport?eventId=${eventId}`, label: "הסעות", icon: "🚌" },
-              { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: "סקיצה אולם", icon: "🪑" },
-              { id: 'new-event', href: "/create-event", label: "פתח אירוע חדש", icon: "➕" },
-              { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: "הגדרות מנהל", icon: "🔐" },
+              { id: 'home', href: '/', label: 'עמוד הבית', icon: '🏠' },
+              { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: '📞' },
+              { id: 'video', href: '/videos', label: 'וידאו האירוע', icon: '🎥' },
+              { id: 'photo', href: '/gallery', label: 'תמונות האירוע', icon: '🖼' },
+              { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: '👥' },
+              { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
+              { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },
+              { id: 'waze', href: '/venue', label: 'רשומות WAZE', icon: '📍' },
+              { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: 'הוספת מוזמנים', icon: '➕' },
+              { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: 'הושבת מוזמנים', icon: '🪑' },
+              { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: 'הושבה מהירה', icon: '⚡' },
+              { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: 'מספרים כפולים', icon: '🔁' },
+              { id: 'add-tables', href: '/addtable', label: 'הוספת שולחנות', icon: '➕' },
+              { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: '💰' },
+              { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: '👀' },
+              { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },
+              { id: 'edit-event', href: `/event/${eventId}/edit`, label: 'עריכת אירוע', icon: '✏️' },
+              { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: '📩' },
+              { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: '💬' },
+              { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: '🌐' },
+              { id: 'whatsapp-manage', href: `/event/${eventId}/whatsapp-templates/manage`, label: 'ניהול תבניות ווטסאפ', icon: '⚙️' },
+              { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: '🚌' },
+              { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
+              { id: 'new-event', href: '/create-event', label: 'פתח אירוע חדש', icon: '➕' },
+              { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
-               .filter((item) => {
-              if (item.id === 'fix-phones') return true;
-              if (item.id === 'duplicate-phones') return true;
-              if (!isClientMode) return true;
-              if (item.id === 'admin-settings') return false;
-              return visibleActions.includes(item.id);
-            })
-            .map((item, index) => (
-              <Link key={index} href={item.href} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center">
-                <div className="text-4xl">{item.icon}</div>
-                <div className="text-sm font-medium text-gray-700">{item.label}</div>
-              </Link>
-            ))}
+              .filter((item) => {
+                if (item.id === 'fix-phones') return true;
+                if (item.id === 'duplicate-phones') return true;
+                if (!isClientMode) return true;
+                if (item.id === 'admin-settings') return false;
+                return visibleActions.includes(item.id);
+              })
+              .map((item, index) => (
+                <Link
+                  key={index}
+                  href={item.href}
+                  className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center"
+                >
+                  <div className="text-4xl">{item.icon}</div>
+                  <div className="text-sm font-medium text-gray-700">{item.label}</div>
+                </Link>
+              ))}
           </div>
         </div>
       </div>
@@ -296,7 +329,7 @@ export default function GuestsPage() {
         <div className="flex items-center gap-4 mb-6">
           <div className="text-3xl font-bold">רשימת מוזמנים</div>
           <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
-            <div className="text-sm opacity-90">סה"כ אישרו</div>
+            <div className="text-sm opacity-90">סה״כ אישרו</div>
             <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
           </div>
         </div>
@@ -304,7 +337,7 @@ export default function GuestsPage() {
         {hasTransport && (
           <div className="flex flex-wrap gap-3 mb-6">
             {transportOptions
-              .filter(opt => opt.name && opt.name.trim() !== '' && !opt.name.includes('עצמאית'))
+              .filter((opt) => opt.name && opt.name.trim() !== '' && !opt.name.includes('עצמאית'))
               .map((opt) => {
                 const count = getTransportCount(opt.name);
                 if (count === 0) return null;
@@ -345,19 +378,46 @@ export default function GuestsPage() {
         )}
 
         <div className="flex flex-wrap gap-3 mb-6">
-          <button onClick={() => setActiveFilter('all')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}>
+          <button
+            onClick={() => setActiveFilter('all')}
+            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
+              activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
             כל המוזמנים ({guests.length})
           </button>
-          <button onClick={() => setActiveFilter('yes')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}>
+          <button
+            onClick={() => setActiveFilter('yes')}
+            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
+              activeFilter === 'yes' ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'
+            }`}
+          >
             יגיעו ({yesCount})
           </button>
-          <button onClick={() => setActiveFilter('no')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+          <button
+            onClick={() => setActiveFilter('no')}
+            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
+              activeFilter === 'no' ? 'bg-red-600 text-white' : 'bg-red-500 text-white hover:bg-red-600'
+            }`}
+          >
             לא יגיעו ({noCount})
           </button>
-          <button onClick={() => setActiveFilter('unknown')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'}`}>
+          <button
+            onClick={() => setActiveFilter('unknown')}
+            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
+              activeFilter === 'unknown' ? 'bg-gray-700 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+          >
             לא ידוע ({unknownWithNoteCount})
           </button>
-          <button onClick={() => setActiveFilter('unknownEmpty')} className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${activeFilter === 'unknownEmpty' ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+          <button
+            onClick={() => setActiveFilter('unknownEmpty')}
+            className={`px-6 py-3 rounded-2xl font-medium text-sm transition-all ${
+              activeFilter === 'unknownEmpty'
+                ? 'bg-orange-600 text-white'
+                : 'bg-orange-500 text-white hover:bg-orange-600'
+            }`}
+          >
             לא ידוע ({unknownEmptyCount})
           </button>
         </div>
@@ -373,13 +433,22 @@ export default function GuestsPage() {
             />
             {!isClientMode && (
               <>
-                <button onClick={sendSMS} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap">
+                <button
+                  onClick={sendSMS}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
+                >
                   📩 SMS
                 </button>
-                <button onClick={sendWhatsApp} className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap">
+                <button
+                  onClick={sendWhatsApp}
+                  className="bg-green-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
+                >
                   💬 ווטסאפ
                 </button>
-                <button onClick={deleteSelected} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap">
+                <button
+                  onClick={deleteSelected}
+                  className="bg-red-600 text-white px-8 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
+                >
                   🗑 מחק מסומנים
                 </button>
               </>
@@ -394,9 +463,12 @@ export default function GuestsPage() {
                 <th className="px-6 py-5 text-center w-12">
                   <input
                     type="checkbox"
-                    checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length}
+                    checked={
+                      filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length
+                    }
                     onChange={toggleSelectAll}
                     className="w-5 h-5 accent-blue-600"
+                    title="סמן את כל הקבוצות"
                   />
                 </th>
                 <th className="px-6 py-5 text-center">#</th>
@@ -413,93 +485,195 @@ export default function GuestsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredGuests.map((guest: any, index: number) => {
-                const transportDisplay = getTransportDisplay(guest);
-                const isWaitingForTransport = transportDisplay === 'לא השיב לשאלת ההסעה';
-                const phone = guest.phone || '';
-                const phoneValid = isValidPhone(phone);
-                const flag = getPhoneFlag(phone);
+              {grouped.length === 0 && (
+                <tr>
+                  <td colSpan={colSpan} className="py-16 text-center text-gray-400 text-lg">
+                    אין מוזמנים להצגה
+                  </td>
+                </tr>
+              )}
+
+              {grouped.map(([groupName, groupGuests]) => {
+                const groupIds = groupGuests.map((g) => g.id);
+                const groupAllSelected =
+                  groupIds.length > 0 && groupIds.every((id) => selectedGuests.includes(id));
+                const confirmedInGroup = groupGuests
+                  .filter(isConfirmedGuest)
+                  .reduce(
+                    (sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1),
+                    0
+                  );
 
                 return (
-                  <tr key={`${guest.id}-${index}`} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedGuests.includes(guest.id)}
-                        onChange={() => toggleGuest(guest.id)}
-                        className="w-5 h-5 accent-blue-600"
-                      />
-                    </td>
-                    <td className="px-6 py-5 text-center text-gray-500 font-medium">{index + 1}</td>
-                    <td className="px-6 py-5 text-center text-blue-600 font-medium">{eventTitle}</td>
-                    <td className="px-6 py-5 font-medium">{guest.name}</td>
-                    <td className="px-6 py-5">
-                      {!phone.trim() ? (
-                        <span className="text-slate-400 text-sm">—</span>
-                      ) : (
-                        <div>
-                          <div className={`flex items-center gap-2 font-mono ${!phoneValid ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-                            {flag && <span className="text-base">{flag}</span>}
-                            <span dir="ltr">{phone}</span>
-                          </div>
-                          {!phoneValid && (
-                            <div className="text-[11px] text-red-500 mt-0.5">מס לא תקין</div>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">{guest.group}</td>
-                    <td className="px-6 py-5 text-center font-bold">{guest.quantity}</td>
-
-                    {hasTransport && (
-                      <td className={`px-6 py-5 text-center font-medium ${isWaitingForTransport ? 'text-orange-600' : 'text-blue-600'}`}>
-                        {transportDisplay}
+                  <>
+                    {/* כותרת קבוצה */}
+                    <tr key={`header-${groupName}`} className="bg-[#f5e8c7]">
+                      <td className="px-6 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={groupAllSelected}
+                          onChange={() => toggleGroup(groupGuests)}
+                          className="w-5 h-5 accent-amber-600"
+                          title={`סמן את כל ${groupName}`}
+                        />
                       </td>
-                    )}
-
-                    {hasSeparation && (
-                      <td className="px-6 py-5 text-center font-medium text-purple-700">
-                        {guest.separation || '-'}
+                      <td
+                        colSpan={colSpan - 1}
+                        className="px-6 py-3 text-center font-bold text-xl text-amber-900 tracking-wide"
+                      >
+                        {groupName}
                       </td>
-                    )}
+                    </tr>
 
-                    <td className="px-6 py-5 text-center">
-                      {guest.confirmed === 'לא מגיע' ? (
-                        <div className="flex flex-col items-center">
-                          <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">❌</div>
-                          <div className="text-red-600 font-semibold text-lg mt-1">0</div>
-                        </div>
-                      ) : guest.confirmed && !isNaN(Number(guest.confirmed)) && Number(guest.confirmed) >= 1 ? (
-                        <div className="flex flex-col items-center">
-                          <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">✅</div>
-                          <div className="text-emerald-700 font-semibold text-lg mt-1">{guest.count || guest.quantity || 1}</div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <div className="text-4xl">⏳</div>
-                          <div className="text-amber-600 font-medium text-sm mt-1">ממתין</div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-5 text-gray-600 text-sm">{guest.notes}</td>
-                    <td className="px-6 py-5 text-center">
-                      <div className="flex gap-2 justify-center">
-                        <Link href={`/event/${eventId}/guests/${guest.id}/edit`} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium">✏️ ערוך</Link>
-                        <button
-                          onClick={() => {
-                            if (confirm(`למחוק את ${guest.name}?`)) {
-                              const updated = guests.filter((g: any) => g.id !== guest.id);
-                              saveGuests(eventId, updated);
-                              setGuests(updated);
-                            }
-                          }}
-                          className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
+                    {/* מוזמנים בקבוצה */}
+                    {groupGuests.map((guest: any, index: number) => {
+                      const transportDisplay = getTransportDisplay(guest);
+                      const isWaitingForTransport =
+                        transportDisplay === 'לא השיב לשאלת ההסעה';
+                      const phone = guest.phone || '';
+                      const phoneValid = isValidPhone(phone);
+                      const flag = getPhoneFlag(phone);
+
+                      return (
+                        <tr
+                          key={`${guest.id}-${index}`}
+                          className="border-b hover:bg-gray-50"
                         >
-                          🗑 מחק
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          <td className="px-6 py-5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedGuests.includes(guest.id)}
+                              onChange={() => toggleGuest(guest.id)}
+                              className="w-5 h-5 accent-blue-600"
+                            />
+                          </td>
+                          <td className="px-6 py-5 text-center text-gray-500 font-medium">
+                            {index + 1}
+                          </td>
+                          <td className="px-6 py-5 text-center text-blue-600 font-medium">
+                            {eventTitle}
+                          </td>
+                          <td className="px-6 py-5 font-medium">{guest.name}</td>
+                          <td className="px-6 py-5">
+                            {!phone.trim() ? (
+                              <span className="text-slate-400 text-sm">—</span>
+                            ) : (
+                              <div>
+                                <div
+                                  className={`flex items-center gap-2 font-mono ${
+                                    !phoneValid
+                                      ? 'text-red-600 font-semibold'
+                                      : 'text-gray-600'
+                                  }`}
+                                >
+                                  {flag && <span className="text-base">{flag}</span>}
+                                  <span dir="ltr">{phone}</span>
+                                </div>
+                                {!phoneValid && (
+                                  <div className="text-[11px] text-red-500 mt-0.5">
+                                    מס לא תקין
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-5">{guest.group}</td>
+                          <td className="px-6 py-5 text-center font-bold">
+                            {guest.quantity}
+                          </td>
+
+                          {hasTransport && (
+                            <td
+                              className={`px-6 py-5 text-center font-medium ${
+                                isWaitingForTransport
+                                  ? 'text-orange-600'
+                                  : 'text-blue-600'
+                              }`}
+                            >
+                              {transportDisplay}
+                            </td>
+                          )}
+
+                          {hasSeparation && (
+                            <td className="px-6 py-5 text-center font-medium text-purple-700">
+                              {guest.separation || '-'}
+                            </td>
+                          )}
+
+                          <td className="px-6 py-5 text-center">
+                            {guest.confirmed === 'לא מגיע' ? (
+                              <div className="flex flex-col items-center">
+                                <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
+                                  ❌
+                                </div>
+                                <div className="text-red-600 font-semibold text-lg mt-1">
+                                  0
+                                </div>
+                              </div>
+                            ) : guest.confirmed &&
+                              !isNaN(Number(guest.confirmed)) &&
+                              Number(guest.confirmed) >= 1 ? (
+                              <div className="flex flex-col items-center">
+                                <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
+                                  ✅
+                                </div>
+                                <div className="text-emerald-700 font-semibold text-lg mt-1">
+                                  {guest.count || guest.quantity || 1}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center">
+                                <div className="text-4xl">⏳</div>
+                                <div className="text-amber-600 font-medium text-sm mt-1">
+                                  ממתין
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-5 text-gray-600 text-sm">
+                            {guest.notes}
+                          </td>
+                          <td className="px-6 py-5 text-center">
+                            <div className="flex gap-2 justify-center">
+                              <Link
+                                href={`/event/${eventId}/guests/${guest.id}/edit`}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-2xl text-sm font-medium"
+                              >
+                                ✏️ ערוך
+                              </Link>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`למחוק את ${guest.name}?`)) {
+                                    const updated = guests.filter(
+                                      (g: any) => g.id !== guest.id
+                                    );
+                                    saveGuests(eventId, updated);
+                                    setGuests(updated);
+                                  }
+                                }}
+                                className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2 rounded-2xl text-sm font-medium"
+                              >
+                                🗑 מחק
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* סיכום קבוצה */}
+                    <tr key={`footer-${groupName}`} className="bg-slate-50 border-b-2 border-slate-200">
+                      <td
+                        colSpan={colSpan}
+                        className="px-6 py-3 text-left text-slate-600 font-medium"
+                      >
+                        סה״כ אורחים שאישרו הגעתם בקבוצה זו:{' '}
+                        <span className="text-emerald-700 font-bold text-lg">
+                          {confirmedInGroup}
+                        </span>
+                      </td>
+                    </tr>
+                  </>
                 );
               })}
             </tbody>

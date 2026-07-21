@@ -15,24 +15,7 @@ export default function EventsPage() {
     setEvents(saved);
   }, []);
 
-  const deleteEvent = (e, eventId, owners) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!confirm(`למחוק לצמיתות את האירוע של "${owners}"?\n\nיימחקו גם כל המוזמנים של האירוע.`)) {
-      return;
-    }
-
-    const updated = events.filter((ev) => ev.id.toString() !== eventId.toString());
-    localStorage.setItem('myEvents', JSON.stringify(updated));
-    setEvents(updated);
-    localStorage.removeItem(`guests_event_${eventId}`);
-    localStorage.removeItem(`groups_event_${eventId}`);
-    alert('✅ האירוע נמחק');
-  };
-
   const getMonthName = (event) => {
-    // תומך ב-date כמו 04/08 או fullDate כמו 2026-08-04
     let monthNum = null;
     if (event.fullDate && event.fullDate.includes('-')) {
       monthNum = parseInt(event.fullDate.split('-')[1], 10);
@@ -75,7 +58,6 @@ export default function EventsPage() {
     .sort((a, b) => {
       const da = formatShortDate(a);
       const db = formatShortDate(b);
-      // מיון לפי יום
       const dayA = parseInt(da.split('/')[0] || '0', 10);
       const dayB = parseInt(db.split('/')[0] || '0', 10);
       return dayA - dayB;
@@ -93,7 +75,6 @@ export default function EventsPage() {
           </Link>
         </div>
 
-        {/* כפתורי חודשים */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
           {months.map((month) => (
             <button
@@ -110,7 +91,6 @@ export default function EventsPage() {
           ))}
         </div>
 
-        {/* רשימה בשורה כמו בתמונה */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px]">
           {filteredEvents.length === 0 ? (
             <p className="text-gray-400 text-center py-10">אין אירועים בחודש זה</p>
@@ -125,7 +105,7 @@ export default function EventsPage() {
                   : 'text-blue-600 hover:text-blue-800';
 
                 return (
-                  <span key={event.id} className="inline-flex items-center gap-1.5 group">
+                  <span key={event.id} className="inline-flex items-center gap-1.5">
                     <span className="text-amber-500 text-lg leading-none">★</span>
                     <Link
                       href={`/event/${event.id}/guests`}
@@ -135,13 +115,6 @@ export default function EventsPage() {
                       {dateStr ? ` (${dateStr})` : ''}
                       {nufar ? ' (נופר)' : ''}
                     </Link>
-                    <button
-                      onClick={(e) => deleteEvent(e, event.id, event.owners)}
-                      className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 text-xs mr-1 transition"
-                      title="מחק"
-                    >
-                      ✕
-                    </button>
                   </span>
                 );
               })}
