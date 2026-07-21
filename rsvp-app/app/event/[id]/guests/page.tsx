@@ -280,8 +280,8 @@ export default function GuestsPage() {
             {[
               { id: 'home', href: '/', label: 'עמוד הבית', icon: '🏠' },
               { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: '📞' },
-              { id: 'video', href: '/videos', label: 'וידאו האירוע', icon: '🎥' },
-              { id: 'photo', href: '/gallery', label: 'תמונות האירוע', icon: '🖼' },
+              { id: 'video', href: `/videos?eventId=${eventId}`, label: "וידאו האירוע", icon: "🎥" },
+              { id: 'photo', href: `/gallery?eventId=${eventId}`, label: "תמונות האירוע", icon: "🖼" },
               { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: '👥' },
               { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
               { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },

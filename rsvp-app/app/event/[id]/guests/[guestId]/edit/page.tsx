@@ -336,11 +336,38 @@ export default function EditGuestPage() {
       <div className="max-w-7xl mx-auto">
         <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm mb-4 inline-block">← חזרה לרשימה</Link>
 
-        <div className="flex flex-col lg:flex-row gap-5 mb-6">
-          <div onClick={callPhone} className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-3xl p-7 flex flex-col items-center justify-center shadow-lg w-full lg:w-[420px] flex-shrink-0">
-            <div className="text-base opacity-80">טלפון</div>
-            <div className="text-5xl font-bold tracking-widest mt-1">{guest.phone}</div>
-            <div className="text-xs mt-2 opacity-70">לחץ להתקשר ב-Zoiper</div>
+                <div className="flex flex-col lg:flex-row gap-5 mb-6">
+          <div className="w-full lg:w-[420px] flex-shrink-0 space-y-3">
+            {/* כפתור Zoiper — לא נוגעים */}
+            <div
+              onClick={callPhone}
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-3xl p-7 flex flex-col items-center justify-center shadow-lg"
+            >
+              <div className="text-base opacity-80">טלפון</div>
+              <div className="text-5xl font-bold tracking-widest mt-1">
+                {guest.phone || '—'}
+              </div>
+              <div className="text-xs mt-2 opacity-70">לחץ להתקשר ב-Zoiper</div>
+            </div>
+
+            {/* תיבת עריכת מספר */}
+            <div className="bg-white rounded-3xl p-4 shadow">
+              <label className="block text-sm text-gray-500 mb-2">
+                עריכת / הוספת מספר טלפון
+              </label>
+              <input
+                type="tel"
+                dir="ltr"
+                value={guest.phone || ''}
+                onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                onBlur={() => saveGuestField({ ...guest, phone: guest.phone || '' })}
+                placeholder="050-0000000"
+                className="w-full p-3 border border-gray-300 rounded-2xl text-lg font-mono text-center tracking-wide focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-[11px] text-gray-400 mt-1.5 text-center">
+                השינוי נשמר אוטומטית · הכפתור הכחול למעלה לחיוג בלבד
+              </p>
+            </div>
           </div>
 
           <div className="flex-1 bg-white rounded-3xl p-6 shadow text-sm">
