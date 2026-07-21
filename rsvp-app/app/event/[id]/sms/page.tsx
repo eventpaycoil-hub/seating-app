@@ -76,12 +76,21 @@ export default function SMSPage() {
   };
 
   const getBaseUrl = () => {
-    return 'https://seating-app-dusky.vercel.app';
-  };
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://seating-app-dusky.vercel.app';
+};
 
   const buildDynamicMessage = (template: any) => {
     if (!template) return '';
     let message = template.content;
+    if (template.id === 4) {
+      const eventIdForLink = currentEvent?.id || eventId || '1';
+      const guestCode = activeGuest?.inviteCode || activeGuest?.id || '';
+      const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
+      message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
+    }
+
+    
     const en = isEnglishEvent;
 
     if (activeGuest?.name && [1, 2, 6].includes(template.id)) {
@@ -189,10 +198,10 @@ export default function SMSPage() {
           title: 'Message 3 – Thank you',
           content: `What an amazing celebration thanks to you!\nThank you for celebrating with us!\nSee you at the next happy occasion.\nLove, ${owners} ❤️`,
         },
-        {
+                {
           id: 4,
           title: 'Message 4 – Transport',
-          content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n${base}/transport?eventId=${eventId}`,
+          content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n*TRANSPORT_LINK*`,
         },
         {
           id: 5,
@@ -226,7 +235,7 @@ export default function SMSPage() {
       {
         id: 4,
         title: 'הודעה מס 4 הסעה',
-        content: `אישרתם הגעה לחתונה של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n${base}/transport?eventId=${eventId}`,
+        content: `אישרתם הגעה לחתונה של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n*TRANSPORT_LINK*`,
       },
       {
         id: 5,

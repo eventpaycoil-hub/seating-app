@@ -8,14 +8,18 @@ import { useSearchParams } from 'next/navigation';
 function TransportContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '1';
-  const guestId = searchParams.get('guestId');
+  // תומך גם ב-guestId וגם ב-ref (מה-SMS)
+  const guestRef =
+    searchParams.get('guestId') ||
+    searchParams.get('ref') ||
+    searchParams.get('code') ||
+    '';
 
   const [eventData, setEventData] = useState<any>(null);
   const [showThankYou, setShowThankYou] = useState(false);
   const [chosenOption, setChosenOption] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // אפשרויות הסעה (ניתנות לעריכה)
   const [options, setOptions] = useState([
     { id: 1, name: '', time: '' },
     { id: 2, name: '', time: '' },
@@ -30,7 +34,6 @@ function TransportContent() {
     const current = events.find((e: any) => e.id.toString() === eventId.toString());
     if (current) setEventData(current);
 
-    // טעינת הגדרות הסעות של האירוע
     const saved = localStorage.getItem(`transport_options_${eventId}`);
     if (saved) {
       try {
@@ -38,12 +41,12 @@ function TransportContent() {
       } catch {}
     }
 
-    // אם אין guestId = מצב מנהל (עריכת שמות)
-    if (!guestId) setIsAdmin(true);
-  }, [eventId, guestId]);
+    // אין ref/guestId = מצב מנהל
+    if (!guestRef) setIsAdmin(true);
+  }, [eventId, guestRef]);
 
   const updateOption = (id: number, field: 'name' | 'time', value: string) => {
-    setOptions(prev => prev.map(o => o.id === id ? { ...o, [field]: value } : o));
+    setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, [field]: value } : o)));
   };
 
   const saveOptions = () => {
@@ -51,52 +54,62 @@ function TransportContent() {
     alert('✅ ההסעות נשמרו בהצלחה');
   };
 
-  const handleChoose = (option: any) => {
-    const transportText = option.id === 7 
-      ? "לא תודה אגיע עצמאית" 
-      : `${option.name}${option.time ? ' - ' + option.time : ''}`;
+  const findGuestIndex = (guests: any[], ref: string) => {
+    if (!ref || !Array.isArray(guests)) return -1;
+    const sc = String(ref).trim();
+    return guests.findIndex((g: any) => {
+      if (!g) return false;
+      if (g.id != null && String(g.id) === sc) return true;
+      if (g.inviteCode != null && String(g.inviteCode) === sc) return true;
+      if (g.code != null && String(g.code) === sc) return true;
+      if (g.phone) {
+        const p = String(g.phone).replace(/\D/g, '');
+        const c = sc.replace(/\D/g, '');
+        if (p && c && p === c) return true;
+      }
+      return false;
+    });
+  };
 
-    if (guestId) {
+  const handleChoose = (option: any) => {
+    const transportText =
+      option.id === 7
+        ? 'לא תודה אגיע עצמאית'
+        : `${option.name}${option.time ? ' - ' + option.time : ''}`;
+
+    if (guestRef) {
       const key = `guests_event_${eventId}`;
       let guests = JSON.parse(localStorage.getItem(key) || '[]');
-      guests = guests.map((g: any) =>
-        g.id.toString() === guestId ? { ...g, transportation: transportText } : g
-      );
-      localStorage.setItem(key, JSON.stringify(guests));
+      const idx = findGuestIndex(guests, guestRef);
+      if (idx !== -1) {
+        guests[idx] = { ...guests[idx], transportation: transportText };
+        localStorage.setItem(key, JSON.stringify(guests));
+      }
     }
 
     setChosenOption(transportText);
     setShowThankYou(true);
   };
 
-  // רק הסעות שיש להן שם
-  const activeOptions = options.filter(o => o.name.trim() !== '');
+  const activeOptions = options.filter((o) => o.name.trim() !== '');
 
-  // מסך תודה
   if (showThankYou) {
     return (
       <div className="min-h-screen bg-[#f8f1e3] flex items-center justify-center p-6" dir="rtl">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
           <div className="text-7xl mb-6">🙏</div>
           <h2 className="text-3xl font-bold text-[#3f2a1e] mb-4">תודה על בחירתך!</h2>
-          <p className="text-xl text-gray-700 mb-8">הבחירה נרשמה בהצלחה באירוע.</p>
-          
+          <p className="text-xl text-gray-700 mb-8">הבחירה נרשמה בהצלחה.</p>
+
           <div className="bg-[#f8f1e3] rounded-2xl p-5 mb-8">
             <p className="text-lg font-medium text-[#5c4033]">{chosenOption}</p>
           </div>
-
-          <Link 
-            href={`/event/${eventId}/guests`} 
-            className="inline-block bg-[#3f2a1e] hover:bg-[#2c2118] text-white px-10 py-4 rounded-2xl text-lg font-medium transition-all"
-          >
-            חזרה לרשימת מוזמנים
-          </Link>
         </div>
       </div>
     );
   }
 
-  // ===== מצב מנהל - עריכת שמות הסעות =====
+  // ===== מצב מנהל =====
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-[#f8f1e3] py-12" dir="rtl">
@@ -154,7 +167,7 @@ function TransportContent() {
       <div className="max-w-4xl mx-auto px-6">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">הסעות לאירוע</h1>
-          <p className="text-2xl text-gray-800">{eventData?.owners || "שלומי ויעל"}</p>
+          <p className="text-2xl text-gray-800">{eventData?.owners || 'האירוע'}</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-10">
@@ -163,28 +176,33 @@ function TransportContent() {
             <p className="text-gray-600">לחץ על האופציה המתאימה לך</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {activeOptions.map(option => (
-              <button
-                key={option.id}
-                onClick={() => handleChoose(option)}
-                className="p-8 rounded-3xl border-2 border-gray-200 hover:border-[#d4a017] hover:bg-[#fff8e1] text-right transition-all active:scale-[0.985]"
-              >
-                <div className="text-2xl font-bold text-gray-900 mb-1">{option.name}</div>
-                {option.time && (
-                  <div className="text-gray-600 text-lg">יציאה בשעה {option.time}</div>
-                )}
-              </button>
-            ))}
+          {activeOptions.length === 0 ? (
+            <p className="text-center text-gray-500 text-lg py-10">
+              עדיין לא הוגדרו הסעות לאירוע זה
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {activeOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => handleChoose(option)}
+                  className="p-8 rounded-3xl border-2 border-gray-200 hover:border-[#d4a017] hover:bg-[#fff8e1] text-right transition-all active:scale-[0.985]"
+                >
+                  <div className="text-2xl font-bold text-gray-900 mb-1">{option.name}</div>
+                  {option.time && (
+                    <div className="text-gray-600 text-lg">יציאה בשעה {option.time}</div>
+                  )}
+                </button>
+              ))}
 
-            {/* תמיד מופיע */}
-            <button
-              onClick={() => handleChoose({ id: 7, name: "לא תודה אגיע עצמאית", time: "" })}
-              className="p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 text-right transition-all active:scale-[0.985]"
-            >
-              <div className="text-2xl font-bold text-gray-900">לא תודה אגיע עצמאית</div>
-            </button>
-          </div>
+              <button
+                onClick={() => handleChoose({ id: 7, name: 'לא תודה אגיע עצמאית', time: '' })}
+                className="p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 text-right transition-all active:scale-[0.985]"
+              >
+                <div className="text-2xl font-bold text-gray-900">לא תודה אגיע עצמאית</div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

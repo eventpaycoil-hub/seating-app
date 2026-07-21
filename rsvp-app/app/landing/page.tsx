@@ -24,6 +24,7 @@ const TEXTS = {
     thanks: 'תודה רבה!',
     confirmedFor: 'אישרת הגעה ל-',
     guests: 'אורחים',
+    seeYou: 'נתראה בשמחה!',
     redirectSeparation: 'מעביר אותך לבחירת הפרדה...',
     sorryNotComing: 'מצטערים שלא תוכלו להגיע',
     thanksUpdate: 'תודה על העדכון',
@@ -59,6 +60,7 @@ const TEXTS = {
     thanks: 'Thank you!',
     confirmedFor: 'You confirmed attendance for ',
     guests: 'guests',
+    seeYou: 'See you at the celebration!',
     redirectSeparation: 'Redirecting to seating preference...',
     sorryNotComing: "We're sorry you can't make it",
     thanksUpdate: 'Thank you for letting us know',
@@ -91,6 +93,7 @@ function LandingPageContent() {
   const [showPersonalNote, setShowPersonalNote] = useState(false);
   const [personalNote, setPersonalNote] = useState('');
   const [lang, setLang] = useState<'he' | 'en'>('he');
+  const [guestName, setGuestName] = useState('');
 
   const isEnglishEvent =
     event?.englishEvent === 'כן' ||
@@ -102,55 +105,80 @@ function LandingPageContent() {
 
   useEffect(() => {
     if (!eventId) return;
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) {
-      setEvent(currentEvent);
-      // ברירת מחדל לאנגלית רק אם מסומן אירוע באנגלית
-      if (
-        currentEvent.englishEvent === 'כן' ||
-        currentEvent.englishEvent === true ||
-        currentEvent.englishEvent === 'yes'
-      ) {
-        setLang('en');
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
+      if (currentEvent) {
+        setEvent(currentEvent);
+        if (
+          currentEvent.englishEvent === 'כן' ||
+          currentEvent.englishEvent === true ||
+          currentEvent.englishEvent === 'yes'
+        ) {
+          setLang('en');
+        }
       }
+    } catch (e) {
+      console.error('load event error', e);
     }
   }, [eventId]);
 
   useEffect(() => {
     if (!eventId) return;
-
-    const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
-    if (videos.length > 0) {
-      setHeroMedia({ type: 'video', url: videos[0].url });
-      return;
-    }
-
-    const globalMedia = JSON.parse(localStorage.getItem('eventpay-media') || '[]');
-    const firstImage = globalMedia.find((item: any) => item.type === 'image');
-
-    if (firstImage) {
-      setHeroMedia({ type: 'image', url: firstImage.url });
-    } else {
+    try {
+      const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
+      if (videos.length > 0 && videos[0].url) {
+        setHeroMedia({ type: 'video', url: videos[0].url });
+        return;
+      }
+      const globalMedia = JSON.parse(localStorage.getItem('eventpay-media') || '[]');
+      const firstImage = globalMedia.find((item: any) => item.type === 'image');
+      if (firstImage?.url) {
+        setHeroMedia({ type: 'image', url: firstImage.url });
+      } else {
+        setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
+      }
+    } catch {
       setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
     }
   }, [eventId]);
 
+  useEffect(() => {
+    if (!eventId || !code) return;
+    try {
+      const saved = getGuests(String(eventId));
+      const idx = findGuestIndex(saved, String(code));
+      if (idx !== -1) {
+        setGuestName(saved[idx].name || '');
+      }
+    } catch (e) {
+      console.error('guest preload error', e);
+    }
+  }, [eventId, code]);
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
+    if (dateStr.includes('/')) return dateStr;
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
 
   const findGuestIndex = (saved: any[], searchCode: string) => {
-    return saved.findIndex(
-      (g: any) =>
-        g.inviteCode === searchCode ||
-        g.code === searchCode ||
-        String(g.id) === searchCode ||
-        (g.name && g.name.toLowerCase().includes(searchCode.toLowerCase()))
-    );
+    if (!searchCode || !Array.isArray(saved)) return -1;
+    const sc = String(searchCode).trim();
+    return saved.findIndex((g: any) => {
+      if (!g) return false;
+      if (g.inviteCode != null && String(g.inviteCode) === sc) return true;
+      if (g.code != null && String(g.code) === sc) return true;
+      if (g.id != null && String(g.id) === sc) return true;
+      if (g.phone) {
+        const p = String(g.phone).replace(/\D/g, '');
+        const c = sc.replace(/\D/g, '');
+        if (p && c && p === c) return true;
+      }
+      return false;
+    });
   };
 
   const handleRsvp = (count: number) => {
@@ -158,82 +186,83 @@ function LandingPageContent() {
       alert(t.invalidLinkAlert);
       return;
     }
-
     if (!code) {
       setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    let saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, code);
+    const saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, String(code));
 
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     saved[guestIndex].confirmed = count;
     saved[guestIndex].confirmedCount = count;
     saved[guestIndex].count = count;
-
-    const key = `guests_event_${eventId}`;
-    localStorage.setItem(key, JSON.stringify(saved));
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
 
     setRsvpCount(count);
+    setGuestName(saved[guestIndex].name || '');
     setRsvpStatus('confirmed');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (event?.hasSeparation === 'כן') {
       setTimeout(() => {
         window.location.href = `/separation?eventId=${eventId}&guestId=${saved[guestIndex].id}`;
-      }, 1500);
+      }, 1800);
     }
   };
 
   const handleNotComing = () => {
     if (!eventId || !code) {
       setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    let saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, code);
+    const saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, String(code));
 
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     saved[guestIndex].confirmed = 'לא מגיע';
     saved[guestIndex].confirmedCount = 0;
     saved[guestIndex].count = 0;
-
-    const key = `guests_event_${eventId}`;
-    localStorage.setItem(key, JSON.stringify(saved));
-
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
     setRsvpStatus('notComing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleUnknown = () => {
     if (!eventId || !code) {
       setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    let saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, code);
+    const saved: any[] = getGuests(String(eventId));
+    const guestIndex = findGuestIndex(saved, String(code));
 
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     saved[guestIndex].confirmed = 'לא ידוע';
     saved[guestIndex].confirmedCount = 0;
-
-    const key = `guests_event_${eventId}`;
-    localStorage.setItem(key, JSON.stringify(saved));
-
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
     setRsvpStatus('pending');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePersonalNoteSubmit = () => {
@@ -241,27 +270,25 @@ function LandingPageContent() {
       alert(t.writeMessage);
       return;
     }
-
     if (code && eventId) {
-      let saved: any[] = getGuests(String(eventId));
-      const guestIndex = findGuestIndex(saved, code);
-
+      const saved: any[] = getGuests(String(eventId));
+      const guestIndex = findGuestIndex(saved, String(code));
       if (guestIndex !== -1) {
         saved[guestIndex].notes = personalNote;
-        const key = `guests_event_${eventId}`;
-        localStorage.setItem(key, JSON.stringify(saved));
+        localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
       }
     }
-
     alert(t.messageSaved);
     setShowPersonalNote(false);
     setPersonalNote('');
     setRsvpStatus('confirmed');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const eventType = event?.eventType || '';
   const isTwoButtons = eventType === '2 כפתורים' || eventType === 'אחר';
   const isThreeButtons = eventType === '3 כפתורים' || eventType === 'אחר 2';
+  const displayTitle = event?.owners || event?.title || event?.hallName || t.ourEvent;
 
   if (!eventId) {
     return (
@@ -276,7 +303,6 @@ function LandingPageContent() {
 
   return (
     <div className="min-h-screen bg-[#f8f1e3]" dir={dir}>
-      {/* מתג שפה – רק אם מסומן אירוע באנגלית */}
       {isEnglishEvent && (
         <div className="bg-[#2a1c14] text-white py-2 px-4 flex justify-center gap-2 text-sm">
           <button
@@ -298,206 +324,216 @@ function LandingPageContent() {
         </div>
       )}
 
-      {/* Header */}
       <div className="bg-[#3f2a1e] text-white py-6 text-center">
-        <h1 className="text-4xl sm:text-5xl font-light tracking-widest">
-          {event?.owners
-            ? `${t.weddingOf} ${event.owners}`
-            : t.ourEvent}
+        <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
+          {event?.owners ? `${t.weddingOf} ${event.owners}` : displayTitle}
         </h1>
+        {guestName && rsvpStatus === 'none' && (
+          <p className="mt-2 text-lg opacity-90">
+            {lang === 'he' ? `שלום ${guestName}` : `Hi ${guestName}`}
+          </p>
+        )}
       </div>
 
-      {/* Hero */}
-      <div className="flex justify-center pt-8 pb-4">
-        <div className="w-full max-w-[1100px] px-4">
-          <div className="relative w-full aspect-[3/2] rounded-3xl overflow-hidden shadow-2xl">
-            {heroMedia?.type === 'video' ? (
-              <video
-                src={heroMedia.url}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <img
-                src={heroMedia?.url || '/chatan-kala.jpg'}
-                alt="Invitation"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            )}
-          </div>
+      {/* אחרי תשובה – מסך תודה בלבד */}
+      {rsvpStatus !== 'none' ? (
+        <div className="max-w-xl mx-auto px-6 py-16 text-center">
+          {rsvpStatus === 'confirmed' && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-12 shadow-xl">
+              <div className="text-7xl mb-6">🎉</div>
+              <h3 className="text-4xl font-bold text-green-800 mb-3">{t.thanks}</h3>
+              {guestName && (
+                <p className="text-xl text-green-700 mb-2">
+                  {lang === 'he' ? `תודה ${guestName}!` : `Thank you ${guestName}!`}
+                </p>
+              )}
+              <p className="text-2xl text-green-700 mb-4">
+                {t.confirmedFor}
+                {rsvpCount} {t.guests}
+              </p>
+              <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
+              {event?.hasSeparation === 'כן' && (
+                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+              )}
+            </div>
+          )}
+
+          {rsvpStatus === 'notComing' && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
+              <div className="text-6xl mb-6">😔</div>
+              <h3 className="text-3xl font-bold text-red-800 mb-3">{t.sorryNotComing}</h3>
+              <p className="text-xl text-red-700">{t.thanksUpdate}</p>
+            </div>
+          )}
+
+          {rsvpStatus === 'pending' && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-3xl p-12 shadow-xl">
+              <div className="text-6xl mb-6">📞</div>
+              <h3 className="text-3xl font-bold text-blue-800 mb-3">{t.thanksShort}</h3>
+              <p className="text-xl text-blue-700">{t.willContact}</p>
+            </div>
+          )}
+
+          {rsvpStatus === 'notFound' && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-red-700 mb-4">{t.guestNotFound}</h3>
+              <p>{t.invalidCode}</p>
+              <p className="text-sm text-gray-500 mt-3">ref: {code}</p>
+            </div>
+          )}
+
+          {rsvpStatus === 'general' && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-amber-700 mb-4">{t.generalLink}</h3>
+              <p className="whitespace-pre-line">{t.generalLinkText}</p>
+            </div>
+          )}
         </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 pt-6 pb-16 text-center">
-        {/* פרטי האירוע */}
-        <div className="mb-10 text-[#3f2a1e]">
-          <div className="text-4xl font-semibold mb-3 tracking-wide">
-            {formatDate(event?.fullDate || event?.eventDate || event?.date)}
-          </div>
-          <div className="text-2xl mb-1.5">{event?.hallName}</div>
-          {event?.city && <div className="text-xl mb-1.5">{event.city}</div>}
-          <div className="text-xl">
-            {t.atHour} {event?.time || '19:30'}
-          </div>
-        </div>
-
-        <h2 className="text-3xl sm:text-4xl font-bold mb-10 text-[#3f2a1e]">
-          {t.gladToSee}
-        </h2>
-
-        {/* בחירת כמות */}
-        {rsvpStatus === 'none' && (
-          <div className="space-y-6">
-            {isTwoButtons && (
-              <div className="flex flex-col sm:flex-row gap-5 justify-center">
-                <button
-                  onClick={() => handleRsvp(1)}
-                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
-                >
-                  {t.coming}
-                </button>
-                <button
-                  onClick={handleNotComing}
-                  className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
-                >
-                  {t.notComing}
-                </button>
+      ) : (
+        <>
+          <div className="flex justify-center pt-8 pb-4">
+            <div className="w-full max-w-[1100px] px-4">
+              <div className="relative w-full aspect-[3/2] rounded-3xl overflow-hidden shadow-2xl">
+                {heroMedia?.type === 'video' ? (
+                  <video
+                    src={heroMedia.url}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={heroMedia?.url || '/chatan-kala.jpg'}
+                    alt="Invitation"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
               </div>
-            )}
+            </div>
+          </div>
 
-            {isThreeButtons && (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={() => handleRsvp(1)}
-                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
-                >
-                  {t.coming1}
-                </button>
-                <button
-                  onClick={() => handleRsvp(2)}
-                  className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
-                >
-                  {t.coming2}
-                </button>
-                <button
-                  onClick={handleNotComing}
-                  className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
-                >
-                  {t.notComing}
-                </button>
+          <div className="max-w-2xl mx-auto px-6 pt-6 pb-16 text-center">
+            <div className="mb-10 text-[#3f2a1e]">
+              <div className="text-4xl font-semibold mb-3 tracking-wide">
+                {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
-            )}
+              <div className="text-2xl mb-1.5">{event?.hallName}</div>
+              {event?.city && <div className="text-xl mb-1.5">{event.city}</div>}
+              <div className="text-xl">
+                {t.atHour} {event?.time || '19:30'}
+              </div>
+            </div>
 
-            {!isTwoButtons && !isThreeButtons && (
-              <>
-                <p className="text-xl">{t.howMany}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-10 text-[#3f2a1e]">
+              {t.gladToSee}
+            </h2>
 
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handleRsvp(num)}
-                      className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
-                    >
-                      {num}
-                    </button>
-                  ))}
+            <div className="space-y-6">
+              {isTwoButtons && (
+                <div className="flex flex-col sm:flex-row gap-5 justify-center">
+                  <button
+                    onClick={() => handleRsvp(1)}
+                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                  >
+                    {t.coming}
+                  </button>
+                  <button
+                    onClick={handleNotComing}
+                    className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                  >
+                    {t.notComing}
+                  </button>
                 </div>
+              )}
 
-                <button
-                  onClick={() => setShowMore(!showMore)}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
-                >
-                  {t.moreThan5}
-                </button>
+              {isThreeButtons && (
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={() => handleRsvp(1)}
+                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                  >
+                    {t.coming1}
+                  </button>
+                  <button
+                    onClick={() => handleRsvp(2)}
+                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                  >
+                    {t.coming2}
+                  </button>
+                  <button
+                    onClick={handleNotComing}
+                    className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                  >
+                    {t.notComing}
+                  </button>
+                </div>
+              )}
 
-                {showMore && (
-                  <div className="flex flex-wrap gap-4 justify-center pt-4 border-t">
-                    {[6, 7, 8, 9, 10].map((num) => (
+              {!isTwoButtons && !isThreeButtons && (
+                <>
+                  <p className="text-xl">{t.howMany}</p>
+                  <div className="flex flex-wrap gap-4 justify-center">
+                    {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                        className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
                       >
                         {num}
                       </button>
                     ))}
                   </div>
-                )}
 
-                <div className="pt-4">
                   <button
-                    onClick={handleNotComing}
-                    className="w-full max-w-md mx-auto bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all mb-3"
+                    onClick={() => setShowMore(!showMore)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
                   >
-                    {t.notComing}
+                    {t.moreThan5}
                   </button>
+
+                  {showMore && (
+                    <div className="flex flex-wrap gap-4 justify-center pt-4 border-t">
+                      {[6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => handleRsvp(num)}
+                          className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="pt-4">
+                    <button
+                      onClick={handleNotComing}
+                      className="w-full max-w-md mx-auto bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all mb-3"
+                    >
+                      {t.notComing}
+                    </button>
+                    <button
+                      onClick={handleUnknown}
+                      className="w-full max-w-md mx-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                    >
+                      {t.unknown}
+                    </button>
+                  </div>
+
                   <button
-                    onClick={handleUnknown}
-                    className="w-full max-w-md mx-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                    onClick={() => setShowPersonalNote(true)}
+                    className="mt-4 px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
                   >
-                    {t.unknown}
+                    {t.personalNote}
                   </button>
-                </div>
-
-                <button
-                  onClick={() => setShowPersonalNote(true)}
-                  className="mt-4 px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
-                >
-                  {t.personalNote}
-                </button>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        )}
-
-        {rsvpStatus === 'confirmed' && (
-          <div className="bg-green-50 border border-green-200 rounded-3xl p-12">
-            <div className="text-7xl mb-6">🎉</div>
-            <h3 className="text-3xl font-bold text-green-800 mb-2">{t.thanks}</h3>
-            <p className="text-xl text-green-700">
-              {t.confirmedFor}
-              {rsvpCount} {t.guests}
-            </p>
-            {event?.hasSeparation === 'כן' && (
-              <p className="text-sm text-green-600 mt-3">{t.redirectSeparation}</p>
-            )}
-          </div>
-        )}
-
-        {rsvpStatus === 'notComing' && (
-          <div className="bg-red-50 border border-red-200 rounded-3xl p-12">
-            <div className="text-6xl mb-6">😔</div>
-            <h3 className="text-3xl font-bold text-red-800 mb-3">{t.sorryNotComing}</h3>
-            <p className="text-xl text-red-700">{t.thanksUpdate}</p>
-          </div>
-        )}
-
-        {rsvpStatus === 'pending' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-3xl p-12">
-            <div className="text-6xl mb-6">📞</div>
-            <h3 className="text-3xl font-bold text-blue-800 mb-3">{t.thanksShort}</h3>
-            <p className="text-xl text-blue-700">{t.willContact}</p>
-          </div>
-        )}
-
-        {rsvpStatus === 'notFound' && (
-          <div className="bg-red-50 border border-red-200 rounded-3xl p-12">
-            <h3 className="text-2xl font-bold text-red-700 mb-4">{t.guestNotFound}</h3>
-            <p>{t.invalidCode}</p>
-          </div>
-        )}
-
-        {rsvpStatus === 'general' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-12">
-            <h3 className="text-2xl font-bold text-amber-700 mb-4">{t.generalLink}</h3>
-            <p className="whitespace-pre-line">{t.generalLinkText}</p>
-          </div>
-        )}
-      </div>
+        </>
+      )}
 
       {showPersonalNote && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
