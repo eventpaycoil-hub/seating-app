@@ -1,10 +1,7 @@
 // @ts-nocheck
 'use client';
-
-export const dynamic = 'force-dynamic';
-
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const DB_NAME = 'eventpay_videos';
@@ -58,7 +55,7 @@ async function deleteVideoRecord(id) {
   });
 }
 
-export default function VideosPage() {
+function VideosInner() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '';
 
@@ -72,11 +69,28 @@ export default function VideosPage() {
       return;
     }
 
-    loadVideosForEvent(eventId).then(setVideos);
-
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const current = events.find((e) => e.id.toString() === eventId.toString());
     if (current) setEventTitle(current.owners || current.title || '');
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    let cancelled = false;
+
+    (async () => {
+      const list = await loadVideosForEvent(eventId);
+      if (cancelled) return;
+      const withUrls = list.map((v) => ({
+        ...v,
+        url: v.blob ? URL.createObjectURL(v.blob) : '',
+      }));
+      setVideos(withUrls);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
   const handleVideoUpload = async (e) => {
@@ -99,7 +113,6 @@ export default function VideosPage() {
           name: file.name,
           size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
           date: new Date().toLocaleDateString('he-IL'),
-          // שומרים את ה-Blob עצמו ב-IndexedDB
           blob: file,
         };
         await saveVideoRecord(record);
@@ -115,26 +128,6 @@ export default function VideosPage() {
       e.target.value = '';
     }
   };
-
-  // אחרי טעינה מ-IndexedDB צריך ליצור שוב blob URL
-  useEffect(() => {
-    if (!eventId) return;
-    let cancelled = false;
-
-    (async () => {
-      const list = await loadVideosForEvent(eventId);
-      if (cancelled) return;
-      const withUrls = list.map((v) => ({
-        ...v,
-        url: v.blob ? URL.createObjectURL(v.blob) : '',
-      }));
-      setVideos(withUrls);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId]);
 
   const deleteVideo = async (id) => {
     if (!confirm('למחוק את הווידאו?')) return;
@@ -160,7 +153,11 @@ export default function VideosPage() {
             <p className="text-xs text-gray-400 mt-1">שמירה: IndexedDB · אירוע {eventId || '—'}</p>
           </div>
 
-          <label className={`bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-3xl font-medium flex items-center gap-3 text-lg shadow-lg cursor-pointer transition ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
+          <label
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-3xl font-medium flex items-center gap-3 text-lg shadow-lg cursor-pointer transition ${
+              uploading ? 'opacity-60 pointer-events-none' : ''
+            }`}
+          >
             {uploading ? '⏳ מעלה...' : '➕ הוסף וידאו חדש'}
             <input
               type="file"
@@ -192,7 +189,9 @@ export default function VideosPage() {
                 {video.url ? (
                   <video src={video.url} controls className="w-full aspect-video bg-black" />
                 ) : (
-                  <div className="w-full aspect-video bg-black flex items-center justify-center text-white">אין תצוגה</div>
+                  <div className="w-full aspect-video bg-black flex items-center justify-center text-white">
+                    אין תצוגה
+                  </div>
                 )}
                 <div className="p-4">
                   <div className="font-medium">{video.name}</div>
@@ -212,5 +211,19 @@ export default function VideosPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VideosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center" dir="rtl">
+          טוען וידאו...
+        </div>
+      }
+    >
+      <VideosInner />
+    </Suspense>
   );
 }

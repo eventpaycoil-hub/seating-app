@@ -1,8 +1,6 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -15,7 +13,7 @@ interface MediaItem {
   date: string;
 }
 
-export default function GalleryPage() {
+function GalleryInner() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '';
 
@@ -186,5 +184,13 @@ export default function GalleryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GalleryPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" dir="rtl">טוען גלריה...</div>}>
+      <GalleryInner />
+    </Suspense>
   );
 }
