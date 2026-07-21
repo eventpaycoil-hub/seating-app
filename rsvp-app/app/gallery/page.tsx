@@ -1,4 +1,7 @@
 'use client';
+
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
