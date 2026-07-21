@@ -21,8 +21,7 @@ export default function HomePage() {
   }, []);
 
   const handleGetQuote = () => {
-    const message = encodeURIComponent('שלום, אשמח לקבל הצעת מחיר לאירוע שלי מ-EventPay');
-    window.open(`https://wa.me/972505270152?text=${message}`, '_blank');
+    window.location.href = '/promo';
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -95,10 +94,23 @@ export default function HomePage() {
         >
           🔐 כניסה לאירוע שלי
         </button>
-
-        <div style={{ color: 'white', fontSize: '14px', opacity: 0.9 }}>
-          050-5270152
-        </div>
+        <a
+          href="https://wa.me/972505270152"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'white',
+            fontSize: '14px',
+            opacity: 0.95,
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span style={{ opacity: 0.85 }}>ליצירת קשר:</span>
+          <span style={{ fontWeight: 'bold' }}>050-5270152</span>
+        </a>
       </div>
 
       {/* ===== HERO SECTION ===== */}
