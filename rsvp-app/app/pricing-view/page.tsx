@@ -1,6 +1,8 @@
+// @ts-nocheck
 'use client';
+
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Trash2, Edit2, Download, Send, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface Quote {
   id: number;
@@ -15,6 +17,22 @@ interface Quote {
   beforeVAT?: string;
   vat?: string;
   total?: string;
+  guests?: string;
+  rsvpPrice?: string;
+  giftsPrice?: string;
+  managementPrice?: string;
+  seatingPrice?: string;
+  hostessesPrice?: string;
+}
+
+function findServicePrice(services: string[] | undefined, keywords: string[]) {
+  if (!services?.length) return '—';
+  const line = services.find((s) =>
+    keywords.some((k) => s.toLowerCase().includes(k.toLowerCase()))
+  );
+  if (!line) return '—';
+  const match = line.match(/([\d,]+(?:\.\d+)?)/);
+  return match ? match[1] : line;
 }
 
 export default function MyQuotesPage() {
@@ -47,7 +65,8 @@ export default function MyQuotesPage() {
       (item) =>
         (item.name || '').toLowerCase().includes(q) ||
         (item.phone || '').includes(q) ||
-        (item.eventType || '').toLowerCase().includes(q)
+        (item.eventType || '').toLowerCase().includes(q) ||
+        String(item.id).includes(q)
     );
   }, [quotes, search]);
 
@@ -68,12 +87,17 @@ export default function MyQuotesPage() {
       total: quote.total || '',
       servicesText: (quote.services || []).join('\n'),
       status: quote.status || 'נשלח',
+      guests: quote.guests || '',
+      rsvpPrice: quote.rsvpPrice || '',
+      giftsPrice: quote.giftsPrice || '',
+      managementPrice: quote.managementPrice || '',
+      seatingPrice: quote.seatingPrice || '',
+      hostessesPrice: quote.hostessesPrice || '',
     });
   };
 
   const saveEdit = () => {
     if (!editingQuote) return;
-
     const services = (editForm.servicesText || '')
       .split('\n')
       .map((s: string) => s.trim())
@@ -92,6 +116,12 @@ export default function MyQuotesPage() {
             total: editForm.total,
             services,
             status: editForm.status,
+            guests: editForm.guests,
+            rsvpPrice: editForm.rsvpPrice,
+            giftsPrice: editForm.giftsPrice,
+            managementPrice: editForm.managementPrice,
+            seatingPrice: editForm.seatingPrice,
+            hostessesPrice: editForm.hostessesPrice,
           }
         : q
     );
@@ -114,7 +144,6 @@ export default function MyQuotesPage() {
   const exportToPDF = (quote: Quote) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
     const servicesHtml = (quote.services || [])
       .map((s) => `<div class="service">• ${s}</div>`)
       .join('');
@@ -158,85 +187,134 @@ export default function MyQuotesPage() {
     printWindow.document.close();
   };
 
+  const thClass =
+    'px-3 py-3 text-xs font-bold text-slate-700 whitespace-nowrap border-b border-slate-200 text-center';
+  const tdClass =
+    'px-3 py-3 text-sm text-slate-700 whitespace-nowrap border-b border-slate-100 text-center';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8f4eb] via-white to-[#f5eede] py-12" dir="rtl">
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-amber-900">ההצעות שלי</h1>
-          <p className="text-amber-700 mt-2">כל הצעות המחיר ששלחת</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#f8f4eb] via-white to-[#f5eede] py-10" dir="rtl">
+      <div className="max-w-[1400px] mx-auto px-4">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-amber-900">צפייה בהצעות מחיר</h1>
+          <p className="text-amber-700 mt-1 text-sm">
+            מספר הצעות מחיר: {quotes.length}
+          </p>
         </div>
 
-        <div className="relative mb-8 max-w-md mx-auto">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+        <div className="relative mb-6 max-w-md mx-auto">
+          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
-            placeholder="חיפוש לפי שם / טלפון / סוג אירוע..."
+            placeholder="חיפוש לפי שם / טלפון / מספר הצעה..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-amber-200 rounded-2xl pr-12 pl-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full border border-amber-200 rounded-2xl pr-11 pl-4 py-2.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
           />
         </div>
 
         {filteredQuotes.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl shadow">
-            <p className="text-2xl text-gray-400">
+          <div className="text-center py-16 bg-white rounded-2xl shadow">
+            <p className="text-xl text-gray-400">
               {quotes.length === 0 ? 'עדיין לא שלחת הצעות מחיר' : 'לא נמצאו תוצאות לחיפוש'}
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {filteredQuotes.map((quote) => (
-              <div key={quote.id} className="bg-white rounded-3xl shadow p-8">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <Calendar className="text-amber-600" size={20} />
-                      <span className="font-medium text-gray-500">{quote.date}</span>
-                      {quote.status && (
-                        <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                          {quote.status}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-2xl font-bold mt-2">{quote.name || 'ללא שם'}</h3>
-                    <p className="text-lg text-gray-600 mt-1">
-                      {quote.eventType || '—'} {quote.phone ? `· ${quote.phone}` : ''}
-                    </p>
-                    {quote.total && (
-                      <p className="text-amber-800 font-bold mt-2">סה&quot;כ: ₪{quote.total}</p>
-                    )}
-                  </div>
+          <div className="bg-white rounded-2xl shadow overflow-x-auto border border-slate-200">
+            <table className="w-full min-w-[1100px] border-collapse">
+              <thead>
+                <tr className="bg-slate-100">
+                  <th className={thClass}>מספר הצעה</th>
+                  <th className={thClass}>תאריך</th>
+                  <th className={thClass}>פרטי לקוח</th>
+                  <th className={thClass}>מספר מוזמנים/רשומות</th>
+                  <th className={thClass}>מחיר לאישורי הגעה</th>
+                  <th className={thClass}>קבלת מתנות באשראי</th>
+                  <th className={thClass}>ניהול האירוע</th>
+                  <th className={thClass}>סידורי הושבה</th>
+                  <th className={thClass}>דיילים/דיילות</th>
+                  <th className={thClass}>הערות</th>
+                  <th className={thClass}>שלח שוב</th>
+                  <th className={thClass}>צפה בהצעה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotes.map((quote, index) => {
+                  const rsvp =
+                    quote.rsvpPrice ||
+                    findServicePrice(quote.services, ['אישור', 'rsvp', 'הגעה']);
+                  const gifts =
+                    quote.giftsPrice ||
+                    findServicePrice(quote.services, ['מתנ', 'אשראי', 'gift']);
+                  const management =
+                    quote.managementPrice ||
+                    findServicePrice(quote.services, ['ניהול']);
+                  const seating =
+                    quote.seatingPrice ||
+                    findServicePrice(quote.services, ['הושב', 'סידור']);
+                  const hostesses =
+                    quote.hostessesPrice ||
+                    findServicePrice(quote.services, ['דייל']);
 
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => startEdit(quote)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-full" title="עריכה">
-                      <Edit2 size={22} />
-                    </button>
-                    <button onClick={() => resendQuote(quote)} className="p-3 text-green-600 hover:bg-green-50 rounded-full" title="ווטסאפ">
-                      <Send size={22} />
-                    </button>
-                    <button onClick={() => exportToPDF(quote)} className="p-3 text-purple-600 hover:bg-purple-50 rounded-full" title="PDF">
-                      <Download size={22} />
-                    </button>
-                    <button onClick={() => deleteQuote(quote.id)} className="p-3 text-red-500 hover:bg-red-50 rounded-full" title="מחיקה">
-                      <Trash2 size={22} />
-                    </button>
-                  </div>
-                </div>
-
-                {(quote.services || []).length > 0 && (
-                  <div className="mt-6">
-                    <p className="text-sm text-gray-500 mb-2">שירותים:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(quote.services || []).map((s, i) => (
-                        <span key={i} className="bg-amber-100 text-amber-800 px-4 py-1 rounded-full text-sm">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  return (
+                    <tr key={quote.id} className="hover:bg-amber-50/40 transition-colors">
+                      <td className={tdClass + ' font-bold text-amber-800'}>
+                        {quote.id || index + 1}
+                      </td>
+                      <td className={tdClass}>{quote.date || '—'}</td>
+                      <td className={tdClass}>
+                        <div className="font-semibold text-slate-900">{quote.name || '—'}</div>
+                        <div className="text-xs text-slate-500" dir="ltr">
+                          {quote.phone || ''}
+                        </div>
+                        {quote.eventType && (
+                          <div className="text-xs text-amber-700 mt-0.5">{quote.eventType}</div>
+                        )}
+                      </td>
+                      <td className={tdClass}>{quote.guests || '—'}</td>
+                      <td className={tdClass}>{rsvp}</td>
+                      <td className={tdClass}>{gifts}</td>
+                      <td className={tdClass}>{management}</td>
+                      <td className={tdClass}>{seating}</td>
+                      <td className={tdClass}>{hostesses}</td>
+                      <td className={tdClass + ' max-w-[140px] truncate'} title={quote.notes || ''}>
+                        {quote.notes || '—'}
+                      </td>
+                      <td className={tdClass}>
+                        <button
+                          onClick={() => resendQuote(quote)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                        >
+                          שלח שוב
+                        </button>
+                      </td>
+                      <td className={tdClass}>
+                        <div className="flex gap-1 justify-center">
+                          <button
+                            onClick={() => exportToPDF(quote)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                          >
+                            צפה
+                          </button>
+                          <button
+                            onClick={() => startEdit(quote)}
+                            className="bg-slate-500 hover:bg-slate-600 text-white text-xs font-bold px-2 py-1.5 rounded-lg"
+                          >
+                            ערוך
+                          </button>
+                          <button
+                            onClick={() => deleteQuote(quote.id)}
+                            className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-2 py-1.5 rounded-lg"
+                          >
+                            מחק
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -257,44 +335,43 @@ export default function MyQuotesPage() {
                   <label className="block text-sm mb-1">סוג אירוע</label>
                   <input type="text" value={editForm.eventType} onChange={(e) => setEditForm({ ...editForm, eventType: e.target.value })} className="w-full border rounded-2xl px-4 py-3" />
                 </div>
-
-                <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm mb-1">מספר מוזמנים/רשומות</label>
+                  <input type="text" value={editForm.guests} onChange={(e) => setEditForm({ ...editForm, guests: e.target.value })} className="w-full border rounded-2xl px-4 py-3" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm mb-1">לפני מע&quot;מ</label>
-                    <input type="text" value={editForm.beforeVAT} onChange={(e) => setEditForm({ ...editForm, beforeVAT: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
+                    <label className="block text-sm mb-1">אישורי הגעה</label>
+                    <input type="text" value={editForm.rsvpPrice} onChange={(e) => setEditForm({ ...editForm, rsvpPrice: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">מע&quot;מ</label>
-                    <input type="text" value={editForm.vat} onChange={(e) => setEditForm({ ...editForm, vat: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
+                    <label className="block text-sm mb-1">מתנות באשראי</label>
+                    <input type="text" value={editForm.giftsPrice} onChange={(e) => setEditForm({ ...editForm, giftsPrice: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">ניהול האירוע</label>
+                    <input type="text" value={editForm.managementPrice} onChange={(e) => setEditForm({ ...editForm, managementPrice: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">סידורי הושבה</label>
+                    <input type="text" value={editForm.seatingPrice} onChange={(e) => setEditForm({ ...editForm, seatingPrice: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">דיילים/דיילות</label>
+                    <input type="text" value={editForm.hostessesPrice} onChange={(e) => setEditForm({ ...editForm, hostessesPrice: e.target.value })} className="w-full border rounded-2xl px-3 py-3" dir="ltr" />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">סה&quot;כ</label>
                     <input type="text" value={editForm.total} onChange={(e) => setEditForm({ ...editForm, total: e.target.value })} className="w-full border rounded-2xl px-3 py-3 font-bold" dir="ltr" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm mb-1">שירותים (שורה לכל שירות)</label>
-                  <textarea
-                    value={editForm.servicesText}
-                    onChange={(e) => setEditForm({ ...editForm, servicesText: e.target.value })}
-                    className="w-full border rounded-2xl px-4 py-3 h-28"
-                  />
+                  <textarea value={editForm.servicesText} onChange={(e) => setEditForm({ ...editForm, servicesText: e.target.value })} className="w-full border rounded-2xl px-4 py-3 h-24" />
                 </div>
-
-                <div>
-                  <label className="block text-sm mb-1">סטטוס</label>
-                  <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full border rounded-2xl px-4 py-3 bg-white">
-                    <option value="נשלח">נשלח</option>
-                    <option value="טיוטה">טיוטה</option>
-                    <option value="אושר">אושר</option>
-                    <option value="בוטל">בוטל</option>
-                  </select>
-                </div>
-
                 <div>
                   <label className="block text-sm mb-1">הערות</label>
-                  <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} className="w-full border rounded-2xl px-4 py-3 h-24" />
+                  <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} className="w-full border rounded-2xl px-4 py-3 h-20" />
                 </div>
               </div>
               <div className="flex gap-4 mt-8">
