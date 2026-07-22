@@ -2,13 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+
+function isPending(g: any) {
+  return !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+}
+
+function matchesQueue(g: any, queue: string | null) {
+  if (!g?.name || !String(g.name).trim()) return false;
+
+  // דילוג בכל הסבבים על מוזמן בלי מספר טלפון
+  const phone = (g.phone || '').toString().trim();
+  if (!phone) return false;
+
+  if (queue === 'unknownEmpty') {
+    return isPending(g) && (!g.notes || String(g.notes).trim() === '');
+  }
+  if (queue === 'unknown') {
+    return isPending(g) && g.notes && String(g.notes).trim() !== '';
+  }
+  return false;
+}
 
 export default function EditGuestPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const eventId = params?.id as string;
   const guestId = params?.guestId as string;
+  const queue = searchParams.get('queue'); // unknownEmpty | unknown | null
 
   const [guest, setGuest] = useState<any>({});
   const [event, setEvent] = useState<any>({});
@@ -76,7 +98,6 @@ export default function EditGuestPage() {
       } catch {}
     }
 
-        // טעינת קבוצות קיימות
     const allGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     const fromGuests = allGuests
       .map((g: any) => (g.group || '').toString().trim())
@@ -87,11 +108,14 @@ export default function EditGuestPage() {
       const saved = localStorage.getItem(`groups_event_${eventId}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        fromStorage = (Array.isArray(parsed) ? parsed : []).map((item: any) => {
-          if (typeof item === 'string') return item.trim();
-          if (item && typeof item === 'object') return (item.name || item.title || item.label || '').toString().trim();
-          return '';
-        }).filter(Boolean);
+        fromStorage = (Array.isArray(parsed) ? parsed : [])
+          .map((item: any) => {
+            if (typeof item === 'string') return item.trim();
+            if (item && typeof item === 'object')
+              return (item.name || item.title || item.label || '').toString().trim();
+            return '';
+          })
+          .filter(Boolean);
       }
     } catch {}
 
@@ -99,6 +123,28 @@ export default function EditGuestPage() {
     const unique = Array.from(new Set([...defaults, ...fromStorage, ...fromGuests])).filter(Boolean);
     setAvailableGroups(unique);
   }, [eventId, guestId]);
+
+  /** מוזמן הבא באותו תור (אחרי הנוכחי בסדר המקורי). אין — חוזרים לרשימה */
+  const goNextOrList = () => {
+    if (!queue) {
+      router.push(`/event/${eventId}/guests`);
+      return;
+    }
+
+    const guestsKey = `guests_event_${eventId}`;
+    const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    const idx = all.findIndex((g: any) => g.id.toString() === guestId.toString());
+
+    for (let i = idx + 1; i < all.length; i++) {
+      if (matchesQueue(all[i], queue)) {
+        router.push(`/event/${eventId}/guests/${all[i].id}/edit?queue=${queue}`);
+        return;
+      }
+    }
+
+    // סיימו את הסבב
+    router.push(`/event/${eventId}/guests`);
+  };
 
   const saveGuestField = (updatedGuest: any) => {
     setGuest(updatedGuest);
@@ -113,10 +159,15 @@ export default function EditGuestPage() {
   const addToNotes = (text: string) => {
     const date = new Date().toLocaleString('he-IL');
     const newNote = `${text} - ${date}`;
-    saveGuestField({
+    const updated = {
       ...guest,
-      notes: guest.notes ? `${guest.notes}\n${newNote}` : newNote
-    });
+      notes: guest.notes ? `${guest.notes}\n${newNote}` : newNote,
+    };
+    saveGuestField(updated);
+    // הערה = טופל בסבב → קופצים לבא בתור (כתום→אפור וכו')
+    if (queue) {
+      setTimeout(() => goNextOrList(), 50);
+    }
   };
 
   const resetToUnknown = () => {
@@ -126,13 +177,13 @@ export default function EditGuestPage() {
   const setCountAndConfirm = (num: number) => {
     const updatedGuest = { ...guest, count: num, confirmed: num.toString() };
     saveGuestField(updatedGuest);
-    router.push(`/event/${eventId}/guests`);
+    goNextOrList();
   };
 
   const markAsNotComing = () => {
     const updatedGuest = { ...guest, count: 0, confirmed: 'לא מגיע' };
     saveGuestField(updatedGuest);
-    router.push(`/event/${eventId}/guests`);
+    goNextOrList();
   };
 
   const handleTransportChange = (value: string) => {
@@ -161,18 +212,35 @@ export default function EditGuestPage() {
 
   const saveAndGoBack = () => {
     saveGuestField(guest);
-    router.push(`/event/${eventId}/guests`);
+    goNextOrList();
   };
 
   const callPhone = () => window.open(`tel:${guest.phone}`);
 
   const quickActions = [
-    "אין מענה", "תא קולי", "שיחה ממתינה", "מס לא מחובר",
-    "טעות במספר", "להתקשר מחדש", "תחילת שבוע", "יאושר בהודעה",
-    "אפס הערה", "ספרה מיותרת", "חסרה ספרה", "להתקשר בעוד ימים",
-    "יחזרו אלינו", "אירוע אחר", "להתקשר ביום א", "להתקשר ביום ב",
-    "להתקשר ביום ג", "להתקשר ביום ד", "להתקשר ביום ה", "ההודעה נמסרה",
-    "לא יודע עדיין", "לא יודעת עדיין", "נשלח וואצאפ"
+    'אין מענה',
+    'תא קולי',
+    'שיחה ממתינה',
+    'מס לא מחובר',
+    'טעות במספר',
+    'להתקשר מחדש',
+    'תחילת שבוע',
+    'יאושר בהודעה',
+    'אפס הערה',
+    'ספרה מיותרת',
+    'חסרה ספרה',
+    'להתקשר בעוד ימים',
+    'יחזרו אלינו',
+    'אירוע אחר',
+    'להתקשר ביום א',
+    'להתקשר ביום ב',
+    'להתקשר ביום ג',
+    'להתקשר ביום ד',
+    'להתקשר ביום ה',
+    'ההודעה נמסרה',
+    'לא יודע עדיין',
+    'לא יודעת עדיין',
+    'נשלח וואצאפ',
   ];
 
   const getDayOfWeek = () => {
@@ -196,7 +264,10 @@ export default function EditGuestPage() {
     return (
       <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
         <div className="max-w-xl mx-auto">
-          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm mb-6 inline-block">
+          <Link
+            href={`/event/${eventId}/guests`}
+            className="text-blue-600 hover:underline text-sm mb-6 inline-block"
+          >
             ← חזרה לרשימה
           </Link>
 
@@ -230,8 +301,10 @@ export default function EditGuestPage() {
               >
                 <option value="">בחר קבוצה...</option>
                 {availableGroups.map((g) => (
-  <option key={String(g)} value={String(g)}>{String(g)}</option>
-))}
+                  <option key={String(g)} value={String(g)}>
+                    {String(g)}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -299,7 +372,8 @@ export default function EditGuestPage() {
                   <option value="">בחר הסעה...</option>
                   {transportOptions.map((opt) => (
                     <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>
-                      {opt.name}{opt.time ? ` (${opt.time})` : ''}
+                      {opt.name}
+                      {opt.time ? ` (${opt.time})` : ''}
                     </option>
                   ))}
                   <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
@@ -334,27 +408,31 @@ export default function EditGuestPage() {
   return (
     <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
-        <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm mb-4 inline-block">← חזרה לרשימה</Link>
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm">
+            ← חזרה לרשימה
+          </Link>
+          {queue && (
+            <span className="text-xs bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-medium">
+              מצב חיוג · תור:{' '}
+              {queue === 'unknownEmpty' ? 'לא ידוע (כתום)' : 'לא ידוע (אפור)'}
+            </span>
+          )}
+        </div>
 
-                <div className="flex flex-col lg:flex-row gap-5 mb-6">
+        <div className="flex flex-col lg:flex-row gap-5 mb-6">
           <div className="w-full lg:w-[420px] flex-shrink-0 space-y-3">
-            {/* כפתור Zoiper — לא נוגעים */}
             <div
               onClick={callPhone}
               className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-3xl p-7 flex flex-col items-center justify-center shadow-lg"
             >
               <div className="text-base opacity-80">טלפון</div>
-              <div className="text-5xl font-bold tracking-widest mt-1">
-                {guest.phone || '—'}
-              </div>
+              <div className="text-5xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
               <div className="text-xs mt-2 opacity-70">לחץ להתקשר ב-Zoiper</div>
             </div>
 
-            {/* תיבת עריכת מספר */}
             <div className="bg-white rounded-3xl p-4 shadow">
-              <label className="block text-sm text-gray-500 mb-2">
-                עריכת / הוספת מספר טלפון
-              </label>
+              <label className="block text-sm text-gray-500 mb-2">עריכת / הוספת מספר טלפון</label>
               <input
                 type="tel"
                 dir="ltr"
@@ -373,13 +451,27 @@ export default function EditGuestPage() {
           <div className="flex-1 bg-white rounded-3xl p-6 shadow text-sm">
             <div className="text-2xl font-bold mb-4">{guest.name}</div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-              <div><span className="font-semibold">בעלי השמחה:</span> {event.owners}</div>
-              <div><span className="font-semibold">תאריך:</span> {event.date}</div>
-              <div><span className="font-semibold">אולם:</span> {event.hallName || event.venue}</div>
-              <div><span className="font-semibold">עיר:</span> {event.city}</div>
-              <div><span className="font-semibold">שעה:</span> {event.time}</div>
-              <div><span className="font-semibold">יום:</span> {getDayOfWeek()}</div>
-              <div className="col-span-2 pt-2 border-t text-blue-700">הורי חתן: {event.groomParents}</div>
+              <div>
+                <span className="font-semibold">בעלי השמחה:</span> {event.owners}
+              </div>
+              <div>
+                <span className="font-semibold">תאריך:</span> {event.date}
+              </div>
+              <div>
+                <span className="font-semibold">אולם:</span> {event.hallName || event.venue}
+              </div>
+              <div>
+                <span className="font-semibold">עיר:</span> {event.city}
+              </div>
+              <div>
+                <span className="font-semibold">שעה:</span> {event.time}
+              </div>
+              <div>
+                <span className="font-semibold">יום:</span> {getDayOfWeek()}
+              </div>
+              <div className="col-span-2 pt-2 border-t text-blue-700">
+                הורי חתן: {event.groomParents}
+              </div>
               <div className="col-span-2 text-blue-700">הורי כלה: {event.brideParents}</div>
             </div>
           </div>
@@ -389,7 +481,11 @@ export default function EditGuestPage() {
           <div className="font-bold mb-4 text-lg">פעולות מהירות</div>
           <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 text-sm">
             {quickActions.map((text, i) => (
-              <button key={i} onClick={() => addToNotes(text)} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-2.5 rounded-xl active:scale-[0.98]">
+              <button
+                key={i}
+                onClick={() => addToNotes(text)}
+                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-2.5 rounded-xl active:scale-[0.98]"
+              >
                 {text}
               </button>
             ))}
@@ -403,26 +499,38 @@ export default function EditGuestPage() {
             <div className="flex gap-3 mb-4">
               <button
                 onClick={resetToUnknown}
-                className={`flex-1 py-3.5 rounded-2xl font-bold text-lg border-2 transition-all cursor-pointer ${guest.confirmed === 'לא ידוע' 
-                  ? 'bg-amber-500 text-white border-amber-600 scale-[1.04] shadow-lg' 
-                  : 'bg-white border-gray-300 hover:border-amber-400 hover:bg-amber-50'}`}
+                className={`flex-1 py-3.5 rounded-2xl font-bold text-lg border-2 transition-all cursor-pointer ${
+                  guest.confirmed === 'לא ידוע'
+                    ? 'bg-amber-500 text-white border-amber-600 scale-[1.04] shadow-lg'
+                    : 'bg-white border-gray-300 hover:border-amber-400 hover:bg-amber-50'
+                }`}
               >
                 לא ידוע
               </button>
 
               <button
                 onClick={markAsNotComing}
-                className={`flex-1 py-3.5 rounded-2xl font-bold text-lg border-2 transition-all cursor-pointer ${guest.confirmed === 'לא מגיע' 
-                  ? 'bg-red-500 text-white border-red-600 scale-[1.04] shadow-lg' 
-                  : 'bg-white border-gray-300 hover:border-red-400 hover:bg-red-50'}`}
+                className={`flex-1 py-3.5 rounded-2xl font-bold text-lg border-2 transition-all cursor-pointer ${
+                  guest.confirmed === 'לא מגיע'
+                    ? 'bg-red-500 text-white border-red-600 scale-[1.04] shadow-lg'
+                    : 'bg-white border-gray-300 hover:border-red-400 hover:bg-red-50'
+                }`}
               >
                 לא מגיע
               </button>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 16 }, (_, i) => i + 1).map(num => (
-                <button key={num} onClick={() => setCountAndConfirm(num)} className={`w-14 h-14 rounded-full text-xl font-bold border-2 transition ${guest.count === num || guest.confirmed === String(num) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-gray-300'}`}>
+              {Array.from({ length: 16 }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setCountAndConfirm(num)}
+                  className={`w-14 h-14 rounded-full text-xl font-bold border-2 transition ${
+                    guest.count === num || guest.confirmed === String(num)
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
                   {num}
                 </button>
               ))}
@@ -430,8 +538,6 @@ export default function EditGuestPage() {
           </div>
 
           <div className="lg:col-span-3 space-y-5">
-
-            {/* קבוצה */}
             <div className="bg-white rounded-3xl p-5 shadow">
               <label className="block text-sm text-gray-500 mb-2">קבוצה</label>
               <select
@@ -441,7 +547,9 @@ export default function EditGuestPage() {
               >
                 <option value="">בחר קבוצה...</option>
                 {availableGroups.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
                 ))}
               </select>
             </div>
@@ -449,15 +557,16 @@ export default function EditGuestPage() {
             {hasTransport && (
               <div className="bg-white rounded-3xl p-5 shadow">
                 <label className="block text-sm text-gray-500 mb-2">הסעה</label>
-                <select 
-                  value={currentTransport} 
-                  onChange={(e) => handleTransportChange(e.target.value)} 
+                <select
+                  value={currentTransport}
+                  onChange={(e) => handleTransportChange(e.target.value)}
                   className="w-full p-3 border rounded-2xl"
                 >
                   <option value="">בחר הסעה...</option>
                   {transportOptions.map((opt) => (
                     <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>
-                      {opt.name}{opt.time ? ` (${opt.time})` : ''}
+                      {opt.name}
+                      {opt.time ? ` (${opt.time})` : ''}
                     </option>
                   ))}
                   <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
@@ -492,9 +601,14 @@ export default function EditGuestPage() {
                     >
                       אחר (בחירה מותאמת)
                     </button>
-                    {currentGender && currentGender !== 'גבר' && currentGender !== 'אישה' && currentGender !== 'זוג' && (
-                      <div className="mt-2 text-center text-purple-700 font-medium">{currentGender}</div>
-                    )}
+                    {currentGender &&
+                      currentGender !== 'גבר' &&
+                      currentGender !== 'אישה' &&
+                      currentGender !== 'זוג' && (
+                        <div className="mt-2 text-center text-purple-700 font-medium">
+                          {currentGender}
+                        </div>
+                      )}
                   </>
                 )}
 
@@ -503,12 +617,14 @@ export default function EditGuestPage() {
                     <div>
                       <div className="text-center font-bold mb-2">גברים</div>
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {[0,1,2,3,4,5,6,7,8].map(num => (
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                           <button
                             key={num}
                             onClick={() => setMenCount(num)}
                             className={`w-12 h-12 rounded-full font-bold border-2 ${
-                              menCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'
+                              menCount === num
+                                ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]'
+                                : 'bg-white border-gray-300'
                             }`}
                           >
                             {num}
@@ -519,12 +635,14 @@ export default function EditGuestPage() {
                     <div>
                       <div className="text-center font-bold mb-2">נשים</div>
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {[0,1,2,3,4,5,6,7,8].map(num => (
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                           <button
                             key={num}
                             onClick={() => setWomenCount(num)}
                             className={`w-12 h-12 rounded-full font-bold border-2 ${
-                              womenCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'
+                              womenCount === num
+                                ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]'
+                                : 'bg-white border-gray-300'
                             }`}
                           >
                             {num}
@@ -540,10 +658,7 @@ export default function EditGuestPage() {
                       </div>
                     )}
                     <div className="flex gap-3">
-                      <button
-                        onClick={() => setGenderMode('simple')}
-                        className="flex-1 py-3 border rounded-2xl"
-                      >
+                      <button onClick={() => setGenderMode('simple')} className="flex-1 py-3 border rounded-2xl">
                         ביטול
                       </button>
                       <button
@@ -560,10 +675,10 @@ export default function EditGuestPage() {
 
             <div className="bg-white rounded-3xl p-5 shadow">
               <label className="block text-sm text-gray-500 mb-2">הערות</label>
-              <textarea 
-                value={guest.notes || ''} 
-                onChange={(e) => setGuest({ ...guest, notes: e.target.value })} 
-                className="w-full h-28 p-4 border rounded-2xl text-sm" 
+              <textarea
+                value={guest.notes || ''}
+                onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
+                className="w-full h-28 p-4 border rounded-2xl text-sm"
                 placeholder="הערות..."
               />
             </div>
@@ -571,11 +686,11 @@ export default function EditGuestPage() {
         </div>
 
         <div className="flex justify-center mt-8">
-          <button 
-            onClick={saveAndGoBack} 
+          <button
+            onClick={saveAndGoBack}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-20 py-4 rounded-2xl text-xl font-medium"
           >
-            עדכן והמשך
+            {queue ? 'עדכן והמשך למוזמן הבא' : 'עדכן והמשך'}
           </button>
         </div>
       </div>

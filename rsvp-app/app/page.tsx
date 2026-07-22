@@ -24,7 +24,7 @@ export default function HomePage() {
     window.location.href = '/promo';
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
     const username = loginData.username.trim();
@@ -39,8 +39,19 @@ export default function HomePage() {
     if (username.toUpperCase() === 'ADMIN' && password === '123456') {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('loggedInUser', 'ADMIN');
+      localStorage.removeItem('clientMode');
       setShowLogin(false);
       window.location.href = '/event/1/guests';
+      return;
+    }
+
+    // ===== טלפנית (EDITOR) =====
+    if (username.toUpperCase() === 'EDITOR' && password === 'EDITOR88') {
+      localStorage.setItem('userRole', 'editor');
+      localStorage.setItem('loggedInUser', 'EDITOR');
+      localStorage.removeItem('clientMode');
+      setShowLogin(false);
+      window.location.href = '/events';
       return;
     }
 

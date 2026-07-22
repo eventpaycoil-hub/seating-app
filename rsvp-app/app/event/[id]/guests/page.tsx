@@ -4,6 +4,16 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
 
+/** סמלים שמותרים לטלפנית (EDITOR) בלבד */
+const EDITOR_ALLOWED = [
+  'home',
+  'fix-phones',
+  'groups',
+  'duplicate-phones',
+  'events-list',
+  'transport',
+] as const;
+
 function normalizePhone(raw: string): string {
   if (!raw) return '';
   let p = raw.toString().trim().replace(/[^\d+]/g, '');
@@ -55,6 +65,10 @@ function getPhoneFlag(phone: string): string {
   return '';
 }
 
+function isPending(g: any) {
+  return !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
+}
+
 export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
@@ -66,13 +80,17 @@ export default function GuestsPage() {
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<
     'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'
-  >('all');
+  >('unknownEmpty');
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
   const [visibleActions, setVisibleActions] = useState<string[]>([]);
   const [isClientMode, setIsClientMode] = useState(false);
+  const [isEditorMode, setIsEditorMode] = useState(false);
   const [jumpGroup, setJumpGroup] = useState('');
+
+  // מנהל מלא = לא לקוח ולא עורך
+  const isFullAdmin = !isClientMode && !isEditorMode;
 
   useEffect(() => {
     if (!eventId) return;
@@ -96,8 +114,9 @@ export default function GuestsPage() {
   }, [eventId]);
 
   useEffect(() => {
-    const role = localStorage.getItem('userRole');
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
     const clientMode = localStorage.getItem('clientMode') === 'true';
+    setIsEditorMode(role === 'editor');
     setIsClientMode(role === 'client' || clientMode);
     const saved = localStorage.getItem(`visibleActions_${eventId}`);
     if (saved) {
@@ -150,17 +169,13 @@ export default function GuestsPage() {
   ).length;
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
 
-  const unknownWithNoteCount = guests.filter((g: any) => {
-    const isPending =
-      !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
-    return isPending && g.notes && g.notes.trim() !== '';
-  }).length;
+  const unknownWithNoteCount = guests.filter(
+    (g: any) => isPending(g) && g.notes && g.notes.trim() !== ''
+  ).length;
 
-  const unknownEmptyCount = guests.filter((g: any) => {
-    const isPending =
-      !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
-    return isPending && (!g.notes || g.notes.trim() === '');
-  }).length;
+  const unknownEmptyCount = guests.filter(
+    (g: any) => isPending(g) && (!g.notes || g.notes.trim() === '')
+  ).length;
 
   const totalConfirmedPeople = guests
     .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
@@ -174,14 +189,10 @@ export default function GuestsPage() {
       return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
     if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
     if (activeFilter === 'unknown') {
-      const isPending =
-        !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
-      return matchesSearch && isPending && g.notes && g.notes.trim() !== '';
+      return matchesSearch && isPending(g) && g.notes && g.notes.trim() !== '';
     }
     if (activeFilter === 'unknownEmpty') {
-      const isPending =
-        !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
-      return matchesSearch && isPending && (!g.notes || g.notes.trim() === '');
+      return matchesSearch && isPending(g) && (!g.notes || g.notes.trim() === '');
     }
     if (activeFilter === 'noNote') return matchesSearch && (!g.notes || g.notes.trim() === '');
     return matchesSearch;
@@ -266,14 +277,28 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
 
-  const baseCols = isClientMode ? 9 : 10;
+  const baseCols = isFullAdmin ? 10 : 9;
   const colSpan = baseCols + (hasTransport ? 1 : 0) + (hasSeparation ? 1 : 0);
-    return (
+
+  const editHref = (guestId: any) => {
+    const q =
+      activeFilter === 'unknownEmpty' || activeFilter === 'unknown'
+        ? `?queue=${activeFilter}`
+        : '';
+    return `/event/${eventId}/guests/${guestId}/edit${q}`;
+  };
+
+  return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="text-xl font-bold text-gray-800">
-            {eventId === '1' ? 'מנהל' : eventTitle}
+          <div className="text-xl font-bold text-gray-800 flex items-center gap-3">
+            <span>{eventId === '1' ? 'מנהל' : eventTitle}</span>
+            {isEditorMode && (
+              <span className="text-xs font-medium bg-violet-100 text-violet-800 px-3 py-1 rounded-full">
+                מצב טלפנית (EDITOR)
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
@@ -305,6 +330,10 @@ export default function GuestsPage() {
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
               .filter((item) => {
+                // EDITOR — רק הרשימה המצומצמת
+                if (isEditorMode) {
+                  return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
+                }
                 if (item.id === 'fix-phones' || item.id === 'duplicate-phones') return true;
                 if (!isClientMode) return true;
                 if (item.id === 'admin-settings') return false;
@@ -348,7 +377,9 @@ export default function GuestsPage() {
                     <span className="text-lg">🚌</span>
                     <span>{opt.name}</span>
                     {opt.time && <span className="text-indigo-500">({opt.time})</span>}
-                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">{count}</span>
+                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      {count}
+                    </span>
                   </div>
                 );
               })}
@@ -360,24 +391,52 @@ export default function GuestsPage() {
             <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
               <span className="text-2xl">👨</span>
               <span className="text-lg">גברים</span>
-              <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">{menCount}</span>
+              <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">
+                {menCount}
+              </span>
             </div>
             <div className="bg-pink-50 border border-pink-200 text-pink-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
               <span className="text-2xl">👩</span>
               <span className="text-lg">נשים</span>
-              <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">{womenCount}</span>
+              <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">
+                {womenCount}
+              </span>
             </div>
           </div>
         )}
 
-        {/* סינון סטטוס — משמאל */}
         <div className="flex flex-wrap gap-3 mb-4 justify-start">
           {[
-            { key: 'all', label: `כל המוזמנים (${guests.length})`, active: 'bg-blue-600', idle: 'bg-blue-500 hover:bg-blue-600' },
-            { key: 'yes', label: `יגיעו (${yesCount})`, active: 'bg-emerald-600', idle: 'bg-emerald-500 hover:bg-emerald-600' },
-            { key: 'no', label: `לא יגיעו (${noCount})`, active: 'bg-red-600', idle: 'bg-red-500 hover:bg-red-600' },
-            { key: 'unknown', label: `לא ידוע (${unknownWithNoteCount})`, active: 'bg-gray-700', idle: 'bg-gray-500 hover:bg-gray-600' },
-            { key: 'unknownEmpty', label: `לא ידוע (${unknownEmptyCount})`, active: 'bg-orange-600', idle: 'bg-orange-500 hover:bg-orange-600' },
+            {
+              key: 'all',
+              label: `כל המוזמנים (${guests.length})`,
+              active: 'bg-blue-600',
+              idle: 'bg-blue-500 hover:bg-blue-600',
+            },
+            {
+              key: 'yes',
+              label: `יגיעו (${yesCount})`,
+              active: 'bg-emerald-600',
+              idle: 'bg-emerald-500 hover:bg-emerald-600',
+            },
+            {
+              key: 'no',
+              label: `לא יגיעו (${noCount})`,
+              active: 'bg-red-600',
+              idle: 'bg-red-500 hover:bg-red-600',
+            },
+            {
+              key: 'unknown',
+              label: `לא ידוע (${unknownWithNoteCount})`,
+              active: 'bg-gray-700',
+              idle: 'bg-gray-500 hover:bg-gray-600',
+            },
+            {
+              key: 'unknownEmpty',
+              label: `לא ידוע (${unknownEmptyCount})`,
+              active: 'bg-orange-600',
+              idle: 'bg-orange-500 hover:bg-orange-600',
+            },
           ].map((btn) => (
             <button
               key={btn.key}
@@ -391,7 +450,6 @@ export default function GuestsPage() {
           ))}
         </div>
 
-        {/* חיפוש + כפתורי פעולה */}
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3 items-stretch">
@@ -402,22 +460,31 @@ export default function GuestsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              {!isClientMode && (
+              {/* SMS / וואטסאפ / מחק — רק מנהל מלא */}
+              {isFullAdmin && (
                 <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={sendSMS} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap">
+                  <button
+                    onClick={sendSMS}
+                    className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
+                  >
                     📩 SMS
                   </button>
-                  <button onClick={sendWhatsApp} className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap">
+                  <button
+                    onClick={sendWhatsApp}
+                    className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
+                  >
                     💬 ווטסאפ
                   </button>
-                  <button onClick={deleteSelected} className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap">
+                  <button
+                    onClick={deleteSelected}
+                    className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
+                  >
                     🗑 מחק
                   </button>
                 </div>
               )}
             </div>
 
-            {/* גלילת קבוצות — בין חיפוש לכפתורים / מתחת לחיפוש */}
             {allGroupNames.length > 0 && (
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-slate-600 whitespace-nowrap">קבוצות:</span>
@@ -443,43 +510,70 @@ export default function GuestsPage() {
           </div>
         </div>
 
-        {/* טבלה */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-300 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] border-collapse">
               <thead>
                 <tr className="bg-slate-200">
-                  {!isClientMode && (
+                  {isFullAdmin && (
                     <th className="px-4 py-4 text-center w-12 text-xs font-bold text-slate-700 border border-slate-300">
                       <input
                         type="checkbox"
-                        checked={filteredGuests.length > 0 && selectedGuests.length === filteredGuests.length}
+                        checked={
+                          filteredGuests.length > 0 &&
+                          selectedGuests.length === filteredGuests.length
+                        }
                         onChange={toggleSelectAll}
                         className="w-5 h-5 accent-blue-600"
                       />
                     </th>
                   )}
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">#</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">אירוע</th>
-                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">שם</th>
-                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">טלפון</th>
-                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">קבוצה</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">צפי</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    #
+                  </th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    אירוע
+                  </th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">
+                    שם
+                  </th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">
+                    טלפון
+                  </th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">
+                    קבוצה
+                  </th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    צפי
+                  </th>
                   {hasTransport && (
-                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">הסעה</th>
+                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                      הסעה
+                    </th>
                   )}
                   {hasSeparation && (
-                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">מגדר</th>
+                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                      מגדר
+                    </th>
                   )}
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">סטטוס</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">הערה</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">פעולות</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    סטטוס
+                  </th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    הערה
+                  </th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    פעולות
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {grouped.length === 0 && (
                   <tr>
-                    <td colSpan={colSpan} className="py-16 text-center text-gray-400 text-lg border border-slate-200">
+                    <td
+                      colSpan={colSpan}
+                      className="py-16 text-center text-gray-400 text-lg border border-slate-200"
+                    >
                       אין מוזמנים להצגה
                     </td>
                   </tr>
@@ -493,10 +587,12 @@ export default function GuestsPage() {
                     .filter(isConfirmedGuest)
                     .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
 
+                  const displayGuests = [...groupGuests].reverse();
+
                   return (
                     <>
                       <tr key={`header-${groupName}`} id={`group-header-${groupName}`}>
-                        {!isClientMode && (
+                        {isFullAdmin && (
                           <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
                               type="checkbox"
@@ -507,24 +603,25 @@ export default function GuestsPage() {
                           </td>
                         )}
                         <td
-                          colSpan={isClientMode ? colSpan : colSpan - 1}
+                          colSpan={isFullAdmin ? colSpan - 1 : colSpan}
                           className="bg-amber-200 border border-amber-300 px-4 py-3 text-center font-bold text-lg text-amber-950"
                         >
                           {groupName}
                         </td>
                       </tr>
 
-                      {groupGuests.map((guest: any, index: number) => {
+                      {displayGuests.map((guest: any, index: number) => {
                         const transportDisplay = getTransportDisplay(guest);
                         const isWaitingForTransport = transportDisplay === 'לא השיב לשאלת ההסעה';
                         const phone = guest.phone || '';
                         const phoneValid = isValidPhone(phone);
                         const flag = getPhoneFlag(phone);
                         const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-100';
+                        const rowNumber = displayGuests.length - index;
 
                         return (
                           <tr key={`${guest.id}-${index}`} className={`${rowBg} hover:bg-blue-50`}>
-                            {!isClientMode && (
+                            {isFullAdmin && (
                               <td className="px-4 py-3.5 text-center border border-slate-200">
                                 <input
                                   type="checkbox"
@@ -534,26 +631,44 @@ export default function GuestsPage() {
                                 />
                               </td>
                             )}
-                            <td className="px-4 py-3.5 text-center text-slate-500 font-medium border border-slate-200">{index + 1}</td>
-                            <td className="px-4 py-3.5 text-center text-blue-700 font-medium border border-slate-200">{eventTitle}</td>
-                            <td className="px-4 py-3.5 font-semibold text-slate-900 border border-slate-200">{guest.name}</td>
+                            <td className="px-4 py-3.5 text-center text-slate-500 font-medium border border-slate-200">
+                              {rowNumber}
+                            </td>
+                            <td className="px-4 py-3.5 text-center text-blue-700 font-medium border border-slate-200">
+                              {eventTitle}
+                            </td>
+                            <td className="px-4 py-3.5 font-semibold text-slate-900 border border-slate-200">
+                              {guest.name}
+                            </td>
                             <td className="px-4 py-3.5 border border-slate-200">
                               {!phone.trim() ? (
                                 <span className="text-slate-300">—</span>
                               ) : (
                                 <div>
-                                  <div className={`flex items-center gap-2 font-mono ${!phoneValid ? 'text-red-600 font-semibold' : 'text-slate-700'}`}>
+                                  <div
+                                    className={`flex items-center gap-2 font-mono ${
+                                      !phoneValid ? 'text-red-600 font-semibold' : 'text-slate-700'
+                                    }`}
+                                  >
                                     {flag && <span>{flag}</span>}
                                     <span dir="ltr">{phone}</span>
                                   </div>
-                                  {!phoneValid && <div className="text-[11px] text-red-500 mt-0.5">מס לא תקין</div>}
+                                  {!phoneValid && (
+                                    <div className="text-[11px] text-red-500 mt-0.5">מס לא תקין</div>
+                                  )}
                                 </div>
                               )}
                             </td>
                             <td className="px-4 py-3.5 border border-slate-200">{guest.group}</td>
-                            <td className="px-4 py-3.5 text-center font-bold text-slate-900 border border-slate-200">{guest.quantity}</td>
+                            <td className="px-4 py-3.5 text-center font-bold text-slate-900 border border-slate-200">
+                              {guest.quantity}
+                            </td>
                             {hasTransport && (
-                              <td className={`px-4 py-3.5 text-center font-medium border border-slate-200 ${isWaitingForTransport ? 'text-orange-600' : 'text-blue-700'}`}>
+                              <td
+                                className={`px-4 py-3.5 text-center font-medium border border-slate-200 ${
+                                  isWaitingForTransport ? 'text-orange-600' : 'text-blue-700'
+                                }`}
+                              >
                                 {transportDisplay}
                               </td>
                             )}
@@ -565,13 +680,21 @@ export default function GuestsPage() {
                             <td className="px-4 py-3.5 text-center border border-slate-200">
                               {guest.confirmed === 'לא מגיע' ? (
                                 <div className="inline-flex flex-col items-center">
-                                  <div className="bg-red-100 text-red-600 w-11 h-11 rounded-xl flex items-center justify-center text-xl">❌</div>
+                                  <div className="bg-red-100 text-red-600 w-11 h-11 rounded-xl flex items-center justify-center text-xl">
+                                    ❌
+                                  </div>
                                   <div className="text-red-600 font-bold text-sm mt-1">0</div>
                                 </div>
-                              ) : guest.confirmed && !isNaN(Number(guest.confirmed)) && Number(guest.confirmed) >= 1 ? (
+                              ) : guest.confirmed &&
+                                !isNaN(Number(guest.confirmed)) &&
+                                Number(guest.confirmed) >= 1 ? (
                                 <div className="inline-flex flex-col items-center">
-                                  <div className="bg-emerald-100 text-emerald-700 w-11 h-11 rounded-xl flex items-center justify-center text-xl">✅</div>
-                                  <div className="text-emerald-700 font-bold text-sm mt-1">{guest.count || guest.quantity || 1}</div>
+                                  <div className="bg-emerald-100 text-emerald-700 w-11 h-11 rounded-xl flex items-center justify-center text-xl">
+                                    ✅
+                                  </div>
+                                  <div className="text-emerald-700 font-bold text-sm mt-1">
+                                    {guest.count || guest.quantity || 1}
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="inline-flex flex-col items-center">
@@ -580,16 +703,18 @@ export default function GuestsPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-4 py-3.5 text-slate-600 border border-slate-200">{guest.notes}</td>
+                            <td className="px-4 py-3.5 text-slate-600 border border-slate-200">
+                              {guest.notes}
+                            </td>
                             <td className="px-4 py-3.5 text-center border border-slate-200">
                               <div className="flex gap-2 justify-center">
                                 <Link
-                                  href={`/event/${eventId}/guests/${guest.id}/edit`}
+                                  href={editHref(guest.id)}
                                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
                                 >
                                   ✏️ ערוך
                                 </Link>
-                                {!isClientMode && (
+                                {isFullAdmin && (
                                   <button
                                     onClick={() => {
                                       if (confirm(`למחוק את ${guest.name}?`)) {
@@ -610,9 +735,14 @@ export default function GuestsPage() {
                       })}
 
                       <tr key={`footer-${groupName}`}>
-                        <td colSpan={colSpan} className="px-4 py-2.5 bg-slate-200 border border-slate-300 text-left text-slate-700 text-sm font-medium">
+                        <td
+                          colSpan={colSpan}
+                          className="px-4 py-2.5 bg-slate-200 border border-slate-300 text-left text-slate-700 text-sm font-medium"
+                        >
                           סה״כ אורחים שאישרו בקבוצה:{' '}
-                          <span className="text-emerald-700 font-bold text-base">{confirmedInGroup}</span>
+                          <span className="text-emerald-700 font-bold text-base">
+                            {confirmedInGroup}
+                          </span>
                         </td>
                       </tr>
                     </>
