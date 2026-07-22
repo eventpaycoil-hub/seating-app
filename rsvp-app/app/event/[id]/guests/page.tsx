@@ -293,13 +293,24 @@ export default function GuestsPage() {
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="text-xl font-bold text-gray-800 flex items-center gap-3">
-            <span>{eventId === '1' ? 'מנהל' : eventTitle}</span>
+            {isFullAdmin ? (
+              <span>
+                מנהל
+                {eventTitle ? (
+                  <span className="text-base font-medium text-gray-500"> · {eventTitle}</span>
+                ) : null}
+              </span>
+            ) : (
+              <span>{eventTitle}</span>
+            )}
             {isEditorMode && (
               <span className="text-xs font-medium bg-violet-100 text-violet-800 px-3 py-1 rounded-full">
                 מצב טלפנית (EDITOR)
               </span>
             )}
           </div>
+    
+
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
@@ -307,6 +318,7 @@ export default function GuestsPage() {
               { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: '📞' },
               { id: 'video', href: `/videos?eventId=${eventId}`, label: 'וידאו האירוע', icon: '🎥' },
               { id: 'photo', href: `/gallery?eventId=${eventId}`, label: 'תמונות האירוע', icon: '🖼' },
+              { id: 'calculator', href: '/calculator', label: 'מחשבון', icon: '🧮' },
               { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: '👥' },
               { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
               { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },
