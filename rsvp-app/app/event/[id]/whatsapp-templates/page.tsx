@@ -1,50 +1,82 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
+
+const AUTOMATION_ID = 'e3d8174d-2823-4d4f-a923-32cda5537f39';
+
+type HeyyTemplate = {
+  id: string;
+  name?: string;
+  status?: string;
+  category?: string;
+  language?: string;
+};
 
 export default function WhatsAppTemplatesPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const eventId = (params?.id as string) || '1';
 
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [selected, setSelected] = useState<any>(null);
+  const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [templates, setTemplates] = useState<HeyyTemplate[]>([]);
+  const [selected, setSelected] = useState<HeyyTemplate | null>(null);
+  const [phone, setPhone] = useState('0505270152');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
-  const [customPhone, setCustomPhone] = useState('');
-  const [customMessage, setCustomMessage] = useState('');
+  const [result, setResult] = useState<string | null>(null);
 
-  const loadFromHeyy = async () => {
+  useEffect(() => {
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const event = events.find((e: any) => e.id.toString() === eventId.toString());
+      if (event) setCurrentEvent(event);
+    } catch {}
+  }, [eventId]);
+
+  useEffect(() => {
+    const p = searchParams.get('phone');
+    if (p) setPhone(p);
+  }, [searchParams]);
+
+  const loadTemplates = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      });
+      const res = await fetch('/api/heyy/templates', { cache: 'no-store' });
       const data = await res.json();
 
       if (!data.success) {
         setError(
-          data.message ||
-            data.error?.message ||
-            JSON.stringify(data.error || data) ||
-            'שגיאה בטעינה מ-Heyy'
+          typeof data.error === 'string'
+            ? data.error
+            : JSON.stringify(data.error || data)
         );
         setTemplates([]);
         return;
       }
 
-      setTemplates(data.templates || []);
-      setLastUpdate(new Date().toLocaleString('he-IL'));
-      if ((data.templates || []).length === 0) {
-        setError('לא נמצאו תבניות בחשבון Heyy (או שה-API עדיין לא מחזיר נתונים)');
+      let list: HeyyTemplate[] = [];
+      if (Array.isArray(data.templates)) list = data.templates;
+      else if (Array.isArray(data?.data?.messageTemplates)) list = data.data.messageTemplates;
+      else if (Array.isArray(data?.messageTemplates)) list = data.messageTemplates;
+
+      const hasStatus = list.some((t) => !!t.status);
+      if (hasStatus) {
+        const approved = list.filter(
+          (t) => String(t.status || '').toUpperCase() === 'APPROVED'
+        );
+        list = approved.length > 0 ? approved : list;
       }
+
+      setTemplates(list);
+      if (list.length > 0) setSelected(list[0]);
+      else setSelected(null);
     } catch (e: any) {
-      setError(e.message || 'שגיאת רשת');
+      setError(e?.message || 'שגיאת רשת');
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -52,41 +84,171 @@ export default function WhatsAppTemplatesPage() {
   };
 
   useEffect(() => {
-    loadFromHeyy();
+    loadTemplates();
   }, []);
 
-  const sendWhatsApp = (phone: string, message: string) => {
-    if (!phone || !message) {
-      alert('חסר מספר או הודעה');
-      return;
-    }
-    let clean = phone.replace(/\D/g, '');
-    if (clean.startsWith('0')) clean = '972' + clean.slice(1);
-    if (!clean.startsWith('972')) clean = '972' + clean;
-    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(message)}`, '_blank');
+  const visibleTemplates = templates.filter((t) => {
+    if (!search.trim()) return true;
+    return (t.name || '').toLowerCase().includes(search.trim().toLowerCase());
+  });
+
+  const buildAttributesForGuest = (guestId?: string | null) => {
+    const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
+    const eventType = currentEvent?.eventType || 'אירוע';
+    const date =
+      currentEvent?.eventDate ||
+      currentEvent?.fullDate ||
+      currentEvent?.date ||
+      '';
+    const time = currentEvent?.time || '';
+
+    const general_text_1 = `${eventType} של ${owners}`;
+    const general_text_2 = time ? `${date} בשעה ${time}` : date;
+
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://seating-app-dusky.vercel.app';
+
+    const rsvp_link = guestId
+      ? `${origin}/landing?eventId=${eventId}&guestId=${guestId}`
+      : `${origin}/landing?eventId=${eventId}`;
+
+    return { general_text_1, general_text_2, rsvp_link };
   };
+
+  const sendTemplate = async () => {
+    setSending(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      let selectedIds: any[] = [];
+      try {
+        selectedIds = JSON.parse(localStorage.getItem('selectedForWhatsApp') || '[]');
+      } catch {}
+
+      let allGuests: any[] = [];
+      try {
+        allGuests = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
+      } catch {}
+
+      // גיבוי אם נשמר במפתח אחר
+      if (allGuests.length === 0) {
+        try {
+          const raw = localStorage.getItem('myGuests') || localStorage.getItem(`guests_${eventId}`);
+          if (raw) allGuests = JSON.parse(raw);
+        } catch {}
+      }
+
+      let targets: { phone: string; name: string; guestId: string }[] = [];
+
+      if (selectedIds.length > 0 && allGuests.length > 0) {
+        targets = allGuests
+          .filter(
+            (g: any) =>
+              selectedIds.includes(g.id) ||
+              selectedIds.includes(String(g.id)) ||
+              selectedIds.includes(Number(g.id))
+          )
+          .filter((g: any) => g.phone && String(g.phone).trim())
+          .map((g: any) => ({
+            phone: String(g.phone).trim(),
+            name: g.name || '',
+            guestId: String(g.id),
+          }));
+      }
+
+      if (targets.length === 0) {
+        if (!phone.trim()) {
+          alert('הזן מספר טלפון או בחר מוזמנים ברשימה');
+          setSending(false);
+          return;
+        }
+        const gid = searchParams.get('guestId') || '';
+        targets = [{ phone: phone.trim(), name: '', guestId: gid }];
+      }
+
+      const campaignName = `וואטסאפ - ${currentEvent?.owners || eventId} - ${Date.now()}`;
+
+      const phonesPayload = targets.map((t) => ({
+        phone: t.phone,
+        name: t.name,
+        attributes: buildAttributesForGuest(t.guestId || null),
+      }));
+
+      const attributes = buildAttributesForGuest(
+        targets[0]?.guestId || searchParams.get('guestId')
+      );
+
+      const res = await fetch('/api/heyy/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaignName,
+          automationId: AUTOMATION_ID,
+          phones: phonesPayload,
+          attributes,
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        const msg =
+          typeof data.error === 'string'
+            ? data.error
+            : JSON.stringify(data.error || data);
+        setError(msg);
+        setResult(null);
+      } else {
+        setResult(
+          `✅ נשלח ל־${targets.length} מוזמנים\n${attributes.general_text_1}\n${attributes.general_text_2}`
+        );
+        localStorage.removeItem('selectedForWhatsApp');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'שגיאת שליחה');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const previewAttrs = buildAttributesForGuest(searchParams.get('guestId'));
 
   return (
     <div className="min-h-screen bg-zinc-100 p-6 md:p-8" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">תבניות וואטסאפ (Heyy)</h1>
-            {lastUpdate && (
-              <p className="text-sm text-gray-500 mt-1">עודכן לאחרונה: {lastUpdate}</p>
+            <h1 className="text-3xl md:text-4xl font-bold">תבניות וואטסאפ</h1>
+            {currentEvent && (
+              <p className="text-gray-600 mt-2 text-lg">
+                אירוע:{' '}
+                <span className="font-bold text-emerald-700">
+                  {currentEvent.owners || currentEvent.title}
+                </span>
+                {currentEvent.hallName ? ` · ${currentEvent.hallName}` : ''}
+                {currentEvent.eventDate || currentEvent.date
+                  ? ` · ${currentEvent.eventDate || currentEvent.date}`
+                  : ''}
+              </p>
+            )}
+            {!currentEvent && (
+              <p className="text-amber-600 mt-2 text-sm">
+                לא נמצא אירוע ל־ID זה ב־localStorage
+              </p>
             )}
           </div>
           <div className="flex gap-3">
             <button
-              onClick={loadFromHeyy}
-              disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-2xl font-bold"
+              onClick={loadTemplates}
+              className="px-5 py-3 rounded-2xl bg-white border hover:bg-gray-50 font-medium"
             >
-              {loading ? '⏳ טוען...' : '🔄 רענון תבניות מ-Heyy'}
+              🔄 רענון תבניות
             </button>
             <Link
               href={`/event/${eventId}/guests`}
-              className="bg-white border px-6 py-3 rounded-2xl text-blue-600 hover:bg-blue-50"
+              className="px-5 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 font-medium"
             >
               ← חזרה למוזמנים
             </Link>
@@ -94,92 +256,104 @@ export default function WhatsAppTemplatesPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
-            <div className="font-bold mb-1">הערה</div>
-            <div className="text-sm whitespace-pre-wrap">{error}</div>
-            <div className="text-xs mt-2 text-amber-700">
-              כש-Heyy יתקנו את ה-API — לחץ שוב על רענון והתבניות יופיעו כאן.
-            </div>
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm whitespace-pre-wrap">
+            {error}
+          </div>
+        )}
+        {result && (
+          <div className="mb-6 p-4 rounded-2xl bg-green-50 border border-green-200 text-green-700 whitespace-pre-wrap">
+            {result}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* רשימת תבניות */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-3xl shadow p-6">
-            <h2 className="text-xl font-bold mb-4">
-              התבניות שלי {templates.length > 0 && `(${templates.length})`}
+            <h2 className="text-xl font-bold mb-3">
+              תבניות מאושרות {loading ? '(טוען...)' : `(${templates.length})`}
             </h2>
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
-              {templates.length === 0 && !loading && (
-                <p className="text-gray-400 text-center py-10">אין תבניות להצגה</p>
+
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="חיפוש לפי שם תבנית..."
+              className="w-full border rounded-2xl px-4 py-3 mb-4"
+            />
+
+            <div className="space-y-3 max-h-[75vh] overflow-y-auto pe-1">
+              {visibleTemplates.length === 0 && !loading ? (
+                <p className="text-gray-500 text-center py-10">לא נמצאו תבניות</p>
+              ) : (
+                visibleTemplates.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelected(t)}
+                    className={`w-full text-right p-4 rounded-2xl border-2 transition ${
+                      selected?.id === t.id
+                        ? 'border-green-600 bg-green-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-semibold text-lg">{t.name || 'ללא שם'}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {t.category || ''} {t.language ? `· ${t.language}` : ''}
+                    </div>
+                  </button>
+                ))
               )}
-              {templates.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => {
-                    setSelected(t);
-                    setCustomMessage(t.content || '');
-                  }}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition ${
-                    selected?.id === t.id
-                      ? 'border-emerald-600 bg-emerald-50'
-                      : 'border-gray-100 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-semibold">{t.name}</div>
-                  {t.status && (
-                    <div className="text-xs text-gray-500 mt-1">סטטוס: {t.status}</div>
-                  )}
-                  <div className="text-sm text-gray-600 line-clamp-2 mt-2">{t.content}</div>
-                </div>
-              ))}
             </div>
           </div>
 
-          {/* תצוגה + שליחה */}
-          <div className="lg:col-span-2 bg-white rounded-3xl shadow p-6">
-            {selected ? (
-              <>
-                <h2 className="text-2xl font-bold mb-4">{selected.name}</h2>
-                <div className="bg-gray-50 p-5 rounded-2xl whitespace-pre-wrap text-gray-800 mb-6 min-h-[120px]">
-                  {selected.content}
-                </div>
+          <div className="bg-white rounded-3xl shadow p-6 h-fit sticky top-6">
+            <h2 className="text-xl font-bold mb-4">שליחה</h2>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">מספר לשליחה</label>
-                    <input
-                      type="tel"
-                      value={customPhone}
-                      onChange={(e) => setCustomPhone(e.target.value)}
-                      placeholder="050-..."
-                      className="w-full border rounded-2xl px-4 py-3"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">הודעה (ניתן לערוך)</label>
-                    <textarea
-                      value={customMessage}
-                      onChange={(e) => setCustomMessage(e.target.value)}
-                      className="w-full border rounded-2xl px-4 py-3 h-32"
-                    />
-                  </div>
-                  <button
-                    onClick={() => sendWhatsApp(customPhone, customMessage)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold text-lg"
-                  >
-                    📱 פתח וואטסאפ עם ההודעה
-                  </button>
-                  <p className="text-xs text-gray-500 text-center">
-                    כרגע נפתח wa.me (ידני). אחרי ש-Heyy יעבוד – נוסיף שליחה ישירה מה-API.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div className="h-80 flex items-center justify-center text-gray-400 text-xl">
-                בחר תבנית מהרשימה או לחץ רענון
+            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-sm space-y-1">
+              <div>
+                <span className="text-gray-500">שורה 1: </span>
+                <strong>{previewAttrs.general_text_1}</strong>
               </div>
+              <div>
+                <span className="text-gray-500">שורה 2: </span>
+                <strong>{previewAttrs.general_text_2 || '—'}</strong>
+              </div>
+              <div className="text-xs text-gray-500 break-all pt-1">
+                קישור: {previewAttrs.rsvp_link}
+              </div>
+            </div>
+
+            {selected ? (
+              <div className="mb-4 p-4 rounded-2xl bg-gray-50">
+                <div className="text-sm text-gray-500 mb-1">תבנית נבחרת (לתצוגה)</div>
+                <div className="font-bold text-lg">{selected.name}</div>
+              </div>
+            ) : (
+              <p className="text-gray-400 mb-4">
+                אין חובה לבחור מהרשימה — נשלח דרך האוטומציה
+              </p>
             )}
+
+            <label className="block text-sm font-medium mb-2">מספר טלפון</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="050-..."
+              className="w-full border rounded-2xl px-5 py-4 mb-4"
+            />
+
+            <button
+              type="button"
+              onClick={sendTemplate}
+              disabled={sending}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
+            >
+              {sending ? '⏳ שולח...' : '📱 שלח בוואטסאפ'}
+            </button>
+
+            <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+              קישור אישי נבנה אוטומטית לכל מוזמן שנבחר ברשימה (guestId).
+            </p>
           </div>
         </div>
       </div>

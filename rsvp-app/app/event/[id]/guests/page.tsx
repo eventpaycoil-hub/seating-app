@@ -257,7 +257,13 @@ export default function GuestsPage() {
   const sendWhatsApp = () => {
     if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/whatsapp-templates`;
+
+    const first = guests.find((g: any) => g.id === selectedGuests[0]);
+    const qs = first?.phone
+      ? `?phone=${encodeURIComponent(first.phone)}&guestId=${encodeURIComponent(String(first.id))}`
+      : '';
+
+    window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
 
   const baseCols = isClientMode ? 9 : 10;
