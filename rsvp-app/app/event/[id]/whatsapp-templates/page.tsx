@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 
@@ -28,6 +28,8 @@ export default function WhatsAppTemplatesPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [selectedGuestIds, setSelectedGuestIds] = useState<any[]>([]);
+  const [allGuests, setAllGuests] = useState<any[]>([]);
 
   useEffect(() => {
     try {
@@ -41,6 +43,36 @@ export default function WhatsAppTemplatesPage() {
     const p = searchParams.get('phone');
     if (p) setPhone(p);
   }, [searchParams]);
+
+  useEffect(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem('selectedForWhatsApp') || '[]');
+      setSelectedGuestIds(Array.isArray(ids) ? ids : []);
+    } catch {
+      setSelectedGuestIds([]);
+    }
+
+    let guests: any[] = [];
+    try {
+      guests = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
+    } catch {}
+    if (guests.length === 0) {
+      try {
+        const raw = localStorage.getItem('myGuests') || localStorage.getItem(`guests_${eventId}`);
+        if (raw) guests = JSON.parse(raw);
+      } catch {}
+    }
+    setAllGuests(Array.isArray(guests) ? guests : []);
+  }, [eventId]);
+
+  const selectedGuestsList = useMemo(() => {
+    return allGuests.filter(
+      (g) =>
+        selectedGuestIds.includes(g.id) ||
+        selectedGuestIds.includes(String(g.id)) ||
+        selectedGuestIds.includes(Number(g.id))
+    );
+  }, [allGuests, selectedGuestIds]);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -123,34 +155,10 @@ export default function WhatsAppTemplatesPage() {
     setError(null);
 
     try {
-      let selectedIds: any[] = [];
-      try {
-        selectedIds = JSON.parse(localStorage.getItem('selectedForWhatsApp') || '[]');
-      } catch {}
-
-      let allGuests: any[] = [];
-      try {
-        allGuests = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
-      } catch {}
-
-      // גיבוי אם נשמר במפתח אחר
-      if (allGuests.length === 0) {
-        try {
-          const raw = localStorage.getItem('myGuests') || localStorage.getItem(`guests_${eventId}`);
-          if (raw) allGuests = JSON.parse(raw);
-        } catch {}
-      }
-
       let targets: { phone: string; name: string; guestId: string }[] = [];
 
-      if (selectedIds.length > 0 && allGuests.length > 0) {
-        targets = allGuests
-          .filter(
-            (g: any) =>
-              selectedIds.includes(g.id) ||
-              selectedIds.includes(String(g.id)) ||
-              selectedIds.includes(Number(g.id))
-          )
+      if (selectedGuestsList.length > 0) {
+        targets = selectedGuestsList
           .filter((g: any) => g.phone && String(g.phone).trim())
           .map((g: any) => ({
             phone: String(g.phone).trim(),
@@ -181,6 +189,7 @@ export default function WhatsAppTemplatesPage() {
         targets[0]?.guestId || searchParams.get('guestId')
       );
 
+      // בקשה אחת בלבד מהדפדפן → היי שולחים
       const res = await fetch('/api/heyy/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -202,9 +211,10 @@ export default function WhatsAppTemplatesPage() {
         setResult(null);
       } else {
         setResult(
-          `✅ נשלח ל־${targets.length} מוזמנים\n${attributes.general_text_1}\n${attributes.general_text_2}`
+          `✅ נשלח ל־${targets.length} מוזמנים (השליחה אצל Heyy)\n${attributes.general_text_1}\n${attributes.general_text_2}`
         );
         localStorage.removeItem('selectedForWhatsApp');
+        setSelectedGuestIds([]);
       }
     } catch (e: any) {
       setError(e?.message || 'שגיאת שליחה');
@@ -213,7 +223,17 @@ export default function WhatsAppTemplatesPage() {
     }
   };
 
-  const previewAttrs = buildAttributesForGuest(searchParams.get('guestId'));
+  const previewAttrs = buildAttributesForGuest(
+    selectedGuestsList[0]?.id
+      ? String(selectedGuestsList[0].id)
+      : searchParams.get('guestId')
+  );
+
+  const buttonLabel = sending
+    ? '⏳ שולח...'
+    : selectedGuestsList.length > 0
+      ? `📱 שלח למסומנים (${selectedGuestsList.length})`
+      : '📱 שלח בוואטסאפ';
 
   return (
     <div className="min-h-screen bg-zinc-100 p-6 md:p-8" dir="rtl">
@@ -254,6 +274,23 @@ export default function WhatsAppTemplatesPage() {
             </Link>
           </div>
         </div>
+
+        {selectedGuestsList.length > 0 && (
+          <div className="mb-6 p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-300">
+            <div className="font-bold text-emerald-800 text-lg">
+              נבחרו {selectedGuestsList.length} מוזמנים לשליחת וואטסאפ
+            </div>
+            <div className="text-sm text-emerald-700 mt-1">
+              {selectedGuestsList
+                .slice(0, 10)
+                .map((g) => g.name)
+                .join(' · ')}
+              {selectedGuestsList.length > 10
+                ? ` ועוד ${selectedGuestsList.length - 10}...`
+                : ''}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm whitespace-pre-wrap">
@@ -333,14 +370,18 @@ export default function WhatsAppTemplatesPage() {
               </p>
             )}
 
-            <label className="block text-sm font-medium mb-2">מספר טלפון</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="050-..."
-              className="w-full border rounded-2xl px-5 py-4 mb-4"
-            />
+            {selectedGuestsList.length === 0 && (
+              <>
+                <label className="block text-sm font-medium mb-2">מספר טלפון (בדיקה בודדת)</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="050-..."
+                  className="w-full border rounded-2xl px-5 py-4 mb-4"
+                />
+              </>
+            )}
 
             <button
               type="button"
@@ -348,11 +389,11 @@ export default function WhatsAppTemplatesPage() {
               disabled={sending}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
             >
-              {sending ? '⏳ שולח...' : '📱 שלח בוואטסאפ'}
+              {buttonLabel}
             </button>
 
             <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-              קישור אישי נבנה אוטומטית לכל מוזמן שנבחר ברשימה (guestId).
+              בקשה אחת מהדפדפן → היי מבצעים את השליחה. קישור אישי לכל מוזמן.
             </p>
           </div>
         </div>

@@ -19,6 +19,8 @@ export default function SMSPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>([]);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   const isEnglishEvent =
     currentEvent?.englishEvent === 'כן' ||
@@ -38,31 +40,36 @@ export default function SMSPage() {
     setSeatingTables(seating);
   }, [eventId]);
 
-  const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>([]);
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('selectedForSMS');
       if (saved) {
-        setSelectedGuestIds(JSON.parse(saved));
+        try {
+          setSelectedGuestIds(JSON.parse(saved));
+        } catch {}
       }
     }
   }, []);
 
-  const activeGuest = useMemo(() => {
-    if (selectedGuestIds.length > 0) {
-      return guests.find((g) => selectedGuestIds.includes(g.id)) || guests[0];
-    }
-    return guests[0];
+  const selectedGuestsList = useMemo(() => {
+    return guests.filter(
+      (g) =>
+        selectedGuestIds.includes(g.id) ||
+        selectedGuestIds.includes(String(g.id)) ||
+        selectedGuestIds.includes(Number(g.id))
+    );
   }, [guests, selectedGuestIds]);
+
+  const activeGuest = useMemo(() => {
+    if (selectedGuestsList.length > 0) return selectedGuestsList[0];
+    return guests[0];
+  }, [guests, selectedGuestsList]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     if (dateStr.includes('/')) return dateStr;
     const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
 
@@ -76,33 +83,32 @@ export default function SMSPage() {
   };
 
   const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return window.location.origin;
-  return 'https://seating-app-dusky.vercel.app';
-};
+    if (typeof window !== 'undefined') return window.location.origin;
+    return 'https://seating-app-dusky.vercel.app';
+  };
 
-  const buildDynamicMessage = (template: any) => {
+  const buildDynamicMessage = (template: any, guestOverride?: any) => {
     if (!template) return '';
     let message = template.content;
+    const guest = guestOverride || activeGuest;
+    const en = isEnglishEvent;
+
     if (template.id === 4) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = activeGuest?.inviteCode || activeGuest?.id || '';
+      const guestCode = guest?.inviteCode || guest?.id || '';
       const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
       message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
     }
 
-    
-    const en = isEnglishEvent;
-
-    if (activeGuest?.name && [1, 2, 6].includes(template.id)) {
-      message = message.replace(/\*שם\*/g, activeGuest.name);
-      message = message.replace(/\*name\*/g, activeGuest.name);
+    if (guest?.name && [1, 2, 6].includes(template.id)) {
+      message = message.replace(/\*שם\*/g, guest.name);
+      message = message.replace(/\*name\*/g, guest.name);
     }
 
     if (template.id === 1 || template.id === 6) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = activeGuest?.inviteCode || activeGuest?.id || 'TEST123';
+      const guestCode = guest?.inviteCode || guest?.id || 'TEST123';
       const rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
-
       message = message.replace(/\*guestId\*/g, String(guestCode));
       message = message.replace(/\*RSVP_LINK\*/g, rsvplink);
       message = message.replace(/ref=\*guestId\*/g, `ref=${guestCode}`);
@@ -111,13 +117,13 @@ export default function SMSPage() {
     if (template.id === 2) {
       const isSeatingEnabled = currentEvent?.seatingArrangement === 'כן';
 
-      if (isSeatingEnabled && activeGuest?.name) {
-        const tableNum = getTableNumberForGuest(activeGuest.name);
+      if (isSeatingEnabled && guest?.name) {
+        const tableNum = getTableNumberForGuest(guest.name);
         if (tableNum) {
           const peopleCount =
-            Number(activeGuest.confirmed) ||
-            Number(activeGuest.confirmedCount) ||
-            Number(activeGuest.quantity) ||
+            Number(guest.confirmed) ||
+            Number(guest.confirmedCount) ||
+            Number(guest.quantity) ||
             1;
 
           let seatingText = '';
@@ -161,7 +167,7 @@ export default function SMSPage() {
     }
 
     if (template.id === 5) {
-      const guestCode = activeGuest?.inviteCode || activeGuest?.id || 'TEST123';
+      const guestCode = guest?.inviteCode || guest?.id || 'TEST123';
       message = message.replace(/\*guestId\*/g, String(guestCode));
     }
 
@@ -198,7 +204,7 @@ export default function SMSPage() {
           title: 'Message 3 – Thank you',
           content: `What an amazing celebration thanks to you!\nThank you for celebrating with us!\nSee you at the next happy occasion.\nLove, ${owners} ❤️`,
         },
-                {
+        {
           id: 4,
           title: 'Message 4 – Transport',
           content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n*TRANSPORT_LINK*`,
@@ -262,6 +268,7 @@ export default function SMSPage() {
     setEditedMessage(built);
     setIsEditing(false);
     setShowEmojiPicker(false);
+    setBulkResult(null);
   };
 
   const addEmoji = (emoji: string) => {
@@ -302,6 +309,49 @@ export default function SMSPage() {
     }
   };
 
+  // שליחה לכל המסומנים — בקשה אחת לדפדפן
+  const sendToSelected = async () => {
+    if (!selectedTemplate) return alert('בחר תבנית קודם');
+    if (selectedGuestsList.length === 0) return alert('לא נבחרו מוזמנים');
+
+    const withPhone = selectedGuestsList.filter((g) => g.phone && String(g.phone).trim());
+    if (withPhone.length === 0) return alert('למסומנים אין מספרי טלפון');
+
+    if (!confirm(`לשלוח SMS ל־${withPhone.length} מוזמנים?`)) return;
+
+    setIsSending(true);
+    setSendingTo('bulk');
+    setBulkResult(null);
+
+    // הודעה מותאמת לכל מוזמן
+    const items = withPhone.map((g) => ({
+      phone: String(g.phone).trim(),
+      message: isEditing ? editedMessage : buildDynamicMessage(selectedTemplate, g),
+    }));
+
+    try {
+      const res = await fetch('/api/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setBulkResult(`✅ נשלח ל־${data.sent || items.length} מוזמנים` + (data.failed ? ` | נכשלו: ${data.failed}` : ''));
+        localStorage.removeItem('selectedForSMS');
+        setSelectedGuestIds([]);
+      } else {
+        setBulkResult(`❌ שגיאה: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error || data)}`);
+      }
+    } catch (e: any) {
+      setBulkResult(`❌ שגיאת רשת: ${e?.message || ''}`);
+    } finally {
+      setIsSending(false);
+      setSendingTo(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
       <div className="max-w-7xl mx-auto">
@@ -318,6 +368,43 @@ export default function SMSPage() {
             ← חזרה לרשימת מוזמנים
           </Link>
         </div>
+
+        {/* מסומנים */}
+        {selectedGuestsList.length > 0 && (
+          <div className="mb-6 p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-300">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="font-bold text-emerald-800 text-lg">
+                  נבחרו {selectedGuestsList.length} מוזמנים לשליחה
+                </div>
+                <div className="text-sm text-emerald-700 mt-1">
+                  {selectedGuestsList
+                    .slice(0, 8)
+                    .map((g) => g.name)
+                    .join(' · ')}
+                  {selectedGuestsList.length > 8 ? ` ועוד ${selectedGuestsList.length - 8}...` : ''}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={sendToSelected}
+                disabled={isSending || !selectedTemplate}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow"
+              >
+                {isSending && sendingTo === 'bulk'
+                  ? '⏳ שולח למסומנים...'
+                  : `📱 שלח למסומנים (${selectedGuestsList.length})`}
+              </button>
+            </div>
+            {!selectedTemplate && (
+              <p className="text-amber-700 text-sm mt-3">בחר תבנית משמאל כדי להפעיל שליחה</p>
+            )}
+          </div>
+        )}
+
+        {bulkResult && (
+          <div className="mb-6 p-4 rounded-2xl bg-white border text-lg whitespace-pre-wrap">{bulkResult}</div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-3xl shadow p-8">
@@ -393,6 +480,19 @@ export default function SMSPage() {
                 )}
 
                 <div className="space-y-4 mt-8">
+                  {selectedGuestsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={sendToSelected}
+                      disabled={isSending}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-bold text-lg"
+                    >
+                      {isSending && sendingTo === 'bulk'
+                        ? '⏳ שולח למסומנים...'
+                        : `📱 שלח למסומנים (${selectedGuestsList.length})`}
+                    </button>
+                  )}
+
                   <button
                     onClick={() => sendRealSMS('0505270152')}
                     disabled={isSending}
