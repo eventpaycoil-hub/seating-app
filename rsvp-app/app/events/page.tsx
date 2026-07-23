@@ -109,7 +109,7 @@ export default function EventsPage() {
                     <span className="text-amber-500 text-lg leading-none">★</span>
                     <Link
                       href={`/event/${event.id}/guests`}
-                      className={`${colorClass} font-medium underline underline-offset-2 decoration-1 text-[15px]`}
+                      className={`${colorClass} font-bold underline underline-offset-2 decoration-1 text-[15px]`}
                     >
                       {event.owners || 'ללא שם'}
                       {dateStr ? ` (${dateStr})` : ''}

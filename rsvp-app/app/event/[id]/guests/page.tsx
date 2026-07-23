@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
@@ -89,7 +89,6 @@ export default function GuestsPage() {
   const [isEditorMode, setIsEditorMode] = useState(false);
   const [jumpGroup, setJumpGroup] = useState('');
 
-  // מנהל מלא = לא לקוח ולא עורך
   const isFullAdmin = !isClientMode && !isEditorMode;
 
   useEffect(() => {
@@ -309,8 +308,6 @@ export default function GuestsPage() {
               </span>
             )}
           </div>
-    
-
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
@@ -335,14 +332,12 @@ export default function GuestsPage() {
               { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: '📩' },
               { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: '💬' },
               { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: '🌐' },
-              { id: 'whatsapp-manage', href: `/event/${eventId}/whatsapp-templates/manage`, label: 'ניהול תבניות ווטסאפ', icon: '⚙️' },
               { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: '🚌' },
               { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
               { id: 'new-event', href: '/create-event', label: 'פתח אירוע חדש', icon: '➕' },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
               .filter((item) => {
-                // EDITOR — רק הרשימה המצומצמת
                 if (isEditorMode) {
                   return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
                 }
@@ -472,7 +467,6 @@ export default function GuestsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              {/* SMS / וואטסאפ / מחק — רק מנהל מלא */}
               {isFullAdmin && (
                 <div className="flex gap-2 flex-shrink-0">
                   <button
@@ -602,8 +596,8 @@ export default function GuestsPage() {
                   const displayGuests = [...groupGuests].reverse();
 
                   return (
-                    <>
-                      <tr key={`header-${groupName}`} id={`group-header-${groupName}`}>
+                    <Fragment key={`group-${groupName}`}>
+                      <tr id={`group-header-${groupName}`}>
                         {isFullAdmin && (
                           <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
@@ -746,7 +740,7 @@ export default function GuestsPage() {
                         );
                       })}
 
-                      <tr key={`footer-${groupName}`}>
+                      <tr>
                         <td
                           colSpan={colSpan}
                           className="px-4 py-2.5 bg-slate-200 border border-slate-300 text-left text-slate-700 text-sm font-medium"
@@ -757,7 +751,7 @@ export default function GuestsPage() {
                           </span>
                         </td>
                       </tr>
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
