@@ -2,7 +2,7 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getGuests, saveGuests } from '../../../lib/guests';
+import { getGuests, saveGuests, fetchGuestsFromSupabase } from '../../../lib/guests';
 
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
 const EDITOR_ALLOWED = [
@@ -93,35 +93,65 @@ export default function GuestsPage() {
 
   useEffect(() => {
     if (!eventId) return;
-    const allGuests = getGuests(String(eventId));
-    setGuests(allGuests.filter((g: any) => g.name && g.name.trim() !== ''));
+    let cancelled = false;
 
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) {
-      setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
-      setHasSeparation(currentEvent.hasSeparation === 'כן');
-      setHasTransport(currentEvent.hasTransport === 'כן');
+    async function load() {
+      const cloud = await fetchGuestsFromSupabase(eventId);
+      if (cancelled) return;
+
+      if (cloud && cloud.length > 0) {
+        const valid = cloud.filter((g: any) => g.name && g.name.trim() !== '');
+        setGuests(valid);
+        localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(valid));
+      } else {
+        const allGuests = getGuests(String(eventId));
+        setGuests(allGuests.filter((g: any) => g.name && g.name.trim() !== ''));
+      }
+
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+      if (currentEvent) {
+        setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
+        setHasSeparation(currentEvent.hasSeparation === 'כן');
+        setHasTransport(currentEvent.hasTransport === 'כן');
+      }
+
+      const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
+      if (savedTransport) {
+        try {
+          setTransportOptions(JSON.parse(savedTransport));
+        } catch {}
+      }
     }
 
-    const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
-    if (savedTransport) {
-      try {
-        setTransportOptions(JSON.parse(savedTransport));
-      } catch {}
-    }
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
-  useEffect(() => {
+    useEffect(() => {
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
     const clientMode = localStorage.getItem('clientMode') === 'true';
     setIsEditorMode(role === 'editor');
     setIsClientMode(role === 'client' || clientMode);
+
     const saved = localStorage.getItem(`visibleActions_${eventId}`);
     if (saved) {
       try {
         setVisibleActions(JSON.parse(saved));
-      } catch {}
+      } catch {
+        setVisibleActions([]);
+      }
+    } else {
+      // אין הגדרות עדיין → מציגים הכל (עד שהמנהל ישנה)
+      setVisibleActions([
+        'home', 'fix-phones', 'video', 'photo', 'calculator', 'groups',
+        'guests-arrived', 'tables-status', 'waze', 'add-guests', 'seating',
+        'fast-seating', 'duplicate-phones', 'add-tables', 'pricing',
+        'pricing-view', 'events-list', 'edit-event', 'sms', 'whatsapp',
+        'landing', 'transport', 'seating-sketch', 'new-event', 'admin-settings',
+      ]);
     }
   }, [eventId]);
 
@@ -176,7 +206,7 @@ export default function GuestsPage() {
     (g: any) => isPending(g) && (!g.notes || g.notes.trim() === '')
   ).length;
 
-  const totalConfirmedPeople = guests
+      const totalConfirmedPeople = guests
     .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
     .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
 
@@ -196,6 +226,14 @@ export default function GuestsPage() {
     if (activeFilter === 'noNote') return matchesSearch && (!g.notes || g.notes.trim() === '');
     return matchesSearch;
   });
+
+  const totalGuests = guests.length;
+  const willComeCount = guests.filter(
+    (g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
+  ).length;
+  const wontComeCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
+  const waitingCount = Math.max(0, totalGuests - willComeCount - wontComeCount);
+  const pct = (n: number) => (totalGuests === 0 ? 0 : Math.round((n / totalGuests) * 100));
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -393,24 +431,77 @@ export default function GuestsPage() {
           </div>
         )}
 
-        {hasSeparation && (
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
-              <span className="text-2xl">👨</span>
-              <span className="text-lg">גברים</span>
-              <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">
-                {menCount}
-              </span>
+                <div className="flex flex-wrap items-center gap-4 mb-6">
+          {hasSeparation && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-5 py-3 rounded-2xl font-medium flex items-center gap-3">
+                <span className="text-2xl">👨</span>
+                <span className="text-lg">גברים</span>
+                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-lg font-bold">
+                  {menCount}
+                </span>
+              </div>
+              <div className="bg-pink-50 border border-pink-200 text-pink-800 px-5 py-3 rounded-2xl font-medium flex items-center gap-3">
+                <span className="text-2xl">👩</span>
+                <span className="text-lg">נשים</span>
+                <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">
+                  {womenCount}
+                </span>
+              </div>
+            </>
+          )}
+
+          {[
+            {
+              label: 'סה״כ',
+              value: totalGuests,
+              percent: 100,
+              color: '#3b82f6',
+              track: '#dbeafe',
+            },
+            {
+              label: 'יגיעו',
+              value: willComeCount,
+              percent: pct(willComeCount),
+              color: '#10b981',
+              track: '#d1fae5',
+            },
+            {
+              label: 'לא יגיעו',
+              value: wontComeCount,
+              percent: pct(wontComeCount),
+              color: '#ef4444',
+              track: '#fee2e2',
+            },
+            {
+              label: 'ממתינים',
+              value: waitingCount,
+              percent: pct(waitingCount),
+              color: '#f59e0b',
+              track: '#fef3c7',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-center gap-3"
+            >
+              <div
+                className="relative w-14 h-14 flex-shrink-0 rounded-full"
+                style={{
+                  background: `conic-gradient(${stat.color} ${stat.percent * 3.6}deg, ${stat.track} 0deg)`,
+                }}
+              >
+                <div className="absolute inset-1.5 bg-white rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold text-slate-800">{stat.percent}%</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-slate-800 leading-none">{stat.value}</div>
+                <div className="text-xs text-slate-500 mt-1">{stat.label}</div>
+              </div>
             </div>
-            <div className="bg-pink-50 border border-pink-200 text-pink-800 px-6 py-4 rounded-2xl font-medium flex items-center gap-3">
-              <span className="text-2xl">👩</span>
-              <span className="text-lg">נשים</span>
-              <span className="bg-pink-600 text-white px-4 py-1 rounded-full text-lg font-bold">
-                {womenCount}
-              </span>
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
 
         <div className="flex flex-wrap gap-3 mb-4 justify-start">
           {[
@@ -456,7 +547,9 @@ export default function GuestsPage() {
             </button>
           ))}
         </div>
+         
 
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4"></div>
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3 items-stretch">
@@ -549,8 +642,8 @@ export default function GuestsPage() {
                   <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">
                     קבוצה
                   </th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
-                    צפי
+                                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                    כמות (הערכה)
                   </th>
                   {hasTransport && (
                     <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">

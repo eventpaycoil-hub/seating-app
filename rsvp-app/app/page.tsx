@@ -176,7 +176,7 @@ export default function HomePage() {
             justifyContent: 'center',
             marginBottom: '36px',
           }}>
-            <img
+                        <img
               src="/eventpay-logo.jpg"
               alt="EventPay"
               style={{
@@ -185,6 +185,7 @@ export default function HomePage() {
                 maxHeight: '140px',
                 objectFit: 'contain',
                 filter: 'drop-shadow(0 8px 28px rgba(0,0,0,0.6))',
+                mixBlendMode: 'multiply',
               }}
             />
           </div>

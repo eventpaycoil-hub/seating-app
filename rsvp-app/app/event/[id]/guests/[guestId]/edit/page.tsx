@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-
+import { saveGuests } from '../../../../../lib/guests';
 function isPending(g: any) {
   return !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
 }
@@ -138,17 +138,18 @@ export default function EditGuestPage() {
     router.push(`/event/${eventId}/guests`);
   };
 
-  const saveGuestField = (updatedGuest: any) => {
+    const saveGuestField = (updatedGuest: any) => {
     setGuest(updatedGuest);
     const guestsKey = `guests_event_${eventId}`;
     let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     savedGuests = savedGuests.map((g: any) =>
       g.id.toString() === guestId ? updatedGuest : g
     );
-    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
+    // localStorage + Supabase (ברקע)
+    saveGuests(eventId, savedGuests);
   };
 
-  const addToNotes = (text: string) => {
+    const addToNotes = (text: string) => {
     const date = new Date().toLocaleString('he-IL');
     const newNote = `${text} - ${date}`;
     const updated = {
@@ -156,10 +157,8 @@ export default function EditGuestPage() {
       notes: guest.notes ? `${guest.notes}\n${newNote}` : newNote,
     };
     saveGuestField(updated);
-    if (queue) {
-      setTimeout(() => goNextOrList(), 50);
-    }
   };
+    
 
   const resetToUnknown = () => {
     saveGuestField({ ...guest, count: 0, confirmed: 'לא ידוע' });
@@ -193,9 +192,9 @@ export default function EditGuestPage() {
       alert('נא לבחור לפחות אדם אחד');
       return;
     }
-    const parts = [];
-    if (menCount > 0) parts.push(`${menCount} גבר${menCount > 1 ? 'ים' : ''}`);
-    if (womenCount > 0) parts.push(`${womenCount} איש${womenCount > 1 ? 'ות' : 'ה'}`);
+        const parts = [];
+    if (menCount > 0) parts.push(menCount === 1 ? '1 גבר' : `${menCount} גברים`);
+    if (womenCount > 0) parts.push(womenCount === 1 ? '1 אישה' : `${womenCount} נשים`);
     saveGuestField({ ...guest, separation: parts.join(' + ') });
   };
 

@@ -4,7 +4,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { fetchSeatingFromSupabase, saveSeating } from '../../../lib/seating';
 
+import { getGuests, fetchGuestsFromSupabase } from '../../../lib/guests';
 interface PlacedTable {
   id: number;
   type: string;
@@ -18,6 +20,7 @@ interface PlacedTable {
   angle?: number;
   isReserve?: boolean;
   isSpecial?: boolean;
+  scale?: number;
 }
 
 interface UnassignedGuest {
@@ -56,6 +59,7 @@ export default function SeatingPage() {
   const [editingTable, setEditingTable] = useState<PlacedTable | null>(null);
   const [eventTitle, setEventTitle] = useState('');
   const [showTableTypes, setShowTableTypes] = useState(false);
+  const [tablesLoaded, setTablesLoaded] = useState(false);
   const [unassignedSearch, setUnassignedSearch] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
   const [selectedSeatedGuests, setSelectedSeatedGuests] = useState<Set<string>>(new Set());
@@ -72,12 +76,14 @@ export default function SeatingPage() {
     resetSketch: false,
     editTableInfo: false,
   });
+  const [arrivedMap, setArrivedMap] = useState<Record<string, number>>({});
+  const [resizingId, setResizingId] = useState<number | null>(null);
 
   const floorRef = useRef<HTMLDivElement>(null);
   const touchDragRef = useRef<{ id: number; offsetX: number; offsetY: number } | null>(null);
   // שמירת קבוצה מקורית לכל מוזמן – כדי שלא יאבד בהחזרה לשולחן
   const guestMetaRef = useRef<Record<string, { group: string }>>({});
-
+  const resizeStart = useRef({ x: 0, y: 0, scale: 1 });
   useEffect(() => {
     setIsAdmin(localStorage.getItem('userRole') === 'admin');
     const saved = localStorage.getItem(`permissions_seating_${eventId}`);
@@ -86,51 +92,86 @@ export default function SeatingPage() {
 
   const can = (key: keyof typeof seatingPerms) => isAdmin || seatingPerms[key];
 
-  useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title || '');
+      useEffect(() => {
+    let cancelled = false;
 
-    const savedTables = localStorage.getItem(`seatingTables_${eventId}`);
-    const tables: PlacedTable[] = savedTables ? JSON.parse(savedTables) : [];
-    if (savedTables) {
+    async function load() {
+      setTablesLoaded(false);
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+      if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title || '');
+
+      // שולחנות
+      let tables: PlacedTable[] = [];
+      const cloudTables = await fetchSeatingFromSupabase(eventId);
+      if (cancelled) return;
+
+      if (cloudTables && cloudTables.length > 0) {
+        tables = cloudTables as PlacedTable[];
+        localStorage.setItem(`seatingTables_${eventId}`, JSON.stringify(tables));
+      } else {
+        const savedTables = localStorage.getItem(`seatingTables_${eventId}`);
+        tables = savedTables ? JSON.parse(savedTables) : [];
+      }
+
       setPlacedTables(tables);
-      localStorage.setItem('seatingTables', savedTables);
+      localStorage.setItem('seatingTables', JSON.stringify(tables));
+      setTablesLoaded(true);
+      // מוזמנים
+      let savedGuests: any[] = [];
+      const cloudGuests = await fetchGuestsFromSupabase(eventId);
+      if (cancelled) return;
+
+            if (cloudGuests && cloudGuests.length > 0) {
+        savedGuests = cloudGuests;
+        localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(cloudGuests));
+      } else {
+        savedGuests = getGuests(eventId);
+      }
+
+      const map: Record<string, number> = {};
+      (savedGuests || []).forEach((g: any) => {
+        if (g?.name) map[g.name] = Number(g.arrivedCount) || 0;
+      });
+      setArrivedMap(map);
+
+      const qtyMap: Record<string, number> = {};
+      const list: UnassignedGuest[] = [];
+      const assigned = new Set<string>();
+      tables.forEach((t) => (t.assignedGuests || []).forEach((name: string) => assigned.add(name)));
+
+      const meta: Record<string, { group: string }> = {};
+      savedGuests.forEach((g: any) => {
+        if (!g.name || !g.name.trim()) return;
+        const status = (g.confirmed ?? '').toString().trim();
+        const confirmedNum = Number(status);
+        if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
+
+        const num = Number(g.count) || Number(g.quantity) || confirmedNum || 1;
+        const group = (g.group || '').trim() || 'ללא קבוצה';
+        meta[g.name] = { group };
+        qtyMap[g.name] = num;
+        if (!assigned.has(g.name)) {
+          list.push({ name: g.name, qty: num, group });
+        }
+      });
+      guestMetaRef.current = meta;
+      setGuestQtyMap(qtyMap);
+      setGuests(list);
     }
 
-    const savedGuests = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
-    const qtyMap: Record<string, number> = {};
-    const list: UnassignedGuest[] = [];
-    const assigned = new Set<string>();
-    tables.forEach((t) => (t.assignedGuests || []).forEach((name: string) => assigned.add(name)));
-
-    const meta: Record<string, { group: string }> = {};
-    savedGuests.forEach((g: any) => {
-      if (!g.name || !g.name.trim()) return;
-      const status = (g.confirmed ?? '').toString().trim();
-      const confirmedNum = Number(status);
-      // רק מי שאישר הגעה (מספר 1–16)
-      if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
-
-      // אותה לוגיקה כמו בדף רשימת המוזמנים
-      const num = Number(g.count) || Number(g.quantity) || confirmedNum || 1;
-
-      const group = (g.group || '').trim() || 'ללא קבוצה';
-      meta[g.name] = { group };
-      qtyMap[g.name] = num;
-      if (!assigned.has(g.name)) {
-        list.push({ name: g.name, qty: num, group });
-      }
-    });
-    guestMetaRef.current = meta;
-    setGuestQtyMap(qtyMap);
-    setGuests(list);
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
-  useEffect(() => {
+    useEffect(() => {
+    if (!eventId || !tablesLoaded) return;
     localStorage.setItem(`seatingTables_${eventId}`, JSON.stringify(placedTables));
     localStorage.setItem('seatingTables', JSON.stringify(placedTables));
-  }, [placedTables, eventId]);
+    saveSeating(eventId, placedTables);
+  }, [placedTables, eventId, tablesLoaded]);
 
   useEffect(() => {
     try {
@@ -157,11 +198,6 @@ export default function SeatingPage() {
     );
 
   // מחזיר קבוצה שמורה – לא מאבד בהחזרה מהשולחן
-  const getGuestGroup = (name: string, fallback?: string) =>
-    guestMetaRef.current[name]?.group || fallback || 'ללא קבוצה';
-
-  const snap = (v: number) => Math.round(v / GRID) * GRID;
-
   const addRegularTable = () => {
     const item = TABLE_TYPES[selectedTypeIndex];
     setPlacedTables((prev) => [
@@ -178,6 +214,7 @@ export default function SeatingPage() {
         angle: 0,
         isReserve: false,
         isSpecial: false,
+        scale: 1,
       },
     ]);
     setShowAddModal(false);
@@ -194,11 +231,13 @@ export default function SeatingPage() {
         y: snap(80 + Math.random() * 120),
         assignedGuests: [],
         isSpecial: true,
+        scale: 1,
       },
     ]);
   };
 
   const deleteTable = (id: number) => {
+    if (!can('deleteTable')) return;
     const table = placedTables.find((t) => t.id === id);
     if (table && table.assignedGuests.length > 0) {
       setGuests((prev) => {
@@ -222,11 +261,45 @@ export default function SeatingPage() {
     if (selectedId === id) setSelectedId(null);
   };
 
-  const rotateTable = (id: number) => {
+    const rotateTable = (id: number) => {
+    if (!can('rotateTable')) return;
     setPlacedTables((prev) =>
       prev.map((t) => (t.id === id ? { ...t, angle: (t.angle || 0) === 0 ? 90 : 0 } : t))
     );
   };
+
+  const onResizeStart = (e: React.MouseEvent, table: PlacedTable) => {
+    if (!isAdmin) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setResizingId(table.id);
+    resizeStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scale: table.scale || 1,
+    };
+  };
+
+  useEffect(() => {
+    if (resizingId === null) return;
+
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.current.x;
+      const next = Math.min(1.9, Math.max(0.55, resizeStart.current.scale + dx / 120));
+      setPlacedTables((prev) =>
+        prev.map((t) => (t.id === resizingId ? { ...t, scale: next } : t))
+      );
+    };
+
+    const onUp = () => setResizingId(null);
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [resizingId]);
 
   const onDragStartTable = (id: number) => {
     if (!can('moveTables') && !isAdmin) return;
@@ -257,6 +330,7 @@ export default function SeatingPage() {
         angle: 0,
         isSpecial: false,
         isReserve: false,
+        scale: 1,
       },
     ]);
     setNewTables((prev) => prev.filter((t) => t.id !== draggedNewTable.id));
@@ -840,7 +914,14 @@ export default function SeatingPage() {
                 onMouseLeave={() => setHoveredTableId(null)}
                 onContextMenu={(e) => { e.preventDefault(); openEdit(table); }}
                 className={`absolute cursor-move select-none ${selectedId === table.id ? 'z-20' : 'z-10'}`}
-                style={{ left: table.x, top: table.y, width: tableW, height: tableH }}
+                style={{
+                  left: table.x,
+                  top: table.y,
+                  width: tableW,
+                  height: tableH,
+                  transform: `scale(${table.scale || 1})`,
+                  transformOrigin: 'center center',
+                }}
               >
                 <div
                   className="absolute inset-0 flex items-center justify-center"
@@ -875,8 +956,15 @@ export default function SeatingPage() {
                   {table.isReserve && !table.isSpecial && (
                     <span className="absolute text-2xl font-black text-white/40">R</span>
                   )}
-                  {!table.isSpecial &&
+                                    {!table.isSpecial &&
                     seatPositions.map((pos, i) => {
+                      const arrivedSeats = (table.assignedGuests || []).reduce((sum, name) => {
+                        if ((arrivedMap[name] || 0) > 0) {
+                          return sum + (table.guestSeats?.[name] ?? getGuestQty(name));
+                        }
+                        return sum;
+                      }, 0);
+                      const isArrived = i < arrivedSeats;
                       const isOccupied = i < occupied;
                       const chairSize = table.seats >= 20 ? 7 : table.seats >= 14 ? 8 : 10;
                       return (
@@ -890,8 +978,12 @@ export default function SeatingPage() {
                             width: chairSize,
                             height: chairSize,
                             borderRadius: '50%',
-                            background: isOccupied ? '#dc2626' : '#fffbeb',
-                            border: isOccupied ? '2px solid #991b1b' : '2px solid #92400e',
+                            background: isArrived ? '#3b82f6' : isOccupied ? '#dc2626' : '#fffbeb',
+                            border: isArrived
+                              ? '2px solid #1d4ed8'
+                              : isOccupied
+                              ? '2px solid #991b1b'
+                              : '2px solid #92400e',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
                           }}
                         />
@@ -913,6 +1005,14 @@ export default function SeatingPage() {
                   >
                     ↻
                   </button>
+                )}
+                {isAdmin && !table.isSpecial && (
+                  <div
+                    onMouseDown={(e) => onResizeStart(e, table)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute -bottom-1 -left-1 w-4 h-4 bg-amber-500 border-2 border-white rounded-sm cursor-se-resize z-40 shadow"
+                    title="הגדל / הקטן"
+                  />
                 )}
                 {hoveredTableId === table.id && table.assignedGuests.length > 0 && (
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
@@ -1055,6 +1155,7 @@ export default function SeatingPage() {
                       angle: 0,
                       isSpecial: false,
                       isReserve: false,
+                      scale: 1,
                     }));
                     setPlacedTables((prev) => [...prev, ...placed]);
                     setNewTables([]);

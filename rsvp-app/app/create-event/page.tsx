@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function CreateEventPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function CreateEventPage() {
     serviceType: '',
     notes: '',
   });
+  const [saving, setSaving] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -42,7 +44,7 @@ export default function CreateEventPage() {
     return pass;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.owners || !formData.eventType) {
@@ -50,12 +52,14 @@ export default function CreateEventPage() {
       return;
     }
 
-    // נוצרים מראש – נשלחים רק בהפעלה
+    setSaving(true);
+
     const username = generateUsername(formData.owners);
     const password = generatePassword();
+    const eventId = Date.now();
 
     const newEvent = {
-      id: Date.now(),
+      id: eventId,
       title: `${formData.hallName || 'אולם'} - ${formData.owners}`,
       owners: formData.owners,
       eventType: formData.eventType,
@@ -81,8 +85,52 @@ export default function CreateEventPage() {
       clientPhone: formData.phone,
     };
 
+    // 1. localStorage — כמו תמיד (חובה)
     const existing = JSON.parse(localStorage.getItem('myEvents') || '[]');
     localStorage.setItem('myEvents', JSON.stringify([...existing, newEvent]));
+
+    // 2. Supabase — נוסף, לא חוסם אם נכשל
+    try {
+     const { error } = await supabase.from('events').insert({
+  id: eventId,
+  title: newEvent.title,
+  owners: newEvent.owners,
+  event_type: newEvent.eventType,
+  hall_name: newEvent.hallName,
+  city: newEvent.city,
+  event_date: formData.eventDate || null,
+  full_date: formData.eventDate || null,
+  time: newEvent.time || null,
+  day: null,
+  groom_parents: newEvent.groomParents || null,
+  bride_parents: newEvent.brideParents || null,
+  email: newEvent.email || null,
+  price: newEvent.price || null,
+  deposit: newEvent.deposit || null,
+  service_type: newEvent.serviceType || null,
+  notes: newEvent.notes || null,
+  is_active: false,
+  credit_link: null,
+  has_separation: null,
+  has_transport: null,
+  seating_arrangement: null,
+  qr_code: null,
+  guest_notes: null,
+  show_seating_link: null,
+  sms_service: null,
+  steward_service: null,
+});
+
+      if (error) {
+        console.warn('Supabase insert error:', error.message);
+      } else {
+        console.log('✅ נשמר גם ב-Supabase');
+      }
+    } catch (err) {
+      console.warn('Supabase failed, localStorage OK:', err);
+    }
+
+    setSaving(false);
 
     alert(
       `✅ האירוע נוצר (עדיין לא פעיל)\n\nפרטי הכניסה יישלחו ללקוח רק כשתלחץ "הפעל את האירוע" בעריכת האירוע.`
@@ -255,9 +303,10 @@ export default function CreateEventPage() {
           <div className="flex justify-center pt-6">
             <button
               type="submit"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-2xl font-bold py-6 px-20 rounded-3xl transition-all"
+              disabled={saving}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 text-white text-2xl font-bold py-6 px-20 rounded-3xl transition-all"
             >
-              יצירת האירוע 🎉
+              {saving ? 'שומר...' : 'יצירת האירוע 🎉'}
             </button>
           </div>
 

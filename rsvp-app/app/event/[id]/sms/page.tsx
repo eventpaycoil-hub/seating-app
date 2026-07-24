@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getGuests, saveGuests } from '../../../lib/guests';
@@ -15,6 +15,7 @@ export default function SMSPage() {
   const [seatingTables, setSeatingTables] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [editedMessage, setEditedMessage] = useState('');
+  const messageRef = useRef<HTMLTextAreaElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -226,8 +227,7 @@ export default function SMSPage() {
       {
         id: 1,
         title: 'הודעה מס 1 אישור הגעה',
-        content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה או אי הגעה:\n\n👉 לאישור הגעה לחצו על הקישור:\n*RSVP_LINK*`,
-      },
+        content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנשמח לראותכם!\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,      },
       {
         id: 2,
         title: 'הודעה מס 2 תזכורת',
@@ -271,8 +271,23 @@ export default function SMSPage() {
     setBulkResult(null);
   };
 
-  const addEmoji = (emoji: string) => {
-    setEditedMessage((prev) => prev + emoji);
+    const addEmoji = (emoji: string) => {
+    if (!isEditing) setIsEditing(true);
+
+    const el = messageRef.current;
+    if (!el) {
+      setEditedMessage((prev) => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? editedMessage.length;
+    const end = el.selectionEnd ?? editedMessage.length;
+    const next = editedMessage.slice(0, start) + emoji + editedMessage.slice(end);
+    setEditedMessage(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
   };
 
   const emojis = [
@@ -463,12 +478,14 @@ export default function SMSPage() {
                   </div>
                 )}
 
-                {isEditing ? (
+                                {isEditing ? (
                   <textarea
+                    ref={messageRef}
                     value={editedMessage}
                     onChange={(e) => setEditedMessage(e.target.value)}
                     className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y focus:outline-none focus:border-amber-500"
                     dir={isEnglishEvent ? 'ltr' : 'rtl'}
+                    style={{ caretColor: '#000' }}
                   />
                 ) : (
                   <div
