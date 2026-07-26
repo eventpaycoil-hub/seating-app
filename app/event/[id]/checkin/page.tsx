@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
@@ -15,10 +15,11 @@ import {
 
 export default function CheckinPage() {
   const params = useParams();
-  const eventId = (params?.id as string) || '1';
+  const eventId = String(
+    Array.isArray(params?.id) ? params.id[0] : params?.id || '1'
+  );
 
   const [backHref, setBackHref] = useState(`/event/${eventId}/guests`);
-
   const [lastScanned, setLastScanned] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
@@ -26,7 +27,7 @@ export default function CheckinPage() {
   const [status, setStatus] = useState('');
   const [eventTitle, setEventTitle] = useState('');
   const [voiceOn, setVoiceOn] = useState(true);
-  const [facingMode, setFacingMode] = useState('environment'); // environment=אחורית, user=קדמית
+  const [facingMode, setFacingMode] = useState('environment');
   const scannerRef = useRef(null);
   const processingRef = useRef(false);
   const resultTimerRef = useRef(null);
@@ -56,6 +57,10 @@ export default function CheckinPage() {
 
     (async () => {
       try {
+        const localRaw = localStorage.getItem(`guests_event_${eventId}`);
+        const localList = localRaw ? JSON.parse(localRaw) : [];
+        if (Array.isArray(localList) && localList.length > 0) return;
+
         const remote = await fetchGuestsFromSupabase(eventId);
         if (remote?.length) {
           localStorage.setItem(
@@ -121,8 +126,21 @@ export default function CheckinPage() {
   };
 
   const loadGuests = async () => {
-    let guests = getGuests(eventId);
-    if (guests.length) return guests;
+    try {
+      const raw = localStorage.getItem(`guests_event_${eventId}`);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) {
+          return list.map((g) => normalizeGuest(g));
+        }
+      }
+    } catch {}
+
+    try {
+      const guests = getGuests(eventId);
+      if (guests?.length) return guests;
+    } catch {}
+
     try {
       const remote = await fetchGuestsFromSupabase(eventId);
       if (remote?.length) {
@@ -134,6 +152,7 @@ export default function CheckinPage() {
         return normalized;
       }
     } catch {}
+
     return [];
   };
 
@@ -141,27 +160,39 @@ export default function CheckinPage() {
     const r = String(ref || '').trim();
     const rDigits = r.replace(/\D/g, '');
     const phoneQ = String(phoneFromQr || '').replace(/\D/g, '');
-    const nameQ = String(nameFromQr || '').trim();
 
-    let found = guests.find((g) => {
-      const id = String(g.id ?? '');
-      const invite = String(g.inviteCode ?? '');
-      const code = String(g.code ?? '');
-      const idDigits = id.replace(/\D/g, '');
-      return (
-        invite === r ||
-        code === r ||
-        id === r ||
-        (idDigits && rDigits && idDigits === rDigits) ||
-        (idDigits && rDigits && idDigits.startsWith(rDigits)) ||
-        (idDigits && rDigits && rDigits.startsWith(idDigits))
-      );
-    });
-    if (found) return found;
+    const normName = (s) =>
+      String(s || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+
+    let nameQ = String(nameFromQr || '').trim();
+    try {
+      nameQ = decodeURIComponent(nameQ);
+    } catch {}
+    nameQ = normName(nameQ);
+
+    if (r) {
+      const found = guests.find((g) => {
+        const id = String(g.id ?? '');
+        const invite = String(g.inviteCode ?? '').trim();
+        const code = String(g.code ?? '').trim();
+        const idDigits = id.replace(/\D/g, '');
+        return (
+          invite === r ||
+          code === r ||
+          id === r ||
+          (idDigits && rDigits && idDigits === rDigits)
+        );
+      });
+      if (found) return found;
+    }
 
     if (phoneQ.length >= 9) {
-      found = guests.find((g) => {
+      const found = guests.find((g) => {
         const p = String(g.phone ?? '').replace(/\D/g, '');
+        if (!p) return false;
         return (
           p === phoneQ ||
           p.endsWith(phoneQ.slice(-9)) ||
@@ -172,21 +203,14 @@ export default function CheckinPage() {
     }
 
     if (nameQ.length >= 2) {
-      const decoded = (() => {
-        try {
-          return decodeURIComponent(nameQ);
-        } catch {
-          return nameQ;
-        }
-      })();
-      found = guests.find((g) => String(g.name || '').trim() === decoded);
+      let found = guests.find((g) => normName(g.name) === nameQ);
       if (found) return found;
-      found = guests.find((g) => String(g.name || '').includes(decoded));
+      found = guests.find((g) => normName(g.name).includes(nameQ));
       if (found) return found;
     }
 
     if (rDigits.length >= 9) {
-      found = guests.find((g) => {
+      const found = guests.find((g) => {
         const p = String(g.phone ?? '').replace(/\D/g, '');
         return p === rDigits || p.endsWith(rDigits.slice(-9));
       });
@@ -351,7 +375,6 @@ export default function CheckinPage() {
         qty,
       });
       setStatus('');
-
       speakTable(tableNumber, guest.name);
 
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
@@ -373,24 +396,23 @@ export default function CheckinPage() {
     setLastScanned('');
     setStatus('מכין מצלמה...');
     setScanning(true);
+    processingRef.current = false;
 
     await new Promise((r) => setTimeout(r, 400));
 
     try {
       await stopScanner();
       setScanning(true);
+      processingRef.current = false;
       await new Promise((r) => setTimeout(r, 200));
 
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      };
+      const config = { fps: 8, qrbox: { width: 250, height: 250 } };
 
       const onSuccess = (decoded) => {
-        setStatus('נמצא!');
+        if (processingRef.current) return;
         processPayload(decoded);
       };
       const onFail = () => {};
@@ -482,10 +504,7 @@ export default function CheckinPage() {
     <div className="min-h-screen bg-slate-900 text-white p-4" dir="rtl">
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <Link
-            href={backHref}
-            className="text-slate-300 hover:text-white"
-          >
+          <Link href={backHref} className="text-slate-300 hover:text-white">
             ← חזרה
           </Link>
           <div className="text-sm text-slate-400">{eventTitle}</div>
