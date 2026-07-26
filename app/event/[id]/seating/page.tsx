@@ -245,7 +245,13 @@ console.log('arrivedMap', map);
         const confirmedNum = Number(status);
         if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
 
-        const num = Number(g.count) || Number(g.quantity) || confirmedNum || 1;
+                // הכמות = מה שאישרו (confirmed), לא quantity ישן
+        const num =
+          confirmedNum ||
+          Number(g.confirmedCount) ||
+          Number(g.count) ||
+          Number(g.quantity) ||
+          1;
         const group = (g.group || '').trim() || 'ללא קבוצה';
         meta[g.name] = { group };
         qtyMap[g.name] = num;
