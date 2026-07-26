@@ -28,6 +28,7 @@ export default function CheckinPage() {
   const [eventTitle, setEventTitle] = useState('');
   const [voiceOn, setVoiceOn] = useState(true);
   const [facingMode, setFacingMode] = useState('environment');
+  const [localCount, setLocalCount] = useState(0);
   const scannerRef = useRef(null);
   const processingRef = useRef(false);
   const resultTimerRef = useRef(null);
@@ -55,6 +56,14 @@ export default function CheckinPage() {
     const savedCam = localStorage.getItem('checkin_camera');
     if (savedCam === 'user' || savedCam === 'environment') setFacingMode(savedCam);
 
+    try {
+      const raw = localStorage.getItem(`guests_event_${eventId}`);
+      const list = raw ? JSON.parse(raw) : [];
+      setLocalCount(Array.isArray(list) ? list.length : 0);
+    } catch {
+      setLocalCount(0);
+    }
+
     (async () => {
       try {
         const localRaw = localStorage.getItem(`guests_event_${eventId}`);
@@ -67,6 +76,7 @@ export default function CheckinPage() {
             `guests_event_${eventId}`,
             JSON.stringify(remote.map(normalizeGuest))
           );
+          setLocalCount(remote.length);
         }
       } catch {}
     })();
@@ -126,33 +136,19 @@ export default function CheckinPage() {
   };
 
   const loadGuests = async () => {
+    const key = `guests_event_${eventId}`;
     try {
-      const raw = localStorage.getItem(`guests_event_${eventId}`);
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list) && list.length > 0) {
-          return list.map((g) => normalizeGuest(g));
-        }
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        console.log('checkin: אין מפתח', key, 'eventId=', eventId);
+        return [];
       }
-    } catch {}
-
-    try {
-      const guests = getGuests(eventId);
-      if (guests?.length) return guests;
-    } catch {}
-
-    try {
-      const remote = await fetchGuestsFromSupabase(eventId);
-      if (remote?.length) {
-        const normalized = remote.map(normalizeGuest);
-        localStorage.setItem(
-          `guests_event_${eventId}`,
-          JSON.stringify(normalized)
-        );
-        return normalized;
-      }
-    } catch {}
-
+      const list = JSON.parse(raw);
+      console.log('checkin: נטענו', Array.isArray(list) ? list.length : 0, key);
+      if (Array.isArray(list) && list.length > 0) return list;
+    } catch (e) {
+      console.error('checkin loadGuests error', e);
+    }
     return [];
   };
 
@@ -511,6 +507,10 @@ export default function CheckinPage() {
         </div>
 
         <h1 className="text-3xl font-bold text-center mb-2">סריקת כניסה</h1>
+
+        <p className="text-center text-xs text-yellow-300 mb-4">
+          debug: eventId={eventId} | מקומי={localCount}
+        </p>
 
         <div className="flex flex-wrap justify-center gap-2 mb-4">
           <button
