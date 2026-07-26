@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
+import { loadGuests, saveGuests } from '../../../../lib/guests';
 
 export default function SeatingArrivalFastPage() {
   const params = useParams();

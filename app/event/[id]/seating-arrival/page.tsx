@@ -1,10 +1,13 @@
 // @ts-nocheck
 'use client';
 
+
+
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
+import { loadGuests, saveGuests } from '../../../../lib/guests';
 
 export default function SeatingArrivalPage() {
   const params = useParams();
@@ -58,7 +61,7 @@ export default function SeatingArrivalPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  useEffect(() => {
+   useEffect(() => {
     if (!eventId) return;
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -67,43 +70,50 @@ export default function SeatingArrivalPage() {
       setEventTitle(currentEvent.owners || currentEvent.title || '');
     }
 
-    const guestsKey = `guests_event_${eventId}`;
-    let saved = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    let cancelled = false;
 
-    const arrivedById = new Map<any, number>();
-    const arrivedByName = new Map<string, number>();
-    try {
-      const arrivedOnly = JSON.parse(
-        localStorage.getItem(`arrived_event_${eventId}`) || '[]'
-      );
-      (arrivedOnly || []).forEach((g: any) => {
-        const n = Number(g.arrivedCount) || 0;
-        if (n <= 0) return;
-        if (g.id != null) arrivedById.set(g.id, n);
-        if (g.name) arrivedByName.set(String(g.name).trim(), n);
+    (async () => {
+      const saved = await loadGuests(String(eventId));
+
+      // תאימות ישנה: אם יש arrived_event_ נפרד — ממזגים פעם אחת
+      const arrivedById = new Map<any, number>();
+      const arrivedByName = new Map<string, number>();
+      try {
+        const arrivedOnly = JSON.parse(
+          localStorage.getItem(`arrived_event_${eventId}`) || '[]'
+        );
+        (arrivedOnly || []).forEach((g: any) => {
+          const n = Number(g.arrivedCount) || 0;
+          if (n <= 0) return;
+          if (g.id != null) arrivedById.set(g.id, n);
+          if (g.name) arrivedByName.set(String(g.name).trim(), n);
+        });
+      } catch {}
+
+      const guestsWithData = (saved || []).map((g: any) => {
+        const restored =
+          Number(g.arrivedCount) ||
+          arrivedById.get(g.id) ||
+          arrivedByName.get(String(g.name || '').trim()) ||
+          0;
+        return {
+          ...g,
+          arrivedCount: restored,
+          confirmedCount:
+            Number(g.confirmedCount) ||
+            (Number(g.confirmed) > 0 ? Number(g.confirmed) : 0) ||
+            Number(g.quantity) ||
+            0,
+        };
       });
-    } catch {}
 
-    const guestsWithData = (saved || []).map((g: any) => {
-      const restored =
-        arrivedById.get(g.id) ||
-        arrivedByName.get(String(g.name || '').trim()) ||
-        Number(g.arrivedCount) ||
-        0;
-      return {
-        ...g,
-        arrivedCount: restored,
-        confirmedCount:
-          Number(g.confirmedCount) ||
-          (Number(g.confirmed) > 0 ? Number(g.confirmed) : 0) ||
-          Number(g.quantity) ||
-          0,
-      };
-    });
+      if (!cancelled) setAllGuests(guestsWithData);
+    })();
 
-    setAllGuests(guestsWithData);
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
-
   const getConfirmedQty = (g: any) => {
     const status = String(g.confirmed ?? '').trim();
     if (status === 'לא מגיע') return 0;
@@ -136,14 +146,16 @@ export default function SeatingArrivalPage() {
     setForceEmptyList(false);
   };
 
-  const markArrival = (id: number, count: number) => {
+    const markArrival = (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
     setAllGuests(updated);
 
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+    // שמירה ל-Supabase + localStorage
+    saveGuests(String(eventId), updated);
 
+    // תאימות ישנה (אופציונלי — אפשר להשאיר)
     const arrivedOnly = updated
       .filter((g) => Number(g.arrivedCount) > 0)
       .map((g) => ({
@@ -197,7 +209,7 @@ export default function SeatingArrivalPage() {
     };
     const updated = [...allGuests, newGuest];
     setAllGuests(updated);
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+    saveGuests(String(eventId), updated);
     setNewName('');
     setNewQty(1);
     setShowAddModal(false);
