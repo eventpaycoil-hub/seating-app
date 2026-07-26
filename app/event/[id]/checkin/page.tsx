@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   getGuests,
+  loadGuests,
   saveGuests,
   fetchGuestsFromSupabase,
   updateGuestInSupabase,
@@ -56,29 +57,23 @@ export default function CheckinPage() {
     const savedCam = localStorage.getItem('checkin_camera');
     if (savedCam === 'user' || savedCam === 'environment') setFacingMode(savedCam);
 
-    try {
-      const raw = localStorage.getItem(`guests_event_${eventId}`);
-      const list = raw ? JSON.parse(raw) : [];
-      setLocalCount(Array.isArray(list) ? list.length : 0);
-    } catch {
-      setLocalCount(0);
-    }
+        (async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        setLocalCount(Array.isArray(list) ? list.length : 0);
+      } catch {
+        setLocalCount(0);
+      }
+    })();
 
     (async () => {
-      try {
-        const localRaw = localStorage.getItem(`guests_event_${eventId}`);
-        const localList = localRaw ? JSON.parse(localRaw) : [];
-        if (Array.isArray(localList) && localList.length > 0) return;
-
-        const remote = await fetchGuestsFromSupabase(eventId);
-        if (remote?.length) {
-          localStorage.setItem(
-            `guests_event_${eventId}`,
-            JSON.stringify(remote.map(normalizeGuest))
-          );
-          setLocalCount(remote.length);
-        }
-      } catch {}
+            try {
+        // תמיד טוען דרך loadGuests (Supabase + local)
+        const list = await loadGuests(String(eventId));
+        setLocalCount(Array.isArray(list) ? list.length : 0);
+      } catch {
+        setLocalCount(0);
+      }
     })();
 
     return () => {
