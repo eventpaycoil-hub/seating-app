@@ -184,8 +184,13 @@ export default function EditGuestPage() {
     saveGuestField({ ...guest, count: 0, confirmed: 'לא ידוע' });
   };
 
-  const setCountAndConfirm = (num: number) => {
-    const updatedGuest = { ...guest, count: num, confirmed: num.toString() };
+    const setCountAndConfirm = (num: number) => {
+    const updatedGuest = {
+      ...guest,
+      confirmed: String(num),
+      confirmedCount: num,
+      count: num,
+    };
     saveGuestField(updatedGuest);
     goNextOrList();
   };
