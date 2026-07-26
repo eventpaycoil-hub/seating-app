@@ -64,26 +64,16 @@ export default function CheckinPage() {
 
     (async () => {
       try {
-        // loadGuests מיובא מ-lib — Supabase + local (לא הפונקציה המקומית!)
         const list = await loadGuests(String(eventId));
         setLocalCount(Array.isArray(list) ? list.length : 0);
-        console.log(
-          'checkin init guests:',
-          Array.isArray(list) ? list.length : 0,
-          (list || []).map((g) => g.name)
-        );
       } catch {
         setLocalCount(0);
       }
-
-      // טעינת סקיצה לטאבלט (אם קיימת ב-local אחרי ביקור בסקיצה / סינכרון)
       try {
         const specific = localStorage.getItem(`seatingTables_${eventId}`);
         if (!specific) {
           const general = localStorage.getItem('seatingTables');
-          if (general) {
-            localStorage.setItem(`seatingTables_${eventId}`, general);
-          }
+          if (general) localStorage.setItem(`seatingTables_${eventId}`, general);
         }
       } catch {}
     })();
@@ -127,7 +117,6 @@ export default function CheckinPage() {
     setStatus('');
   };
 
-  // חיפוש שולחן — local לפי אירוע + נרמול שם
   const findTable = (guestName) => {
     try {
       const name = normName(guestName);
@@ -138,17 +127,13 @@ export default function CheckinPage() {
         const seating = JSON.parse(raw);
         if (!Array.isArray(seating)) return null;
         for (const t of seating) {
-          const hit = (t.assignedGuests || []).some(
-            (n) => normName(n) === name
-          );
+          const hit = (t.assignedGuests || []).some((n) => normName(n) === name);
           if (hit) return t.tableNumber ?? null;
         }
         return null;
       };
 
-      const fromSpecific = tryList(
-        localStorage.getItem(`seatingTables_${eventId}`)
-      );
+      const fromSpecific = tryList(localStorage.getItem(`seatingTables_${eventId}`));
       if (fromSpecific != null) return fromSpecific;
 
       const fromGeneral = tryList(localStorage.getItem('seatingTables'));
@@ -214,13 +199,15 @@ export default function CheckinPage() {
 
     return null;
   };
-  const markArrived = async (guest, guests) => {
+    const markArrived = async (guest, guests) => {
+    const fromConfirmed = Number(guest.confirmed);
     const qty =
-      Number(guest.count) ||
-      Number(guest.quantity) ||
-      Number(guest.confirmedCount) ||
-      Number(guest.confirmed) ||
-      1;
+      !isNaN(fromConfirmed) && fromConfirmed >= 1
+        ? fromConfirmed
+        : Number(guest.confirmedCount) ||
+          Number(guest.count) ||
+          Number(guest.quantity) ||
+          1;
 
     const updatedGuest = {
       ...guest,
@@ -340,16 +327,27 @@ export default function CheckinPage() {
         return;
       }
 
-      const guests = await loadGuests();
-      const guest = findGuest(guests, refValue, phoneValue, nameValue);
+      // ===== התיקון הקריטי =====
+      let guests = await loadGuests(String(eventId));
+      if (!Array.isArray(guests) || guests.length === 0) {
+        try {
+          guests = await fetchGuestsFromSupabase(String(eventId));
+          if (Array.isArray(guests) && guests.length > 0) {
+            saveGuests(String(eventId), guests);
+          }
+        } catch {}
+      }
+      setLocalCount(Array.isArray(guests) ? guests.length : 0);
+
+      const guest = findGuest(guests || [], refValue, phoneValue, nameValue);
 
       if (!guest) {
-        const sample = guests
+        const sample = (guests || [])
           .slice(0, 5)
           .map((g) => `${g.name}:${String(g.phone || '').slice(-4)}`)
           .join(' | ');
         setError(
-          `לא נמצא מוזמן\nקוד: ${refValue}\nטלפון: ${phoneValue || '-'}\nשם: ${nameValue || '-'}\nנטענו: ${guests.length}\nדוגמאות: ${sample}`
+          `לא נמצא מוזמן\nקוד: ${refValue}\nטלפון: ${phoneValue || '-'}\nשם: ${nameValue || '-'}\nנטענו: ${(guests || []).length}\nדוגמאות: ${sample}`
         );
         processingRef.current = false;
         return;
@@ -388,9 +386,36 @@ export default function CheckinPage() {
     setResult(null);
     setError('');
     setLastScanned('');
+    setStatus('טוען מוזמנים...');
+    processingRef.current = false;
+
+    try {
+      let list = await loadGuests(String(eventId));
+      if (!Array.isArray(list) || list.length === 0) {
+        list = await fetchGuestsFromSupabase(String(eventId));
+        if (Array.isArray(list) && list.length > 0) {
+          saveGuests(String(eventId), list);
+        }
+      }
+      const n = Array.isArray(list) ? list.length : 0;
+      setLocalCount(n);
+      if (n === 0) {
+        setError(
+          'לא נטענו מוזמנים לאירוע ' +
+            eventId +
+            '.\nפתח רשימת מוזמנים, רענן, וחזור לכאן.'
+        );
+        setStatus('');
+        return;
+      }
+    } catch {
+      setError('שגיאה בטעינת מוזמנים');
+      setStatus('');
+      return;
+    }
+
     setStatus('מכין מצלמה...');
     setScanning(true);
-    processingRef.current = false;
 
     await new Promise((r) => setTimeout(r, 400));
 
@@ -507,7 +532,7 @@ export default function CheckinPage() {
         <h1 className="text-3xl font-bold text-center mb-2">סריקת כניסה</h1>
 
         <p className="text-center text-xs text-yellow-300 mb-4">
-          debug: eventId={eventId} | מקומי={localCount}
+          אירוע: {eventId} | מוזמנים טעונים: {localCount}
         </p>
 
         <div className="flex flex-wrap justify-center gap-2 mb-4">
