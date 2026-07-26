@@ -851,7 +851,7 @@ export default function GuestsPage() {
                                     ✅
                                   </div>
                                   <div className="text-emerald-700 font-bold text-sm mt-1">
-                                    {guest.count || guest.quantity || 1}
+                                   {Number(guest.confirmed) || guest.confirmedCount || guest.count || 1}
                                   </div>
                                 </div>
                               ) : (
