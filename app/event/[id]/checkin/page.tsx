@@ -34,6 +34,11 @@ export default function CheckinPage() {
   const processingRef = useRef(false);
   const resultTimerRef = useRef(null);
 
+  const normName = (s) =>
+    String(s || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+
   useEffect(() => {
     const from = new URLSearchParams(window.location.search).get('from');
     if (from === 'seating-arrival') {
@@ -57,23 +62,30 @@ export default function CheckinPage() {
     const savedCam = localStorage.getItem('checkin_camera');
     if (savedCam === 'user' || savedCam === 'environment') setFacingMode(savedCam);
 
-        (async () => {
-      try {
-        const list = await loadGuests(String(eventId));
-        setLocalCount(Array.isArray(list) ? list.length : 0);
-      } catch {
-        setLocalCount(0);
-      }
-    })();
-
     (async () => {
-            try {
-        // תמיד טוען דרך loadGuests (Supabase + local)
+      try {
+        // loadGuests מיובא מ-lib — Supabase + local (לא הפונקציה המקומית!)
         const list = await loadGuests(String(eventId));
         setLocalCount(Array.isArray(list) ? list.length : 0);
+        console.log(
+          'checkin init guests:',
+          Array.isArray(list) ? list.length : 0,
+          (list || []).map((g) => g.name)
+        );
       } catch {
         setLocalCount(0);
       }
+
+      // טעינת סקיצה לטאבלט (אם קיימת ב-local אחרי ביקור בסקיצה / סינכרון)
+      try {
+        const specific = localStorage.getItem(`seatingTables_${eventId}`);
+        if (!specific) {
+          const general = localStorage.getItem('seatingTables');
+          if (general) {
+            localStorage.setItem(`seatingTables_${eventId}`, general);
+          }
+        }
+      } catch {}
     })();
 
     return () => {
@@ -115,36 +127,36 @@ export default function CheckinPage() {
     setStatus('');
   };
 
+  // חיפוש שולחן — local לפי אירוע + נרמול שם
   const findTable = (guestName) => {
     try {
-      const specific = localStorage.getItem(`seatingTables_${eventId}`);
-      const general = localStorage.getItem('seatingTables');
-      const seating = JSON.parse(specific || general || '[]');
-      const name = String(guestName || '').trim();
-      for (const t of seating) {
-        if (t.assignedGuests?.some((n) => String(n).trim() === name)) {
-          return t.tableNumber ?? null;
-        }
-      }
-    } catch {}
-    return null;
-  };
+      const name = normName(guestName);
+      if (!name) return null;
 
-  const loadGuests = async () => {
-    const key = `guests_event_${eventId}`;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) {
-        console.log('checkin: אין מפתח', key, 'eventId=', eventId);
-        return [];
-      }
-      const list = JSON.parse(raw);
-      console.log('checkin: נטענו', Array.isArray(list) ? list.length : 0, key);
-      if (Array.isArray(list) && list.length > 0) return list;
+      const tryList = (raw) => {
+        if (!raw) return null;
+        const seating = JSON.parse(raw);
+        if (!Array.isArray(seating)) return null;
+        for (const t of seating) {
+          const hit = (t.assignedGuests || []).some(
+            (n) => normName(n) === name
+          );
+          if (hit) return t.tableNumber ?? null;
+        }
+        return null;
+      };
+
+      const fromSpecific = tryList(
+        localStorage.getItem(`seatingTables_${eventId}`)
+      );
+      if (fromSpecific != null) return fromSpecific;
+
+      const fromGeneral = tryList(localStorage.getItem('seatingTables'));
+      if (fromGeneral != null) return fromGeneral;
     } catch (e) {
-      console.error('checkin loadGuests error', e);
+      console.log('findTable error', e);
     }
-    return [];
+    return null;
   };
 
   const findGuest = (guests, ref, phoneFromQr = '', nameFromQr = '') => {
@@ -152,7 +164,7 @@ export default function CheckinPage() {
     const rDigits = r.replace(/\D/g, '');
     const phoneQ = String(phoneFromQr || '').replace(/\D/g, '');
 
-    const normName = (s) =>
+    const normNameLower = (s) =>
       String(s || '')
         .trim()
         .toLowerCase()
@@ -162,7 +174,7 @@ export default function CheckinPage() {
     try {
       nameQ = decodeURIComponent(nameQ);
     } catch {}
-    nameQ = normName(nameQ);
+    nameQ = normNameLower(nameQ);
 
     if (r) {
       const found = guests.find((g) => {
@@ -194,23 +206,14 @@ export default function CheckinPage() {
     }
 
     if (nameQ.length >= 2) {
-      let found = guests.find((g) => normName(g.name) === nameQ);
+      let found = guests.find((g) => normNameLower(g.name) === nameQ);
       if (found) return found;
-      found = guests.find((g) => normName(g.name).includes(nameQ));
-      if (found) return found;
-    }
-
-    if (rDigits.length >= 9) {
-      const found = guests.find((g) => {
-        const p = String(g.phone ?? '').replace(/\D/g, '');
-        return p === rDigits || p.endsWith(rDigits.slice(-9));
-      });
+      found = guests.find((g) => normNameLower(g.name).includes(nameQ));
       if (found) return found;
     }
 
     return null;
   };
-
   const markArrived = async (guest, guests) => {
     const qty =
       Number(guest.count) ||
