@@ -130,13 +130,13 @@ export default function SeatingArrivalFastPage() {
     setForceEmptyList(false);
   };
 
-  const markArrival = (id: number, count: number) => {
+    const markArrival = (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
     setAllGuests(updated);
 
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+    saveGuests(String(eventId), updated);
 
     const arrivedOnly = updated
       .filter((g) => Number(g.arrivedCount) > 0)
