@@ -2,7 +2,7 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getGuests, saveGuests, fetchGuestsFromSupabase } from '../../../../lib/guests';
+import { loadGuests, saveGuests, getGuests } from '../../../../lib/guests';
 
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
 const EDITOR_ALLOWED = [
@@ -102,27 +102,28 @@ export default function GuestsPage() {
 
   const isFullAdmin = !isClientMode && !isEditorMode;
 
-  useEffect(() => {
+    useEffect(() => {
     if (!eventId) return;
+
     let cancelled = false;
 
     async function load() {
-      const cloud = await fetchGuestsFromSupabase(eventId);
+      const cloud = await loadGuests(String(eventId));
       if (cancelled) return;
 
-      if (cloud && cloud.length > 0) {
-        const valid = cloud.filter((g: any) => g.name && g.name.trim() !== '');
-        setGuests(valid);
-        localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(valid));
-      } else {
-        const allGuests = getGuests(String(eventId));
-        setGuests(allGuests.filter((g: any) => g.name && g.name.trim() !== ''));
-      }
+      const valid = (cloud || []).filter(
+        (g: any) => g.name && String(g.name).trim() !== ''
+      );
+      setGuests(valid);
 
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-      const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+      const currentEvent = events.find(
+        (e: any) => e.id.toString() === eventId.toString()
+      );
       if (currentEvent) {
-        setEventTitle(currentEvent.owners || currentEvent.title || `אירוע #${eventId}`);
+        setEventTitle(
+          currentEvent.owners || currentEvent.title || `אירוע #${eventId}`
+        );
         setHasSeparation(currentEvent.hasSeparation === 'כן');
         setHasTransport(currentEvent.hasTransport === 'כן');
       }
@@ -136,6 +137,7 @@ export default function GuestsPage() {
     }
 
     load();
+
     return () => {
       cancelled = true;
     };

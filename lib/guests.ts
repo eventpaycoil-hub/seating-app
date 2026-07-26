@@ -1,27 +1,98 @@
-// app/lib/guests.ts
+// lib/guests.ts
 import { supabase } from './supabase.js';
+
+export function generateInviteCode(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
+}
 
 export function normalizeGuest(guest: any) {
   if (!guest) return guest;
 
-  if (!guest.inviteCode && guest.id) {
-    guest.inviteCode = String(guest.id).replace(/\./g, '').slice(-12);
-  }
+  const id = guest.id ?? Date.now() + Math.floor(Math.random() * 100000);
 
-  if (!guest.code && guest.inviteCode) {
-    guest.code = guest.inviteCode;
-  }
-
-  if (guest.confirmed !== undefined && guest.confirmedCount === undefined) {
-    const num = Number(guest.confirmed);
-    guest.confirmedCount = isNaN(num) ? 0 : num;
-  }
-
-  return guest;
+  return {
+    ...guest,
+    id,
+    inviteCode:
+      guest.inviteCode ||
+      guest.code ||
+      String(id).replace(/\./g, '').slice(-12),
+    code:
+      guest.code ||
+      guest.inviteCode ||
+      String(id).replace(/\./g, '').slice(-12),
+    confirmed: guest.confirmed ?? '',
+    confirmedCount:
+      guest.confirmedCount !== undefined && guest.confirmedCount !== null
+        ? Number(guest.confirmedCount)
+        : !isNaN(Number(guest.confirmed))
+          ? Number(guest.confirmed)
+          : 0,
+    arrivedCount: Number(guest.arrivedCount) || 0,
+    quantity: guest.quantity ?? '',
+    group: guest.group ?? guest.guest_group ?? '',
+    phone: guest.phone ?? '',
+    name: guest.name ?? '',
+    notes: guest.notes ?? '',
+    transportation: guest.transportation ?? '',
+    customerExpectation: guest.customerExpectation ?? guest.customer_expectation ?? '',
+    separation: guest.separation ?? '',
+  };
 }
 
+function toRow(g: any, eventId: string | number) {
+  const n = normalizeGuest(g);
+  const eid = Number(eventId);
+  const idNum = Math.floor(Number(n.id));
+  const countValue =
+    Number(n.confirmedCount) ||
+    Number(n.count) ||
+    Number(n.quantity) ||
+    (!isNaN(Number(n.confirmed)) ? Number(n.confirmed) : 0) ||
+    0;
+
+  return {
+    id: idNum,
+    event_id: eid,
+    name: String(n.name || '').trim(),
+    phone: n.phone || null,
+    quantity: n.quantity || null,
+    guest_group: n.group || null,
+    transportation: n.transportation || null,
+    confirmed: n.confirmed || null,
+    count: countValue,
+    customer_expectation: n.customerExpectation || null,
+    notes: n.notes || null,
+    separation: n.separation || null,
+    // אם העמודות האלה קיימות ב-Supabase — מצוין. אם לא, נסיר בהמשך.
+    invite_code: n.inviteCode || null,
+    arrived_count: Number(n.arrivedCount) || 0,
+  };
+}
+
+function fromRow(row: any) {
+  return normalizeGuest({
+    id: row.id,
+    name: row.name || '',
+    phone: row.phone || '',
+    quantity: row.quantity || '',
+    group: row.guest_group || '',
+    transportation: row.transportation || '',
+    confirmed: row.confirmed || '',
+    customerExpectation: row.customer_expectation || '',
+    notes: row.notes || '',
+    separation: row.separation || '',
+    confirmedCount: row.count ?? 0,
+    inviteCode: row.invite_code || undefined,
+    code: row.invite_code || undefined,
+    arrivedCount: row.arrived_count ?? 0,
+  });
+}
+
+/** קריאה סינכרונית מה-cache המקומי (כדי לא לשבור דפים קיימים) */
 export function getGuests(eventId: string | number): any[] {
   if (!eventId) return [];
+  if (typeof window === 'undefined') return [];
 
   const key = `guests_event_${eventId}`;
   const raw = localStorage.getItem(key);
@@ -37,120 +108,131 @@ export function getGuests(eventId: string | number): any[] {
   }
 }
 
+/**
+ * מקור האמת: קודם Supabase, אחר כך cache מקומי.
+ * קרא לזה ב-useEffect של דפי מוזמנים / סריקה / SMS.
+ */
+export async function loadGuests(eventId: string | number): Promise<any[]> {
+  if (!eventId) return [];
+
+  const key = `guests_event_${eventId}`;
+  const eid = Number(eventId);
+
+  // 1) Supabase
+  try {
+    const { data, error } = await supabase
+      .from('guests')
+      .select('*')
+      .eq('event_id', eid);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const guests = data.map(fromRow);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify(guests));
+      }
+      console.log('✅ loadGuests from Supabase:', guests.length);
+      return guests;
+    }
+  } catch (e) {
+    console.warn('loadGuests supabase failed', e);
+  }
+
+  // 2) cache מקומי
+  const local = getGuests(eventId);
+  if (local.length) {
+    console.log('⚠️ loadGuests from localStorage:', local.length);
+    return local;
+  }
+
+  console.log('❌ loadGuests empty', eventId);
+  return [];
+}
+
+/**
+ * שמירה: cache מקומי + upsert ל-Supabase (בלי למחוק הכל!)
+ */
 export function saveGuests(eventId: string | number, guests: any[]) {
   if (!eventId) return;
 
+  const normalized = (guests || []).map(normalizeGuest);
   const key = `guests_event_${eventId}`;
-  localStorage.setItem(key, JSON.stringify(guests));
 
-  syncGuestsToSupabase(eventId, guests).catch((err) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, JSON.stringify(normalized));
+  }
+
+  syncGuestsToSupabase(eventId, normalized).catch((err) => {
     console.warn('Supabase guests sync failed:', err);
   });
 }
 
 async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
   const eid = Number(eventId);
+  const valid = guests.filter((g) => g.name && String(g.name).trim() !== '');
+  if (!valid.length) return;
 
-  const { error: delError } = await supabase
-    .from('guests')
-    .delete()
-    .eq('event_id', eid);
+  const rows = valid.map((g) => toRow(g, eid));
 
-  if (delError) {
-    console.warn('Supabase delete guests error:', delError.message);
-  }
-
-  if (!guests.length) return;
-
-        const rows = guests
-    .filter((g) => g.name && String(g.name).trim() !== '')
-    .map((g, index) => ({
-      id: Date.now() * 1000 + index * 17 + Math.floor(Math.random() * 100000),
-      event_id: eid,
-      name: String(g.name).trim(),
-      phone: g.phone || null,
-      quantity: g.quantity || null,
-      guest_group: g.group || null,
-      transportation: g.transportation || null,
-      confirmed: g.confirmed || null,
-      count: g.confirmedCount ?? g.count ?? null,
-      customer_expectation: g.customerExpectation || null,
-      notes: g.notes || null,
-      separation: g.separation || null,
-    }));
-
-  if (!rows.length) return;
-
-  const { error } = await supabase.from('guests').insert(rows);
+  // upsert לפי id — שומר מזהים יציבים
+  const { error } = await supabase.from('guests').upsert(rows, {
+    onConflict: 'id',
+  });
 
   if (error) {
-    console.warn('Supabase insert guests error:', error.message);
-  } else {
-    console.log('✅ מוזמנים נשמרו גם ב-Supabase:', rows.length);
+    console.warn('Supabase upsert guests error:', error.message, error);
+    return;
   }
-}
 
-export async function fetchGuestsFromSupabase(eventId: string | number): Promise<any[] | null> {
+  console.log('✅ מוזמנים נשמרו ב-Supabase (upsert):', rows.length);
+
+  // מחיקת מוזמנים שנמחקו אצלנו ולא קיימים יותר ברשימה
   try {
-    const { data, error } = await supabase
+    const ids = rows.map((r) => r.id);
+    const { data: existing } = await supabase
       .from('guests')
-      .select('*')
-      .eq('event_id', Number(eventId));
+      .select('id')
+      .eq('event_id', eid);
 
-    if (error) {
-      console.warn('Supabase fetch guests error:', error.message);
-      return null;
+    if (existing?.length) {
+      const toDelete = existing
+        .map((r: any) => r.id)
+        .filter((id: number) => !ids.includes(id));
+
+      if (toDelete.length) {
+        await supabase.from('guests').delete().in('id', toDelete);
+        console.log('🗑️ נמחקו מ-Supabase:', toDelete.length);
+      }
     }
-    if (!data || !data.length) return null;
-
-    return data.map((row: any) =>
-      normalizeGuest({
-        id: row.id,
-        name: row.name || '',
-        phone: row.phone || '',
-        quantity: row.quantity || '',
-        group: row.guest_group || '',
-        transportation: row.transportation || '',
-        confirmed: row.confirmed || '',
-        customerExpectation: row.customer_expectation || '',
-        notes: row.notes || '',
-        separation: row.separation || '',
-        confirmedCount: row.count ?? 0,
-      })
-    );
   } catch (e) {
-    console.warn('fetchGuestsFromSupabase failed', e);
-    return null;
+    console.warn('cleanup delete failed', e);
   }
 }
+
+export async function fetchGuestsFromSupabase(
+  eventId: string | number
+): Promise<any[] | null> {
+  const list = await loadGuests(eventId);
+  return list.length ? list : null;
+}
+
 export async function updateGuestInSupabase(guest: any, eventId: string | number) {
   if (!guest?.id) return;
 
-   const countValue =
-    Number(guest.count) ||
-    Number(guest.confirmedCount) ||
-    Number(guest.quantity) ||
-    Number(guest.confirmed) ||
-    1;
+  const row = toRow(guest, eventId);
 
   const { error } = await supabase
     .from('guests')
-    .update({
-      name: guest.name || null,
-      phone: guest.phone || null,
-      quantity: guest.quantity ?? countValue,
-      guest_group: guest.group || null,
-      transportation: guest.transportation || null,
-      confirmed: guest.confirmed || null,
-      count: countValue,
-      customer_expectation: guest.customerExpectation || null,
-      notes: guest.notes || null,
-      separation: guest.separation || null,
-    })
-    .eq('id', Math.floor(Number(guest.id)))
-    .eq('event_id', Number(eventId));
+    .upsert(row, { onConflict: 'id' });
 
   if (error) {
     console.warn('Supabase update guest error:', error.message);
   }
+}
+
+export function addGuest(eventId: string | number, guestData: any) {
+  const guests = getGuests(eventId);
+  const newGuest = normalizeGuest(guestData);
+  guests.push(newGuest);
+  saveGuests(eventId, guests);
+  return newGuest;
 }
