@@ -235,9 +235,10 @@ export default function GuestsPage() {
 
   const { men: menCount, women: womenCount } = countSeparation();
 
-  const yesCount = guests.filter(
+    const yesCount = guests.filter(
     (g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
   ).length;
+
   const noCount = guests.filter((g: any) => g.confirmed === 'לא מגיע').length;
 
   const unknownWithNoteCount = guests.filter(
@@ -248,9 +249,11 @@ export default function GuestsPage() {
     (g: any) => isPending(g) && (!g.notes || g.notes.trim() === '')
   ).length;
 
-      const totalConfirmedPeople = guests
-    .filter((g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1)
-    .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
+  const totalConfirmedPeople = guests.reduce((sum: number, g: any) => {
+    const n = Number(g.confirmed);
+    if (!isNaN(n) && n >= 1) return sum + n;
+    return sum;
+  }, 0);
 
   const filteredGuests = guests.filter((g: any) => {
     const matchesSearch =
