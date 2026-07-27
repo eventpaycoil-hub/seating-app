@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { fetchSeatingFromSupabase, saveSeating } from '../../../../lib/seating';
+import { fetchSeatingFromSupabase, saveSeating, loadSeating } from '../../../../lib/seating';
 import { getGuests, fetchGuestsFromSupabase } from '../../../../lib/guests';
 interface PlacedTable {
   id: number;
@@ -140,18 +140,19 @@ export default function SeatingPage() {
       const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
       if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title || '');
 
-      // שולחנות
+            // שולחנות — ענן ואז local
       let tables: PlacedTable[] = [];
-      const cloudTables = await fetchSeatingFromSupabase(eventId);
-      if (cancelled) return;
-
-      if (cloudTables && cloudTables.length > 0) {
-        tables = cloudTables as PlacedTable[];
-        localStorage.setItem(`seatingTables_${eventId}`, JSON.stringify(tables));
-      } else {
+      try {
+        tables = (await loadSeating(String(eventId))) as PlacedTable[];
+      } catch {
         const savedTables = localStorage.getItem(`seatingTables_${eventId}`);
         tables = savedTables ? JSON.parse(savedTables) : [];
       }
+      if (cancelled) return;
+
+      setPlacedTables(tables || []);
+      localStorage.setItem('seatingTables', JSON.stringify(tables || []));
+      setTablesLoaded(true);
 
       setPlacedTables(tables);
       localStorage.setItem('seatingTables', JSON.stringify(tables));
