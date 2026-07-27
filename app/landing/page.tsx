@@ -83,6 +83,23 @@ const TEXTS = {
   },
 };
 
+function findGuestIndex(saved: any[], searchCode: string) {
+  if (!searchCode || !Array.isArray(saved)) return -1;
+  const sc = String(searchCode).trim();
+  return saved.findIndex((g: any) => {
+    if (!g) return false;
+    if (g.inviteCode != null && String(g.inviteCode) === sc) return true;
+    if (g.code != null && String(g.code) === sc) return true;
+    if (g.id != null && String(g.id) === sc) return true;
+    if (g.phone) {
+      const p = String(g.phone).replace(/\D/g, '');
+      const c = sc.replace(/\D/g, '');
+      if (p && c && p === c) return true;
+    }
+    return false;
+  });
+}
+
 function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
@@ -108,35 +125,137 @@ function LandingPageContent() {
   const t = TEXTS[lang];
   const dir = lang === 'he' ? 'rtl' : 'ltr';
 
-  // טעינת אירוע: localStorage ואז ניסיון Supabase (אם יש טבלת events)
-    // מדיה — קודם מהאירוע/Supabase, אחר כך local, אחר כך ברירת מחדל
+  // טעינת אירוע
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      // localStorage
+      try {
+        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+        const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
+        if (currentEvent && !cancelled) {
+          setEvent(currentEvent);
+          if (
+            currentEvent.englishEvent === 'כן' ||
+            currentEvent.englishEvent === true ||
+            currentEvent.englishEvent === 'yes'
+          ) {
+            setLang('en');
+          }
+        }
+      } catch (e) {
+        console.error('load event local error', e);
+      }
+
+      // Supabase events (אם קיים)
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (!error && data && !cancelled) {
+          const mapped = {
+            id: data.id,
+            owners: data.owners || data.title || '',
+            title: data.title || data.owners || '',
+            hallName: data.hall_name || data.hallName || '',
+            city: data.city || '',
+            time: data.time || '19:30',
+            eventDate: data.event_date || data.eventDate || '',
+            fullDate: data.full_date || data.fullDate || data.event_date || '',
+            eventType: data.event_type || data.eventType || '',
+            englishEvent: data.english_event || data.englishEvent || 'לא',
+            hasSeparation: data.has_separation || data.hasSeparation || 'לא',
+            hasTransport: data.has_transport || data.hasTransport || 'לא',
+            guestNotes: data.guest_notes || data.guestNotes || 'כן',
+            coverUrl: data.cover_url || data.coverUrl || '',
+          };
+          setEvent((prev: any) => ({ ...(prev || {}), ...mapped }));
+          if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) {
+            setLang('en');
+          }
+        }
+      } catch (e) {
+        console.warn('events table query failed', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  // טעינת מוזמנים
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 4000);
+
+    (async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        if (!cancelled) {
+          setGuests(list);
+          if (code) {
+            const idx = findGuestIndex(list, String(code));
+            if (idx !== -1) setGuestName(list[idx].name || '');
+          }
+        }
+      } catch (e) {
+        console.error('loadGuests error', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+        clearTimeout(timeoutId);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [eventId, code]);
+
+  // מדיה
   useEffect(() => {
     if (!eventId) return;
 
     let cancelled = false;
 
     (async () => {
-      // 1) cover_url מטבלת events
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('events')
           .select('cover_url')
           .eq('id', Number(eventId))
           .maybeSingle();
 
-        if (!cancelled && data?.cover_url) {
+        if (!cancelled && !error && data?.cover_url) {
           setHeroMedia({ type: 'image', url: data.cover_url });
           return;
         }
-      } catch {}
+      } catch (e) {
+        console.warn('cover_url query failed', e);
+      }
 
-      // 2) coverUrl מתוך אובייקט event שכבר נטען
       if (!cancelled && event?.coverUrl) {
         setHeroMedia({ type: 'image', url: event.coverUrl });
         return;
       }
 
-      // 3) localStorage (רק במחשב שלך)
       try {
         const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
         if (videos.length > 0 && videos[0].url) {
@@ -167,23 +286,6 @@ function LandingPageContent() {
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
-  };
-
-  const findGuestIndex = (saved: any[], searchCode: string) => {
-    if (!searchCode || !Array.isArray(saved)) return -1;
-    const sc = String(searchCode).trim();
-    return saved.findIndex((g: any) => {
-      if (!g) return false;
-      if (g.inviteCode != null && String(g.inviteCode) === sc) return true;
-      if (g.code != null && String(g.code) === sc) return true;
-      if (g.id != null && String(g.id) === sc) return true;
-      if (g.phone) {
-        const p = String(g.phone).replace(/\D/g, '');
-        const c = sc.replace(/\D/g, '');
-        if (p && c && p === c) return true;
-      }
-      return false;
-    });
   };
 
   const persistGuestUpdate = async (updatedList: any[], guest: any) => {
