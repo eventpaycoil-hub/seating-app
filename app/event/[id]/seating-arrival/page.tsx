@@ -1,13 +1,11 @@
 // @ts-nocheck
 'use client';
 
-
-
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
-import { loadGuests, saveGuests } from '../../../../lib/guests';
+import { loadGuests, saveGuests, fetchGuestsFromSupabase } from '../../../../lib/guests';
 
 export default function SeatingArrivalPage() {
   const params = useParams();
@@ -61,7 +59,8 @@ export default function SeatingArrivalPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-   useEffect(() => {
+  // טעינה ראשונית
+  useEffect(() => {
     if (!eventId) return;
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -73,46 +72,49 @@ export default function SeatingArrivalPage() {
     let cancelled = false;
 
     (async () => {
-      const saved = await loadGuests(String(eventId));
-
-      // תאימות ישנה: אם יש arrived_event_ נפרד — ממזגים פעם אחת
-      const arrivedById = new Map<any, number>();
-      const arrivedByName = new Map<string, number>();
       try {
-        const arrivedOnly = JSON.parse(
-          localStorage.getItem(`arrived_event_${eventId}`) || '[]'
-        );
-        (arrivedOnly || []).forEach((g: any) => {
-          const n = Number(g.arrivedCount) || 0;
-          if (n <= 0) return;
-          if (g.id != null) arrivedById.set(g.id, n);
-          if (g.name) arrivedByName.set(String(g.name).trim(), n);
-        });
-      } catch {}
-
-      const guestsWithData = (saved || []).map((g: any) => {
-        const restored =
-          Number(g.arrivedCount) ||
-          arrivedById.get(g.id) ||
-          arrivedByName.get(String(g.name || '').trim()) ||
-          0;
-        return {
-          ...g,
-          arrivedCount: restored,
-          confirmedCount:
-            Number(g.confirmedCount) ||
-            (Number(g.confirmed) > 0 ? Number(g.confirmed) : 0) ||
-            Number(g.quantity) ||
-            0,
-        };
-      });
-
-      if (!cancelled) setAllGuests(guestsWithData);
+        const list = await loadGuests(String(eventId));
+        if (!cancelled && Array.isArray(list)) {
+          setAllGuests(list);
+        }
+      } catch (e) {
+        console.log('loadGuests error', e);
+        if (!cancelled) {
+          const local = JSON.parse(
+            localStorage.getItem(`guests_event_${eventId}`) || '[]'
+          );
+          setAllGuests(local);
+        }
+      }
     })();
 
     return () => {
       cancelled = true;
     };
+  }, [eventId]);
+
+  // סנכרון הגעות בין טאבלטים (כל 4 שניות)
+  useEffect(() => {
+    if (!eventId) return;
+
+    const tick = async () => {
+      try {
+        let list: any[] = [];
+        if (typeof fetchGuestsFromSupabase === 'function') {
+          list = await fetchGuestsFromSupabase(String(eventId));
+        } else {
+          list = await loadGuests(String(eventId));
+        }
+        if (Array.isArray(list) && list.length > 0) {
+          setAllGuests(list);
+        }
+      } catch (e) {
+        console.log('poll guests', e);
+      }
+    };
+
+    const id = setInterval(tick, 4000);
+    return () => clearInterval(id);
   }, [eventId]);
   const getConfirmedQty = (g: any) => {
     const status = String(g.confirmed ?? '').trim();

@@ -53,6 +53,7 @@ export default function SeatingArrivalFastPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // טעינה ראשונית מהענן
   useEffect(() => {
     if (!eventId) return;
 
@@ -62,41 +63,47 @@ export default function SeatingArrivalFastPage() {
       setEventTitle(currentEvent.owners || currentEvent.title || '');
     }
 
-    const guestsKey = `guests_event_${eventId}`;
-    const saved = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    let cancelled = false;
 
-    const arrivedById = new Map<any, number>();
-    const arrivedByName = new Map<string, number>();
-    try {
-      const arrivedOnly = JSON.parse(
-        localStorage.getItem(`arrived_event_${eventId}`) || '[]'
-      );
-      (arrivedOnly || []).forEach((g: any) => {
-        const n = Number(g.arrivedCount) || 0;
-        if (n <= 0) return;
-        if (g.id != null) arrivedById.set(g.id, n);
-        if (g.name) arrivedByName.set(String(g.name).trim(), n);
-      });
-    } catch {}
+    (async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        if (!cancelled && Array.isArray(list)) {
+          setAllGuests(list);
+        }
+      } catch (e) {
+        console.log('loadGuests error', e);
+        if (!cancelled) {
+          const local = JSON.parse(
+            localStorage.getItem(`guests_event_${eventId}`) || '[]'
+          );
+          setAllGuests(local);
+        }
+      }
+    })();
 
-    const guestsWithData = (saved || []).map((g: any) => {
-      const restored =
-        arrivedById.get(g.id) ||
-        arrivedByName.get(String(g.name || '').trim()) ||
-        Number(g.arrivedCount) ||
-        0;
-      return {
-        ...g,
-        arrivedCount: restored,
-        confirmedCount:
-          Number(g.confirmedCount) ||
-          (Number(g.confirmed) > 0 ? Number(g.confirmed) : 0) ||
-          Number(g.quantity) ||
-          0,
-      };
-    });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
-    setAllGuests(guestsWithData);
+  // סנכרון הגעות בין טאבלטים (כל 4 שניות)
+  useEffect(() => {
+    if (!eventId) return;
+
+    const tick = async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        if (Array.isArray(list) && list.length > 0) {
+          setAllGuests(list);
+        }
+      } catch (e) {
+        console.log('poll guests', e);
+      }
+    };
+
+    const id = setInterval(tick, 4000);
+    return () => clearInterval(id);
   }, [eventId]);
 
   const getConfirmedQty = (g: any) => {
