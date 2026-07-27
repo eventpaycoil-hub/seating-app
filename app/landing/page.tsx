@@ -3,7 +3,8 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getGuests } from '../../lib/guests';
+import { loadGuests, saveGuests, updateGuestInSupabase } from '../../lib/guests';
+import { supabase } from '../../lib/supabase.js';
 
 const TEXTS = {
   he: {
@@ -41,6 +42,7 @@ const TEXTS = {
     writeMessage: 'נא לכתוב הודעה',
     messageSaved: 'ההודעה נשמרה בהצלחה!',
     invalidLinkAlert: 'קישור לא תקין',
+    loading: 'טוען...',
   },
   en: {
     invalidLink: 'Invalid link',
@@ -77,6 +79,7 @@ const TEXTS = {
     writeMessage: 'Please write a message',
     messageSaved: 'Message saved successfully!',
     invalidLinkAlert: 'Invalid link',
+    loading: 'Loading...',
   },
 };
 
@@ -86,6 +89,8 @@ function LandingPageContent() {
   const code = searchParams.get('code') || searchParams.get('ref');
 
   const [event, setEvent] = useState<any>(null);
+  const [guests, setGuests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [heroMedia, setHeroMedia] = useState<{ type: 'video' | 'image'; url: string } | null>(null);
   const [rsvpStatus, setRsvpStatus] = useState<'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'>('none');
   const [rsvpCount, setRsvpCount] = useState(0);
@@ -103,26 +108,108 @@ function LandingPageContent() {
   const t = TEXTS[lang];
   const dir = lang === 'he' ? 'rtl' : 'ltr';
 
+  // טעינת אירוע: localStorage ואז ניסיון Supabase (אם יש טבלת events)
   useEffect(() => {
-    if (!eventId) return;
-    try {
-      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-      const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
-      if (currentEvent) {
-        setEvent(currentEvent);
-        if (
-          currentEvent.englishEvent === 'כן' ||
-          currentEvent.englishEvent === true ||
-          currentEvent.englishEvent === 'yes'
-        ) {
-          setLang('en');
-        }
-      }
-    } catch (e) {
-      console.error('load event error', e);
+    if (!eventId) {
+      setLoading(false);
+      return;
     }
+
+    let cancelled = false;
+
+    (async () => {
+      // 1) localStorage
+      try {
+        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+        const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
+        if (currentEvent && !cancelled) {
+          setEvent(currentEvent);
+          if (
+            currentEvent.englishEvent === 'כן' ||
+            currentEvent.englishEvent === true ||
+            currentEvent.englishEvent === 'yes'
+          ) {
+            setLang('en');
+          }
+        }
+      } catch (e) {
+        console.error('load event local error', e);
+      }
+
+      // 2) Supabase events (אם קיימת)
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (!error && data && !cancelled) {
+          const mapped = {
+            id: data.id,
+            owners: data.owners || data.title || '',
+            title: data.title || data.owners || '',
+            hallName: data.hall_name || data.hallName || '',
+            city: data.city || '',
+            time: data.time || '19:30',
+            eventDate: data.event_date || data.eventDate || '',
+            fullDate: data.full_date || data.fullDate || data.event_date || '',
+            eventType: data.event_type || data.eventType || '',
+            englishEvent: data.english_event || data.englishEvent || 'לא',
+            hasSeparation: data.has_separation || data.hasSeparation || 'לא',
+            hasTransport: data.has_transport || data.hasTransport || 'לא',
+            guestNotes: data.guest_notes || data.guestNotes || 'כן',
+          };
+          setEvent((prev: any) => prev || mapped);
+          if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) {
+            setLang('en');
+          }
+        }
+      } catch (e) {
+        // אין טבלת events — ממשיכים רק עם localStorage
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
+  // טעינת מוזמנים מ-Supabase
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        if (!cancelled) {
+          setGuests(list);
+
+          if (code) {
+            const idx = findGuestIndex(list, String(code));
+            if (idx !== -1) {
+              setGuestName(list[idx].name || '');
+            }
+          }
+        }
+      } catch (e) {
+        console.error('loadGuests error', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, code]);
+
+  // מדיה
   useEffect(() => {
     if (!eventId) return;
     try {
@@ -142,19 +229,6 @@ function LandingPageContent() {
       setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
     }
   }, [eventId]);
-
-  useEffect(() => {
-    if (!eventId || !code) return;
-    try {
-      const saved = getGuests(String(eventId));
-      const idx = findGuestIndex(saved, String(code));
-      if (idx !== -1) {
-        setGuestName(saved[idx].name || '');
-      }
-    } catch (e) {
-      console.error('guest preload error', e);
-    }
-  }, [eventId, code]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -181,7 +255,17 @@ function LandingPageContent() {
     });
   };
 
-  const handleRsvp = (count: number) => {
+  const persistGuestUpdate = async (updatedList: any[], guest: any) => {
+    setGuests(updatedList);
+    saveGuests(String(eventId), updatedList);
+    try {
+      await updateGuestInSupabase(guest, String(eventId));
+    } catch (e) {
+      console.warn('updateGuestInSupabase failed', e);
+    }
+  };
+
+  const handleRsvp = async (count: number) => {
     if (!eventId) {
       alert(t.invalidLinkAlert);
       return;
@@ -192,90 +276,102 @@ function LandingPageContent() {
       return;
     }
 
-    const saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, String(code));
-
+    const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    saved[guestIndex].confirmed = count;
-    saved[guestIndex].confirmedCount = count;
-    saved[guestIndex].count = count;
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: String(count),
+      confirmedCount: count,
+      count: count,
+    };
+
+    await persistGuestUpdate(updated, updated[guestIndex]);
 
     setRsvpCount(count);
-    setGuestName(saved[guestIndex].name || '');
+    setGuestName(updated[guestIndex].name || '');
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (event?.hasSeparation === 'כן') {
       setTimeout(() => {
-        window.location.href = `/separation?eventId=${eventId}&guestId=${saved[guestIndex].id}`;
+        window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
       }, 1800);
     }
   };
 
-  const handleNotComing = () => {
+  const handleNotComing = async () => {
     if (!eventId || !code) {
       setRsvpStatus('general');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    const saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, String(code));
-
+    const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    saved[guestIndex].confirmed = 'לא מגיע';
-    saved[guestIndex].confirmedCount = 0;
-    saved[guestIndex].count = 0;
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: 'לא מגיע',
+      confirmedCount: 0,
+      count: 0,
+    };
+
+    await persistGuestUpdate(updated, updated[guestIndex]);
     setRsvpStatus('notComing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleUnknown = () => {
+  const handleUnknown = async () => {
     if (!eventId || !code) {
       setRsvpStatus('general');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    const saved: any[] = getGuests(String(eventId));
-    const guestIndex = findGuestIndex(saved, String(code));
-
+    const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    saved[guestIndex].confirmed = 'לא ידוע';
-    saved[guestIndex].confirmedCount = 0;
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: 'לא ידוע',
+      confirmedCount: 0,
+    };
+
+    await persistGuestUpdate(updated, updated[guestIndex]);
     setRsvpStatus('pending');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePersonalNoteSubmit = () => {
+  const handlePersonalNoteSubmit = async () => {
     if (!personalNote.trim()) {
       alert(t.writeMessage);
       return;
     }
     if (code && eventId) {
-      const saved: any[] = getGuests(String(eventId));
-      const guestIndex = findGuestIndex(saved, String(code));
+      const guestIndex = findGuestIndex(guests, String(code));
       if (guestIndex !== -1) {
-        saved[guestIndex].notes = personalNote;
-        localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(saved));
+        const updated = [...guests];
+        updated[guestIndex] = {
+          ...updated[guestIndex],
+          notes: personalNote,
+        };
+        await persistGuestUpdate(updated, updated[guestIndex]);
       }
     }
     alert(t.messageSaved);
@@ -297,6 +393,14 @@ function LandingPageContent() {
           <h2 className="text-3xl font-bold text-red-600 mb-4">{TEXTS.he.invalidLink}</h2>
           <p>{TEXTS.he.missingDetails}</p>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
+        <div className="text-2xl text-gray-600">{t.loading}</div>
       </div>
     );
   }
@@ -335,7 +439,6 @@ function LandingPageContent() {
         )}
       </div>
 
-      {/* אחרי תשובה – מסך תודה בלבד */}
       {rsvpStatus !== 'none' ? (
         <div className="max-w-xl mx-auto px-6 py-16 text-center">
           {rsvpStatus === 'confirmed' && (
