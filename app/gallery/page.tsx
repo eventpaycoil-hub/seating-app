@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase.js';
 
 interface MediaItem {
   id: number;
@@ -11,6 +12,7 @@ interface MediaItem {
   url: string;
   type: 'image' | 'pdf';
   date: string;
+  storagePath?: string;
 }
 
 function GalleryInner() {
@@ -21,6 +23,7 @@ function GalleryInner() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const storageKey = eventId ? `eventpay-media_${eventId}` : 'eventpay-media_unknown';
 
@@ -30,6 +33,7 @@ function GalleryInner() {
       return;
     }
 
+    // 1) local cache
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       try {
@@ -41,9 +45,45 @@ function GalleryInner() {
       setMedia([]);
     }
 
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const current = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (current) setEventTitle(current.owners || current.title || '');
+    // 2) event title
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const current = events.find((e: any) => e.id.toString() === eventId.toString());
+      if (current) setEventTitle(current.owners || current.title || '');
+    } catch {}
+
+    // 3) נסה לטעון cover מ-Supabase events
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('events')
+          .select('cover_url, owners, title')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (data?.owners || data?.title) {
+          setEventTitle(data.owners || data.title || '');
+        }
+
+        if (data?.cover_url) {
+          setMedia((prev) => {
+            if (prev.some((m) => m.url === data.cover_url)) return prev;
+            const coverItem: MediaItem = {
+              id: Date.now(),
+              name: 'תמונת אירוע',
+              url: data.cover_url,
+              type: 'image',
+              date: new Date().toLocaleDateString('he-IL'),
+            };
+            const next = [coverItem, ...prev.filter((m) => m.url !== data.cover_url)];
+            localStorage.setItem(storageKey, JSON.stringify(next));
+            return next;
+          });
+        }
+      } catch (e) {
+        console.warn('load cover from events failed', e);
+      }
+    })();
   }, [eventId, storageKey]);
 
   const saveToLocal = (updated: MediaItem[]) => {
@@ -55,7 +95,7 @@ function GalleryInner() {
       localStorage.setItem(storageKey, JSON.stringify(updated));
       setMedia(updated);
     } catch {
-      alert('התמונה גדולה מדי. נסה קובץ קטן יותר.');
+      alert('שגיאה בשמירה מקומית');
     }
   };
 
@@ -72,29 +112,103 @@ function GalleryInner() {
     }
   };
 
-  const uploadMedia = () => {
-    if (!selectedFile) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
+  const uploadMedia = async () => {
+    if (!selectedFile || !eventId) return;
+
+    setUploading(true);
+    try {
+      const isImage = selectedFile.type.startsWith('image/');
+      const ext = selectedFile.name.split('.').pop() || (isImage ? 'jpg' : 'pdf');
+      const path = `${eventId}/${Date.now()}.${ext}`;
+
+      // העלאה ל-Storage
+      const { error: uploadError } = await supabase.storage
+        .from('event-media')
+        .upload(path, selectedFile, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: selectedFile.type || undefined,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        alert('שגיאה בהעלאה ל-Supabase: ' + uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      // כתובת ציבורית
+      const { data: pub } = supabase.storage.from('event-media').getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+
+      if (!publicUrl) {
+        alert('הקובץ הועלה אבל לא התקבלה כתובת ציבורית');
+        setUploading(false);
+        return;
+      }
+
       const newItem: MediaItem = {
         id: Date.now(),
         name: selectedFile.name,
-        url: ev.target?.result as string,
-        type: selectedFile.type.startsWith('image/') ? 'image' : 'pdf',
+        url: publicUrl,
+        type: isImage ? 'image' : 'pdf',
         date: new Date().toLocaleDateString('he-IL'),
+        storagePath: path,
       };
-      saveToLocal([newItem, ...media]);
+
+      const updated = [newItem, ...media];
+      saveToLocal(updated);
+
+      // אם זו תמונה — שמור כ-cover של האירוע
+      if (isImage) {
+        try {
+          await supabase
+            .from('events')
+            .upsert(
+              {
+                id: Number(eventId),
+                cover_url: publicUrl,
+              },
+              { onConflict: 'id' }
+            );
+        } catch (e) {
+          console.warn('save cover_url failed (ייתכן שחסרה עמודה cover_url)', e);
+        }
+
+        // גם ב-localStorage של האירוע
+        try {
+          const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+          const next = events.map((ev: any) =>
+            String(ev.id) === String(eventId) ? { ...ev, coverUrl: publicUrl } : ev
+          );
+          localStorage.setItem('myEvents', JSON.stringify(next));
+        } catch {}
+      }
+
       setSelectedFile(null);
       setPreview(null);
-      alert('✅ נשמר לאירוע זה בלבד');
-    };
-    reader.readAsDataURL(selectedFile);
+      alert('✅ התמונה הועלתה לענן ונשמרה לאירוע');
+    } catch (e: any) {
+      console.error(e);
+      alert('שגיאה: ' + (e?.message || 'העלאה נכשלה'));
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const deleteMedia = (id: number) => {
-    if (confirm('למחוק?')) {
-      saveToLocal(media.filter((item) => item.id !== id));
+  const deleteMedia = async (item: MediaItem) => {
+    if (!confirm('למחוק?')) return;
+
+    if (item.storagePath) {
+      try {
+        await supabase.storage.from('event-media').remove([item.storagePath]);
+      } catch (e) {
+        console.warn('storage delete failed', e);
+      }
     }
+
+    const updated = media.filter((m) => m.id !== item.id);
+    saveToLocal(updated);
   };
 
   return (
@@ -106,7 +220,7 @@ function GalleryInner() {
             <p className="text-amber-700 mt-1">
               {eventTitle || (eventId ? `אירוע #${eventId}` : 'לא נבחר אירוע')}
             </p>
-            <p className="text-xs text-gray-400 mt-1">מפתח שמירה: {storageKey}</p>
+            <p className="text-xs text-gray-400 mt-1">נשמר בענן (Supabase Storage)</p>
           </div>
           {eventId ? (
             <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm">
@@ -135,9 +249,11 @@ function GalleryInner() {
           {selectedFile && (
             <button
               onClick={uploadMedia}
-              className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+              disabled={uploading}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
             >
-              <Upload size={20} /> העלה עכשיו
+              <Upload size={20} />
+              {uploading ? 'מעלה...' : 'העלה עכשיו לענן'}
             </button>
           )}
         </div>
@@ -165,7 +281,7 @@ function GalleryInner() {
                 <p className="text-xs text-gray-500">{item.date}</p>
                 <div className="flex gap-3 mt-4">
                   <button
-                    onClick={() => deleteMedia(item.id)}
+                    onClick={() => deleteMedia(item)}
                     className="flex-1 bg-red-100 text-red-600 py-2 rounded-xl flex items-center justify-center gap-2"
                   >
                     <Trash2 size={18} /> מחק
@@ -173,6 +289,7 @@ function GalleryInner() {
                   <a
                     href={item.url}
                     target="_blank"
+                    rel="noreferrer"
                     className="flex-1 bg-blue-100 text-blue-600 py-2 rounded-xl text-center"
                   >
                     פתח

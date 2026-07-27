@@ -109,126 +109,57 @@ function LandingPageContent() {
   const dir = lang === 'he' ? 'rtl' : 'ltr';
 
   // טעינת אירוע: localStorage ואז ניסיון Supabase (אם יש טבלת events)
+    // מדיה — קודם מהאירוע/Supabase, אחר כך local, אחר כך ברירת מחדל
   useEffect(() => {
-    if (!eventId) {
-      setLoading(false);
-      return;
-    }
+    if (!eventId) return;
 
     let cancelled = false;
 
     (async () => {
-      // 1) localStorage
+      // 1) cover_url מטבלת events
       try {
-        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-        const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
-        if (currentEvent && !cancelled) {
-          setEvent(currentEvent);
-          if (
-            currentEvent.englishEvent === 'כן' ||
-            currentEvent.englishEvent === true ||
-            currentEvent.englishEvent === 'yes'
-          ) {
-            setLang('en');
-          }
-        }
-      } catch (e) {
-        console.error('load event local error', e);
-      }
-
-      // 2) Supabase events (אם קיימת)
-      try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('events')
-          .select('*')
+          .select('cover_url')
           .eq('id', Number(eventId))
           .maybeSingle();
 
-        if (!error && data && !cancelled) {
-          const mapped = {
-            id: data.id,
-            owners: data.owners || data.title || '',
-            title: data.title || data.owners || '',
-            hallName: data.hall_name || data.hallName || '',
-            city: data.city || '',
-            time: data.time || '19:30',
-            eventDate: data.event_date || data.eventDate || '',
-            fullDate: data.full_date || data.fullDate || data.event_date || '',
-            eventType: data.event_type || data.eventType || '',
-            englishEvent: data.english_event || data.englishEvent || 'לא',
-            hasSeparation: data.has_separation || data.hasSeparation || 'לא',
-            hasTransport: data.has_transport || data.hasTransport || 'לא',
-            guestNotes: data.guest_notes || data.guestNotes || 'כן',
-          };
-          setEvent((prev: any) => prev || mapped);
-          if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) {
-            setLang('en');
-          }
+        if (!cancelled && data?.cover_url) {
+          setHeroMedia({ type: 'image', url: data.cover_url });
+          return;
         }
-      } catch (e) {
-        // אין טבלת events — ממשיכים רק עם localStorage
-      }
-    })();
+      } catch {}
 
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId]);
-
-  // טעינת מוזמנים מ-Supabase
-  useEffect(() => {
-    if (!eventId) {
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const list = await loadGuests(String(eventId));
-        if (!cancelled) {
-          setGuests(list);
-
-          if (code) {
-            const idx = findGuestIndex(list, String(code));
-            if (idx !== -1) {
-              setGuestName(list[idx].name || '');
-            }
-          }
-        }
-      } catch (e) {
-        console.error('loadGuests error', e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, code]);
-
-  // מדיה
-  useEffect(() => {
-    if (!eventId) return;
-    try {
-      const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
-      if (videos.length > 0 && videos[0].url) {
-        setHeroMedia({ type: 'video', url: videos[0].url });
+      // 2) coverUrl מתוך אובייקט event שכבר נטען
+      if (!cancelled && event?.coverUrl) {
+        setHeroMedia({ type: 'image', url: event.coverUrl });
         return;
       }
-      const globalMedia = JSON.parse(localStorage.getItem('eventpay-media') || '[]');
-      const firstImage = globalMedia.find((item: any) => item.type === 'image');
-      if (firstImage?.url) {
-        setHeroMedia({ type: 'image', url: firstImage.url });
-      } else {
+
+      // 3) localStorage (רק במחשב שלך)
+      try {
+        const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
+        if (videos.length > 0 && videos[0].url) {
+          if (!cancelled) setHeroMedia({ type: 'video', url: videos[0].url });
+          return;
+        }
+        const eventMedia = JSON.parse(localStorage.getItem(`eventpay-media_${eventId}`) || '[]');
+        const firstImage = eventMedia.find((item: any) => item.type === 'image' && item.url);
+        if (firstImage?.url) {
+          if (!cancelled) setHeroMedia({ type: 'image', url: firstImage.url });
+          return;
+        }
+      } catch {}
+
+      if (!cancelled) {
         setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
       }
-    } catch {
-      setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
-    }
-  }, [eventId]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, event?.coverUrl]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
