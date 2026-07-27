@@ -31,7 +31,8 @@ export default function CheckinPage() {
   const [voiceOn, setVoiceOn] = useState(true);
   const [facingMode, setFacingMode] = useState('environment');
   const [localCount, setLocalCount] = useState(0);
-  const [presenceOnly, setPresenceOnly] = useState(false); // ← חדש
+    const [presenceOnly, setPresenceOnly] = useState(false);
+  const presenceOnlyRef = useRef(false);
   const scannerRef = useRef(null);
   const processingRef = useRef(false);
   const resultTimerRef = useRef(null);
@@ -64,6 +65,7 @@ export default function CheckinPage() {
       raw === true ||
       raw === 'true';
     setPresenceOnly(!!on);
+    presenceOnlyRef.current = !!on;
     console.log('INIT presenceOnly', eventId, raw, on);
 
     const savedVoice = localStorage.getItem('checkin_voice');
