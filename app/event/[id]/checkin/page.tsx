@@ -58,7 +58,7 @@ export default function CheckinPage() {
     if (ev) setEventTitle(ev.owners || ev.title || '');
 
     // ← טעינת מצב נוכחות בלבד פעם אחת
-    const raw = ev?.presenceOnly;
+        const raw = ev?.presenceOnly;
     const on =
       raw === 'כן' || raw === true || raw === 'true' || String(raw).trim() === 'כן';
     setPresenceOnly(!!on);
