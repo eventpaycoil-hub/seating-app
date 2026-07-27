@@ -228,7 +228,7 @@ export default function CheckinPage() {
 
     return null;
   };
-    const markArrived = async (guest, guests) => {
+      const markArrived = async (guest, guests) => {
     const fromConfirmed = Number(guest.confirmed);
     const qty =
       !isNaN(fromConfirmed) && fromConfirmed >= 1
@@ -356,7 +356,6 @@ export default function CheckinPage() {
         return;
       }
 
-      // ===== התיקון הקריטי =====
       let guests = await loadGuests(String(eventId));
       if (!Array.isArray(guests) || guests.length === 0) {
         try {
@@ -382,22 +381,13 @@ export default function CheckinPage() {
         return;
       }
 
-                 const already = Number(guest.arrivedCount) > 0;
+      const already = Number(guest.arrivedCount) > 0;
       const qty = already
         ? Number(guest.arrivedCount)
         : await markArrived(guest, guests);
 
-      // ========== כאן מדביקים ==========
-            let presenceOnly = false;
-      try {
-        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-        const ev = events.find((e: any) => String(e.id) === String(eventId));
-        const raw = ev?.presenceOnly;
-        presenceOnly = raw === 'כן' || raw === true || raw === 'true' || raw === 'כן ';
-        console.log('CHECKIN presence', { eventId, raw, presenceOnly });
-      } catch (e) {
-        console.log('CHECKIN presence error', e);
-      }
+      // presenceOnly מגיע מה-state (נטען ב-useEffect)
+      console.log('SCAN presenceOnly=', presenceOnly);
 
       const guestQty =
         Number(guest.confirmed) ||
@@ -411,15 +401,14 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-            setResult({
+      setResult({
         name: guest.name,
         tableNumber: presenceOnly ? null : tableNumber,
         alreadyArrived: already,
         qty: guestQty,
-        presenceOnly,
+        presenceOnly: !!presenceOnly,
       });
       setStatus('');
-      // ========== עד כאן ==========
 
       if (presenceOnly) {
         try {
@@ -447,6 +436,7 @@ export default function CheckinPage() {
       processingRef.current = false;
     }
   };
+
   const startScanner = async () => {
     setResult(null);
     setError('');
@@ -584,7 +574,7 @@ export default function CheckinPage() {
     };
   }, []);
 
-   return (
+  return (
     <div className="min-h-screen bg-slate-900 text-white p-4" dir="rtl">
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -596,9 +586,16 @@ export default function CheckinPage() {
 
         <h1 className="text-3xl font-bold text-center mb-2">סריקת כניסה</h1>
 
-        <p className="text-center text-xs text-yellow-300 mb-4">
+        <p className="text-center text-xs text-yellow-300 mb-2">
           אירוע: {eventId} | מוזמנים טעונים: {localCount}
         </p>
+
+        {/* חיווי מצב נוכחות */}
+        {presenceOnly && (
+          <p className="text-center text-sm text-emerald-400 mb-4 font-bold">
+            מצב: נוכחות בלבד (בלי שולחן)
+          </p>
+        )}
 
         <div className="flex flex-wrap justify-center gap-2 mb-4">
           <button
@@ -686,7 +683,7 @@ export default function CheckinPage() {
               {result.qty} אורחים
             </div>
 
-                        {result.presenceOnly ? (
+            {result.presenceOnly ? (
               <div className="py-6">
                 <div className="text-2xl text-gray-600 mb-2">ברקוד זה מיועד ל</div>
                 <div className="text-[7rem] font-black text-emerald-600 leading-none">
