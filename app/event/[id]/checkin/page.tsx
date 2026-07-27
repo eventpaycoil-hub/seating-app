@@ -58,11 +58,13 @@ export default function CheckinPage() {
     if (ev) setEventTitle(ev.owners || ev.title || '');
 
     // ← טעינת מצב נוכחות בלבד פעם אחת
-        const raw = ev?.presenceOnly;
+           const raw = ev?.presenceOnly;
     const on =
-      raw === 'כן' || raw === true || raw === 'true' || String(raw).trim() === 'כן';
+      String(raw ?? '').includes('כן') ||
+      raw === true ||
+      raw === 'true';
     setPresenceOnly(!!on);
-    console.log('INIT presenceOnly', { eventId, raw, on });
+    console.log('INIT presenceOnly', eventId, raw, on);
 
     const savedVoice = localStorage.getItem('checkin_voice');
     if (savedVoice === '0') setVoiceOn(false);
@@ -586,8 +588,8 @@ export default function CheckinPage() {
 
         <h1 className="text-3xl font-bold text-center mb-2">סריקת כניסה</h1>
 
-        <p className="text-center text-xs text-yellow-300 mb-2">
-          אירוע: {eventId} | מוזמנים טעונים: {localCount}
+                <p className="text-center text-sm mb-2" style={{ color: presenceOnly ? '#34d399' : '#f87171' }}>
+          DEBUG presenceOnly = {String(presenceOnly)}
         </p>
 
         {/* חיווי מצב נוכחות */}
