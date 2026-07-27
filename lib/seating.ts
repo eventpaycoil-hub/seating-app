@@ -65,3 +65,23 @@ export function saveSeating(eventId: string | number, tables: any[]) {
   saveSeatingLocal(eventId, tables);
   saveSeatingToSupabase(eventId, tables).catch(() => {});
 }
+
+/** טעינה: קודם ענן, אחרת מקומי. מעדכן local אחרי fetch */
+export async function loadSeating(eventId: string | number): Promise<any[]> {
+  const eid = String(eventId);
+
+  try {
+    const remote = await fetchSeatingFromSupabase(eid);
+    if (Array.isArray(remote) && remote.length > 0) {
+      saveSeatingLocal(eid, remote);
+      console.log('✅ סקיצה מ-Supabase:', remote.length, 'שולחנות');
+      return remote;
+    }
+  } catch (e) {
+    console.warn('loadSeating remote failed', e);
+  }
+
+  const local = getSeatingLocal(eid);
+  console.log('סקיצה מ-local:', local.length, 'שולחנות');
+  return local;
+}

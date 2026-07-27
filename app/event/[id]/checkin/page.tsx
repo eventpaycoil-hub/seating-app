@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Html5Qrcode } from 'html5-qrcode';
+import { loadSeating, getSeatingLocal } from '../../../../lib/seating';
 import {
   getGuests,
   loadGuests,
@@ -91,7 +92,7 @@ export default function CheckinPage() {
       const text =
         tableNumber != null
           ? `שולחן מספר ${tableNumber}`
-          : `${name || 'אורח'}, טרם הושבת לשולחן`;
+          : `${name || 'אורח'}, טרם הושב לשולחן`;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'he-IL';
       u.rate = 0.95;
@@ -358,7 +359,7 @@ export default function CheckinPage() {
         ? Number(guest.arrivedCount)
         : await markArrived(guest, guests);
 
-      const tableNumber = findTable(guest.name);
+            const tableNumber = await findTable(guest.name);
 
       setResult({
         name: guest.name,
