@@ -373,21 +373,25 @@ export default function CheckinPage() {
         return;
       }
 
-            const already = Number(guest.arrivedCount) > 0;
+                 const already = Number(guest.arrivedCount) > 0;
       const qty = already
         ? Number(guest.arrivedCount)
         : await markArrived(guest, guests);
 
-      // מצב נוכחות בלבד (בלי הושבה)
+      // ========== כאן מדביקים ==========
       let presenceOnly = false;
       try {
         const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-        const ev = events.find((e: any) => e.id.toString() === String(eventId));
+        const ev = events.find((e: any) => String(e.id) === String(eventId));
+        console.log('EVENT', eventId, ev?.presenceOnly, ev);
+
         presenceOnly =
-          ev?.checkinMode === 'presence' ||
+          ev?.presenceOnly === 'כן' ||
           ev?.presenceOnly === true ||
-          ev?.presenceOnly === 'כן';
-      } catch {}
+          ev?.presenceOnly === 'true';
+      } catch (e) {
+        console.log('presence load error', e);
+      }
 
       const guestQty =
         Number(guest.confirmed) ||
@@ -401,8 +405,6 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-                  
-
       setResult({
         name: guest.name,
         tableNumber: presenceOnly ? null : tableNumber,
@@ -411,6 +413,7 @@ export default function CheckinPage() {
         presenceOnly: !!presenceOnly,
       });
       setStatus('');
+      // ========== עד כאן ==========
 
       if (presenceOnly) {
         try {
