@@ -59,11 +59,12 @@ export default function CheckinPage() {
     if (ev) setEventTitle(ev.owners || ev.title || '');
 
     // ← טעינת מצב נוכחות בלבד פעם אחת
-           const raw = ev?.presenceOnly;
+             const raw = ev?.presenceOnly;
     const on =
-      String(raw ?? '').includes('כן') ||
       raw === true ||
-      raw === 'true';
+      raw === 'true' ||
+      String(raw ?? '').trim() === 'כן';
+    // "לא" / false / undefined → false
     setPresenceOnly(!!on);
     presenceOnlyRef.current = !!on;
     console.log('INIT presenceOnly', eventId, raw, on);
