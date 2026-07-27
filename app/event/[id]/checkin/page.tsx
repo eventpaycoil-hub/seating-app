@@ -118,29 +118,48 @@ export default function CheckinPage() {
     setStatus('');
   };
 
-  const findTable = (guestName) => {
+    const findTable = async (guestName: string): Promise<number | null> => {
+    const name = String(guestName || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    if (!name || !eventId) return null;
+
+    const sources: any[] = [];
+
     try {
-      const name = normName(guestName);
-      if (!name) return null;
-
-      const tryList = (raw) => {
-        if (!raw) return null;
-        const seating = JSON.parse(raw);
-        if (!Array.isArray(seating)) return null;
-        for (const t of seating) {
-          const hit = (t.assignedGuests || []).some((n) => normName(n) === name);
-          if (hit) return t.tableNumber ?? null;
-        }
-        return null;
-      };
-
-      const fromSpecific = tryList(localStorage.getItem(`seatingTables_${eventId}`));
-      if (fromSpecific != null) return fromSpecific;
-
-      const fromGeneral = tryList(localStorage.getItem('seatingTables'));
-      if (fromGeneral != null) return fromGeneral;
+      const { loadSeating } = await import('../../../../lib/seating');
+      const cloud = await loadSeating(String(eventId));
+      if (Array.isArray(cloud)) sources.push(...cloud);
     } catch (e) {
-      console.log('findTable error', e);
+      console.log('loadSeating', e);
+    }
+
+    for (const key of [
+      `seatingTables_${eventId}`,
+      'seatingTables',
+      'seatingTables_v2',
+    ]) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) sources.push(...arr);
+      } catch {}
+    }
+
+    for (const table of sources) {
+      const list = table?.assignedGuests;
+      if (!Array.isArray(list)) continue;
+      const hit = list.some((g: string) =>
+        String(g || '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ' ') === name
+      );
+      if (hit && table.tableNumber != null) {
+        return Number(table.tableNumber);
+      }
     }
     return null;
   };
