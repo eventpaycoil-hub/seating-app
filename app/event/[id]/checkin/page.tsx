@@ -401,7 +401,10 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-            setResult({
+                  // זמני לבדיקה — מחק אחרי שמוודאים שהתצוגה עובדת
+      // presenceOnly = true;
+
+      setResult({
         name: guest.name,
         tableNumber: presenceOnly ? null : tableNumber,
         alreadyArrived: already,
