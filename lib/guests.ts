@@ -200,27 +200,8 @@ async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
 
   console.log('✅ מוזמנים נשמרו ב-Supabase (upsert):', rows.length);
 
-  // מחיקת מוזמנים שנמחקו אצלנו
-  try {
-    const ids = rows.map((r) => r.id);
-    const { data: existing } = await supabase
-      .from('guests')
-      .select('id')
-      .eq('event_id', eid);
-
-    if (existing?.length) {
-      const toDelete = existing
-        .map((r: any) => r.id)
-        .filter((id: number) => !ids.includes(id));
-
-      if (toDelete.length) {
-        await supabase.from('guests').delete().in('id', toDelete);
-        console.log('🗑️ נמחקו מ-Supabase:', toDelete.length);
-      }
-    }
-  } catch (e) {
-    console.warn('cleanup delete failed', e);
-  }
+  
+    
 }
 
 export async function fetchGuestsFromSupabase(
