@@ -202,6 +202,38 @@ function AddGuestsContent() {
     if (field === 'phone') finalValue = normalizePhone(value);
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, [field]: finalValue } : g)));
   };
+  const handleKeyDown = (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  rowIndex: number,
+  field: keyof Guest
+) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+
+  if (rowIndex >= guests.length - 1) {
+    setGuests(prev => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        name: '',
+        phone: '',
+        quantity: '',
+        group: '',
+        transportation: '',
+        confirmed: '',
+        customerExpectation: '',
+        notes: '',
+      },
+    ]);
+  }
+
+  setTimeout(() => {
+    const next = document.querySelector(
+      `input[data-row="${rowIndex + 1}"][data-field="${field}"]`
+    ) as HTMLInputElement | null;
+    next?.focus();
+  }, 0);
+};
 
   const deleteRow = (id: number) => {
     if (!confirm('למחוק את השורה?')) return;
@@ -590,70 +622,94 @@ function AddGuestsContent() {
                   <td className="text-center text-slate-500 py-3 border-r">{idx + 1}</td>
                   <td className="pr-6 border-r">
                     <input
-                      value={guest.name}
-                      onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'name')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.phone}
-                      onChange={(e) => updateGuest(guest.id, 'phone', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'phone')}
-                      className={`w-full py-3.5 outline-none bg-transparent ${
-                        phoneInvalid ? 'text-red-600 font-semibold' : ''
-                      }`}
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.quantity}
-                      onChange={(e) => updateGuest(guest.id, 'quantity', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'quantity')}
-                      className="w-full py-3.5 outline-none text-center bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.group}
-                      onChange={(e) => updateGuest(guest.id, 'group', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'group')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.transportation}
-                      onChange={(e) => updateGuest(guest.id, 'transportation', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'transportation')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.confirmed}
-                      onChange={(e) => updateGuest(guest.id, 'confirmed', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'confirmed')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6 border-r">
-                    <input
-                      value={guest.customerExpectation}
-                      onChange={(e) => updateGuest(guest.id, 'customerExpectation', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'customerExpectation')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
-                  <td className="pr-6">
-                    <input
-                      value={guest.notes}
-                      onChange={(e) => updateGuest(guest.id, 'notes', e.target.value)}
-                      onPaste={(e) => handlePaste(e, idx, 'notes')}
-                      className="w-full py-3.5 outline-none bg-transparent"
-                    />
-                  </td>
+  value={guest.name}
+  onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
+  onPaste={(e) => handlePaste(e, idx, 'name')}
+  onKeyDown={(e) => handleKeyDown(e, idx, 'name')}
+  data-row={idx}
+  data-field="name"
+  className="w-full py-3.5 outline-none bg-transparent"
+/>
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.phone}
+    onChange={(e) => updateGuest(guest.id, 'phone', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'phone')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'phone')}
+    data-row={idx}
+    data-field="phone"
+    className={`w-full py-3.5 outline-none bg-transparent ${
+      phoneInvalid ? 'text-red-600 font-semibold' : ''
+    }`}
+  />
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.quantity}
+    onChange={(e) => updateGuest(guest.id, 'quantity', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'quantity')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'quantity')}
+    data-row={idx}
+    data-field="quantity"
+    className="w-full py-3.5 outline-none text-center bg-transparent"
+  />
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.group}
+    onChange={(e) => updateGuest(guest.id, 'group', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'group')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'group')}
+    data-row={idx}
+    data-field="group"
+    className="w-full py-3.5 outline-none bg-transparent"
+  />
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.transportation}
+    onChange={(e) => updateGuest(guest.id, 'transportation', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'transportation')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'transportation')}
+    data-row={idx}
+    data-field="transportation"
+    className="w-full py-3.5 outline-none bg-transparent"
+  />
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.confirmed}
+    onChange={(e) => updateGuest(guest.id, 'confirmed', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'confirmed')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'confirmed')}
+    data-row={idx}
+    data-field="confirmed"
+    className="w-full py-3.5 outline-none bg-transparent"
+  />
+</td>
+<td className="pr-6 border-r">
+  <input
+    value={guest.customerExpectation}
+    onChange={(e) => updateGuest(guest.id, 'customerExpectation', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'customerExpectation')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'customerExpectation')}
+    data-row={idx}
+    data-field="customerExpectation"
+    className="w-full py-3.5 outline-none bg-transparent"
+  />
+</td>
+<td className="pr-6">
+  <input
+    value={guest.notes}
+    onChange={(e) => updateGuest(guest.id, 'notes', e.target.value)}
+    onPaste={(e) => handlePaste(e, idx, 'notes')}
+    onKeyDown={(e) => handleKeyDown(e, idx, 'notes')}
+    data-row={idx}
+    data-field="notes"
+    className="w-full py-3.5 outline-none bg-transparent"
+  />
+</td>
                   <td className="text-center">
                     <button onClick={() => deleteRow(guest.id)} className="text-red-500 text-xl px-3">
                       ×
