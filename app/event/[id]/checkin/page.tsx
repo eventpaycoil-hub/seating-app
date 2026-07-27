@@ -31,6 +31,7 @@ export default function CheckinPage() {
   const [voiceOn, setVoiceOn] = useState(true);
   const [facingMode, setFacingMode] = useState('environment');
   const [localCount, setLocalCount] = useState(0);
+  const [presenceOnly, setPresenceOnly] = useState(false); // ← חדש
   const scannerRef = useRef(null);
   const processingRef = useRef(false);
   const resultTimerRef = useRef(null);
@@ -53,8 +54,15 @@ export default function CheckinPage() {
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const ev = events.find((e) => e.id?.toString() === eventId.toString());
+    const ev = events.find((e) => String(e.id) === String(eventId));
     if (ev) setEventTitle(ev.owners || ev.title || '');
+
+    // ← טעינת מצב נוכחות בלבד פעם אחת
+    const raw = ev?.presenceOnly;
+    const on =
+      raw === 'כן' || raw === true || raw === 'true' || String(raw).trim() === 'כן';
+    setPresenceOnly(!!on);
+    console.log('INIT presenceOnly', { eventId, raw, on });
 
     const savedVoice = localStorage.getItem('checkin_voice');
     if (savedVoice === '0') setVoiceOn(false);
@@ -118,7 +126,7 @@ export default function CheckinPage() {
     setStatus('');
   };
 
-    const findTable = async (guestName: string): Promise<number | null> => {
+  const findTable = async (guestName: string): Promise<number | null> => {
     const name = String(guestName || '')
       .trim()
       .toLowerCase()
@@ -151,11 +159,12 @@ export default function CheckinPage() {
     for (const table of sources) {
       const list = table?.assignedGuests;
       if (!Array.isArray(list)) continue;
-      const hit = list.some((g: string) =>
-        String(g || '')
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, ' ') === name
+      const hit = list.some(
+        (g: string) =>
+          String(g || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ') === name
       );
       if (hit && table.tableNumber != null) {
         return Number(table.tableNumber);
