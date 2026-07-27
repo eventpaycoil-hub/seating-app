@@ -402,7 +402,7 @@ export default function CheckinPage() {
       }
 
                   // זמני לבדיקה — מחק אחרי שמוודאים שהתצוגה עובדת
-      // presenceOnly = true;
+       presenceOnly = true;
 
       setResult({
         name: guest.name,
