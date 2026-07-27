@@ -64,7 +64,6 @@ function toRow(g: any, eventId: string | number) {
     customer_expectation: n.customerExpectation || null,
     notes: n.notes || null,
     separation: n.separation || null,
-    // אם העמודות האלה קיימות ב-Supabase — מצוין. אם לא, נסיר בהמשך.
     invite_code: n.inviteCode || null,
     arrived_count: Number(n.arrivedCount) || 0,
   };
@@ -89,7 +88,19 @@ function fromRow(row: any) {
   });
 }
 
-/** קריאה סינכרונית מה-cache המקומי (כדי לא לשבור דפים קיימים) */
+/** מסיר כפילויות לפי id — שומר את האחרון */
+function dedupeById(guests: any[]): any[] {
+  const map = new Map<string, any>();
+  for (const g of guests || []) {
+    if (!g) continue;
+    const id = g.id != null ? String(Math.floor(Number(g.id)) || g.id) : '';
+    if (!id || id === 'NaN') continue;
+    map.set(id, g);
+  }
+  return Array.from(map.values());
+}
+
+/** קריאה סינכרונית מה-cache המקומי */
 export function getGuests(eventId: string | number): any[] {
   if (!eventId) return [];
   if (typeof window === 'undefined') return [];
@@ -101,7 +112,7 @@ export function getGuests(eventId: string | number): any[] {
   try {
     const guests = JSON.parse(raw);
     if (!Array.isArray(guests)) return [];
-    return guests.map(normalizeGuest);
+    return dedupeById(guests.map(normalizeGuest));
   } catch (e) {
     console.error('Error parsing guests', e);
     return [];
@@ -110,7 +121,6 @@ export function getGuests(eventId: string | number): any[] {
 
 /**
  * מקור האמת: קודם Supabase, אחר כך cache מקומי.
- * קרא לזה ב-useEffect של דפי מוזמנים / סריקה / SMS.
  */
 export async function loadGuests(eventId: string | number): Promise<any[]> {
   if (!eventId) return [];
@@ -118,7 +128,6 @@ export async function loadGuests(eventId: string | number): Promise<any[]> {
   const key = `guests_event_${eventId}`;
   const eid = Number(eventId);
 
-  // 1) Supabase
   try {
     const { data, error } = await supabase
       .from('guests')
@@ -126,7 +135,7 @@ export async function loadGuests(eventId: string | number): Promise<any[]> {
       .eq('event_id', eid);
 
     if (!error && Array.isArray(data) && data.length > 0) {
-      const guests = data.map(fromRow);
+      const guests = dedupeById(data.map(fromRow));
       if (typeof window !== 'undefined') {
         localStorage.setItem(key, JSON.stringify(guests));
       }
@@ -137,7 +146,6 @@ export async function loadGuests(eventId: string | number): Promise<any[]> {
     console.warn('loadGuests supabase failed', e);
   }
 
-  // 2) cache מקומי
   const local = getGuests(eventId);
   if (local.length) {
     console.log('⚠️ loadGuests from localStorage:', local.length);
@@ -149,12 +157,12 @@ export async function loadGuests(eventId: string | number): Promise<any[]> {
 }
 
 /**
- * שמירה: cache מקומי + upsert ל-Supabase (בלי למחוק הכל!)
+ * שמירה: cache מקומי + upsert ל-Supabase
  */
 export function saveGuests(eventId: string | number, guests: any[]) {
   if (!eventId) return;
 
-  const normalized = (guests || []).map(normalizeGuest);
+  const normalized = dedupeById((guests || []).map(normalizeGuest));
   const key = `guests_event_${eventId}`;
 
   if (typeof window !== 'undefined') {
@@ -171,9 +179,16 @@ async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
   const valid = guests.filter((g) => g.name && String(g.name).trim() !== '');
   if (!valid.length) return;
 
-  const rows = valid.map((g) => toRow(g, eid));
+  // חשוב: dedupe נוסף לפני upsert
+  const rowsMap = new Map<number, any>();
+  for (const g of valid) {
+    const row = toRow(g, eid);
+    if (!row.id || Number.isNaN(row.id)) continue;
+    rowsMap.set(row.id, row);
+  }
+  const rows = Array.from(rowsMap.values());
+  if (!rows.length) return;
 
-  // upsert לפי id — שומר מזהים יציבים
   const { error } = await supabase.from('guests').upsert(rows, {
     onConflict: 'id',
   });
@@ -185,7 +200,7 @@ async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
 
   console.log('✅ מוזמנים נשמרו ב-Supabase (upsert):', rows.length);
 
-  // מחיקת מוזמנים שנמחקו אצלנו ולא קיימים יותר ברשימה
+  // מחיקת מוזמנים שנמחקו אצלנו
   try {
     const ids = rows.map((r) => r.id);
     const { data: existing } = await supabase
