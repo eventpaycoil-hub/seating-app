@@ -22,7 +22,7 @@ export default function SeatingArrivalPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
-
+const [isListening, setIsListening] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedTerm(searchTerm), 300);
     return () => clearTimeout(t);
@@ -147,7 +147,34 @@ export default function SeatingArrivalPage() {
     setSearchTerm(term);
     setForceEmptyList(false);
   };
+const startVoiceSearch = () => {
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
+  if (!SpeechRecognition) {
+    alert('הדפדפן לא תומך בזיהוי קול');
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'he-IL';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => setIsListening(true);
+  recognition.onend = () => setIsListening(false);
+  recognition.onerror = () => setIsListening(false);
+
+  recognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript?.trim() || '';
+    if (transcript) {
+      handleSearch(transcript);
+      searchInputRef.current?.focus();
+    }
+  };
+
+  recognition.start();
+};
     const markArrival = (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
@@ -345,61 +372,78 @@ export default function SeatingArrivalPage() {
         </div>
 
         <div className="flex items-center gap-4 mb-10 justify-center flex-wrap">
-          <div className="relative w-full max-w-2xl">
-            <Search className="absolute left-6 top-5 text-gray-400" size={24} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="חיפוש שם או טלפון (לפחות 2 תווים)..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-16 pr-6 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
-            />
-          </div>
-          <button
-            onClick={clearSearch}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium"
-          >
-            נקה
-          </button>
-          <button
-            onClick={refresh}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"
-          >
-            <RefreshCw size={20} /> רענן שולחנות
-          </button>
-          <button
-            onClick={printPage}
-            className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"
-          >
-            <Printer size={20} /> PDF
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium"
-          >
-            <UserPlus size={20} /> הוסף מוזמן
-          </button>
-          <Link
-            href={`/event/${eventId}/checkin?from=seating-arrival`}
-            className="bg-emerald-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium"
-          >
-            <QrCode size={20} /> סריקת כניסה
-          </Link>
-        </div>
+  <div className="relative w-full max-w-2xl">
+    <Search className="absolute left-6 top-5 text-gray-400" size={24} />
+    <input
+      ref={searchInputRef}
+      type="text"
+      placeholder="חיפוש שם או טלפון (לפחות 2 תווים)..."
+      value={searchTerm}
+      onChange={(e) => handleSearch(e.target.value)}
+      className="w-full pl-16 pr-20 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
+    />
+    <button
+      type="button"
+      onClick={startVoiceSearch}
+      className={`absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${
+        isListening
+          ? 'bg-red-500 text-white animate-pulse'
+          : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+      }`}
+      title="חיפוש קולי"
+    >
+      🎤
+    </button>
+  </div>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-amber-100">
-              <tr>
-                <th className="text-right py-5 px-8">שם וטלפון</th>
-                <th className="text-center py-5 px-8">מס שולחן</th>
-                <th className="text-center py-5 px-8">סטטוס</th>
-                <th className="text-center py-5 px-8">הגיע</th>
-                <th className="text-center py-5 px-8">התאמה</th>
-              </tr>
-            </thead>
-            <tbody>
+  <button
+    onClick={clearSearch}
+    className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium"
+  >
+    נקה
+  </button>
+
+  <button
+    onClick={refresh}
+    className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"
+  >
+    <RefreshCw size={20} /> רענן שולחנות
+  </button>
+
+  <button
+    onClick={printPage}
+    className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"
+  >
+    <Printer size={20} /> PDF
+  </button>
+
+  <button
+    onClick={() => setShowAddModal(true)}
+    className="bg-blue-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium"
+  >
+    <UserPlus size={20} /> הוסף מוזמן
+  </button>
+
+  <Link
+    href={`/event/${eventId}/checkin?from=seating-arrival`}
+    className="bg-emerald-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium"
+  >
+    <QrCode size={20} /> סריקת כניסה
+  </Link>
+</div>
+
+<div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+  <table className="w-full">
+    <thead className="bg-amber-100">
+      <tr>
+        <th className="text-right py-5 px-8">שם וטלפון</th>
+        <th className="text-center py-5 px-8">מס שולחן</th>
+        <th className="text-center py-5 px-8">סטטוס</th>
+        <th className="text-center py-5 px-8">הגיע</th>
+        <th className="text-center py-5 px-8">התאמה</th>
+      </tr>
+    </thead>
+    <tbody>
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest: any) => {
                   const confirmed =

@@ -21,6 +21,7 @@ export default function SeatingArrivalFastPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
+  const [isListening, setIsListening] = useState(false);
 
   const tableMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -53,7 +54,6 @@ export default function SeatingArrivalFastPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // טעינה ראשונית מהענן
   useEffect(() => {
     if (!eventId) return;
 
@@ -87,7 +87,6 @@ export default function SeatingArrivalFastPage() {
     };
   }, [eventId]);
 
-  // סנכרון הגעות בין טאבלטים (כל 4 שניות)
   useEffect(() => {
     if (!eventId) return;
 
@@ -137,7 +136,36 @@ export default function SeatingArrivalFastPage() {
     setForceEmptyList(false);
   };
 
-    const markArrival = (id: number, count: number) => {
+  const startVoiceSearch = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('הדפדפן לא תומך בזיהוי קול');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'he-IL';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript?.trim() || '';
+      if (transcript) {
+        handleSearch(transcript);
+        searchInputRef.current?.focus();
+      }
+    };
+
+    recognition.start();
+  };
+
+  const markArrival = (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
@@ -327,8 +355,20 @@ export default function SeatingArrivalFastPage() {
               placeholder="חיפוש שם או טלפון..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-16 pr-6 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
+              className="w-full pl-16 pr-20 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
             />
+            <button
+              type="button"
+              onClick={startVoiceSearch}
+              className={`absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${
+                isListening
+                  ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+              }`}
+              title="חיפוש קולי"
+            >
+              🎤
+            </button>
           </div>
           <button
             onClick={clearSearch}
