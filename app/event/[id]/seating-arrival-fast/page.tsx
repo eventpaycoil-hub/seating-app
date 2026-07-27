@@ -47,42 +47,54 @@ export default function SeatingArrivalFastPage() {
   }, [tableMapVersion]);
 
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'seatingTables') setTableMapVersion((prev) => prev + 1);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === 'seatingTables') setTableMapVersion((prev) => prev + 1);
+  };
+  window.addEventListener('storage', handleStorageChange);
+  return () => window.removeEventListener('storage', handleStorageChange);
+}, []);
 
-  useEffect(() => {
-    if (!eventId) return;
+// סגירת מקלדת אוטומטית אחרי חיפוש (טאבלט)
+useEffect(() => {
+  if (searchTerm.trim().length < 2) return;
+  if (forceEmptyList) return;
 
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId);
-    if (currentEvent) {
-      setEventTitle(currentEvent.owners || currentEvent.title || '');
-    }
+  const t = setTimeout(() => {
+    searchInputRef.current?.blur();
+  }, 450);
 
-    let cancelled = false;
+  return () => clearTimeout(t);
+}, [searchTerm, forceEmptyList]);
 
-    (async () => {
-      try {
-        const list = await loadGuests(String(eventId));
-        if (!cancelled && Array.isArray(list)) {
-          setAllGuests(list);
-        }
-      } catch (e) {
-        console.log('loadGuests error', e);
-        if (!cancelled) {
-          const local = JSON.parse(
-            localStorage.getItem(`guests_event_${eventId}`) || '[]'
-          );
-          setAllGuests(local);
-        }
+useEffect(() => {
+  if (!eventId) return;
+
+  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+  const currentEvent = events.find((e: any) => e.id.toString() === eventId);
+  if (currentEvent) {
+    setEventTitle(currentEvent.owners || currentEvent.title || '');
+  }
+
+  let cancelled = false;
+
+  (async () => {
+    try {
+      const list = await loadGuests(String(eventId));
+      if (!cancelled && Array.isArray(list)) {
+        setAllGuests(list);
       }
-    })();
+    } catch (e) {
+      console.log('loadGuests error', e);
+      if (!cancelled) {
+        const local = JSON.parse(
+          localStorage.getItem(`guests_event_${eventId}`) || '[]'
+        );
+        setAllGuests(local);
+      }
+    }
+  })();
 
-    return () => {
+      return () => {
       cancelled = true;
     };
   }, [eventId]);
