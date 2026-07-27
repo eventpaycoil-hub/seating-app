@@ -51,7 +51,11 @@ export default function EditEventPage() {
     fullDate: '',
     hasTransport: 'לא',
     hasSeparation: 'לא',
+    
     clientPhone: '',
+        hasTransport: 'לא',
+    hasSeparation: 'לא',
+    presenceOnly: 'לא',
   });
 
   const [showDeleteZone, setShowDeleteZone] = useState(false);
