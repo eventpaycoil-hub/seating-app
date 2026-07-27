@@ -478,6 +478,7 @@ export default function EditEventPage() {
               { label: 'שליחת SMS', name: 'smsService' },
               { label: 'שירות דיילות', name: 'stewardService' },
               { label: 'הסעות', name: 'hasTransport' },
+              { label: 'סריקה – נוכחות בלבד (בלי שולחן)', name: 'presenceOnly' },
               { label: 'אירוע בהפרדה', name: 'hasSeparation' },
             ].map((field) => (
               <label key={field.name} className="flex items-center gap-3 text-lg">

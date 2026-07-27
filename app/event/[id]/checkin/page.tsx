@@ -373,21 +373,56 @@ export default function CheckinPage() {
         return;
       }
 
-      const already = Number(guest.arrivedCount) > 0;
+            const already = Number(guest.arrivedCount) > 0;
       const qty = already
         ? Number(guest.arrivedCount)
         : await markArrived(guest, guests);
 
-            const tableNumber = await findTable(guest.name);
+      // מצב נוכחות בלבד (בלי הושבה)
+      let presenceOnly = false;
+      try {
+        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+        const ev = events.find((e: any) => e.id.toString() === String(eventId));
+        presenceOnly =
+          ev?.checkinMode === 'presence' ||
+          ev?.presenceOnly === true ||
+          ev?.presenceOnly === 'כן';
+      } catch {}
+
+      const guestQty =
+        Number(guest.confirmed) ||
+        Number(guest.confirmedCount) ||
+        Number(guest.quantity) ||
+        Number(qty) ||
+        1;
+
+      let tableNumber: number | null = null;
+      if (!presenceOnly) {
+        tableNumber = await findTable(guest.name);
+      }
 
       setResult({
         name: guest.name,
         tableNumber,
         alreadyArrived: already,
-        qty,
+        qty: guestQty,
+        presenceOnly,
       });
       setStatus('');
-      speakTable(tableNumber, guest.name);
+
+      if (presenceOnly) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(
+            `ברקוד זה מיועד ל ${guestQty} אורחים`
+          );
+          u.lang = 'he-IL';
+          u.rate = 0.9;
+          window.speechSynthesis.speak(u);
+        } catch {}
+      } else {
+        speakTable(tableNumber, guest.name);
+      }
 
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       resultTimerRef.current = setTimeout(() => {
@@ -401,7 +436,6 @@ export default function CheckinPage() {
       processingRef.current = false;
     }
   };
-
   const startScanner = async () => {
     setResult(null);
     setError('');
@@ -641,7 +675,15 @@ export default function CheckinPage() {
               {result.qty} אורחים
             </div>
 
-            {result.tableNumber != null ? (
+                        {result.presenceOnly ? (
+              <div className="py-6">
+                <div className="text-2xl text-gray-600 mb-2">ברקוד זה מיועד ל</div>
+                <div className="text-[7rem] font-black text-emerald-600 leading-none">
+                  {result.qty}
+                </div>
+                <div className="text-2xl text-gray-600 mt-2">אורחים</div>
+              </div>
+            ) : result.tableNumber != null ? (
               <div className="py-2">
                 <div className="text-2xl text-gray-600 mb-2">שולחן</div>
                 <div className="text-[9rem] font-black text-emerald-600 leading-none">
