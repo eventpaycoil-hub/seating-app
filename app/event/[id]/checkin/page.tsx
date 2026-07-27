@@ -539,7 +539,7 @@ export default function CheckinPage() {
     };
   }, []);
 
-  return (
+   return (
     <div className="min-h-screen bg-slate-900 text-white p-4" dir="rtl">
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -599,7 +599,8 @@ export default function CheckinPage() {
         <div className={scanning ? 'block' : 'hidden'}>
           <div
             id="qr-reader"
-            className="rounded-2xl overflow-hidden bg-black min-h-[300px] mb-4"
+            className="rounded-2xl overflow-hidden bg-black w-full mb-4"
+            style={{ minHeight: '55vh' }}
           />
           <button
             onClick={stopScanner}
@@ -623,40 +624,42 @@ export default function CheckinPage() {
             </button>
           </div>
         )}
-
-        {result && (
-          <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6">
-            <div className="bg-white text-slate-900 rounded-3xl p-10 text-center max-w-md w-full shadow-2xl">
-              {result.alreadyArrived && (
-                <div className="text-amber-600 font-bold mb-2 text-xl">
-                  כבר נרשם כהגיע
-                </div>
-              )}
-              <div className="text-3xl font-bold mb-2">{result.name}</div>
-              <div className="text-sm text-gray-500 mb-2">
-                {result.qty} אורחים
-              </div>
-
-              {result.tableNumber != null ? (
-                <div className="py-4">
-                  <div className="text-xl text-gray-600">שולחן</div>
-                  <div className="text-9xl font-black text-emerald-600 leading-none">
-                    {result.tableNumber}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-2xl text-amber-600 font-bold py-8">
-                  טרם הושב לשולחן
-                </div>
-              )}
-
-              <p className="text-sm text-gray-400 mt-2">
-                ממשיך לסריקה בעוד רגע...
-              </p>
-            </div>
-          </div>
-        )}
       </div>
+
+      {result && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+          <div className="bg-white text-slate-900 rounded-3xl px-8 py-10 text-center w-full max-w-lg shadow-2xl">
+            {result.alreadyArrived && (
+              <div className="text-amber-600 font-bold mb-3 text-2xl">
+                כבר נרשם כהגיע
+              </div>
+            )}
+
+            <div className="text-4xl font-bold mb-2">{result.name}</div>
+
+            <div className="text-xl text-gray-500 mb-6">
+              {result.qty} אורחים
+            </div>
+
+            {result.tableNumber != null ? (
+              <div className="py-2">
+                <div className="text-2xl text-gray-600 mb-2">שולחן</div>
+                <div className="text-[9rem] font-black text-emerald-600 leading-none">
+                  {result.tableNumber}
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-3xl font-bold text-amber-600">
+                טרם הושב לשולחן
+              </div>
+            )}
+          </div>
+
+          <p className="text-sm text-gray-300 mt-4">
+            ממשיך לסריקה בעוד רגע...
+          </p>
+        </div>
+      )}
     </div>
   );
 }
