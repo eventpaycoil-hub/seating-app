@@ -1227,9 +1227,9 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
                 <p className="text-center text-slate-500 text-xs py-6">אין מוזמנים שאישרו</p>
               ) : (
                 groupedGuests.map(([group, list]) => {
-                  const isCollapsed = unassignedSearch.trim()
-  ? false
-  : !!collapsedGroups[group];
+                  const isCollapsed = collapsedGroups[group] ?? true;
+  
+  
                   const groupTotal = list.reduce((s, g) => s + g.qty, 0);
                   return (
                     <div key={group} className="mb-1">
