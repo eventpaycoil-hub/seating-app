@@ -401,12 +401,12 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-      setResult({
+            setResult({
         name: guest.name,
-        tableNumber,
+        tableNumber: presenceOnly ? null : tableNumber,
         alreadyArrived: already,
         qty: guestQty,
-        presenceOnly,
+        presenceOnly: !!presenceOnly,
       });
       setStatus('');
 
