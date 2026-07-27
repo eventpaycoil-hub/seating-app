@@ -401,8 +401,7 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-                  // זמני לבדיקה — מחק אחרי שמוודאים שהתצוגה עובדת
-       presenceOnly = true;
+                  
 
       setResult({
         name: guest.name,
