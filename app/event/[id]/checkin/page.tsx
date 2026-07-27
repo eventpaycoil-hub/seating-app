@@ -379,18 +379,15 @@ export default function CheckinPage() {
         : await markArrived(guest, guests);
 
       // ========== כאן מדביקים ==========
-      let presenceOnly = false;
+            let presenceOnly = false;
       try {
         const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
         const ev = events.find((e: any) => String(e.id) === String(eventId));
-        console.log('EVENT', eventId, ev?.presenceOnly, ev);
-
-        presenceOnly =
-          ev?.presenceOnly === 'כן' ||
-          ev?.presenceOnly === true ||
-          ev?.presenceOnly === 'true';
+        const raw = ev?.presenceOnly;
+        presenceOnly = raw === 'כן' || raw === true || raw === 'true' || raw === 'כן ';
+        console.log('CHECKIN presence', { eventId, raw, presenceOnly });
       } catch (e) {
-        console.log('presence load error', e);
+        console.log('CHECKIN presence error', e);
       }
 
       const guestQty =
@@ -405,12 +402,12 @@ export default function CheckinPage() {
         tableNumber = await findTable(guest.name);
       }
 
-      setResult({
+            setResult({
         name: guest.name,
         tableNumber: presenceOnly ? null : tableNumber,
         alreadyArrived: already,
         qty: guestQty,
-        presenceOnly: !!presenceOnly,
+        presenceOnly,
       });
       setStatus('');
       // ========== עד כאן ==========
