@@ -354,7 +354,36 @@ const handleNotComing = async () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
+const handleUnknown = async () => {
+  if (!eventId || !code) {
+    setRsvpStatus('general');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
 
+  const guestIndex = findGuestIndex(guests, String(code));
+  if (guestIndex === -1) {
+    setRsvpStatus('notFound');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const updated = [...guests];
+  updated[guestIndex] = {
+    ...updated[guestIndex],
+    confirmed: 'ממתין',
+    confirmedCount: 0,
+    count: 0,
+    confirmedSource: 'link',
+    confirmedAt: now,
+    notes: (updated[guestIndex].notes || '') + (updated[guestIndex].notes ? '\n' : '') + 'המוזמן סימן: לא יודע כרגע',
+  };
+
+  await persistGuestUpdate(updated, updated[guestIndex]);
+  setRsvpStatus('pending');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
   const now = new Date().toISOString();
   const updated = [...guests];
   updated[guestIndex] = {
