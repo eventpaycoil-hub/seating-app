@@ -335,7 +335,7 @@ const markAsNotComing = () => {
                 ))}
               </div>
             </div>
-            {hasTransport && (
+            {hasTransport && guest.needsTransport && (
               <div>
                 <label className="block text-sm text-gray-500 mb-1">הסעה</label>
                 <select value={currentTransport} onChange={(e) => handleTransportChange(e.target.value)} className="w-full p-3 border rounded-2xl">
@@ -374,25 +374,35 @@ const markAsNotComing = () => {
 
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="w-full lg:w-[320px] flex-shrink-0 space-y-2">
-            <div
-              onClick={callPhone}
-              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-5 py-4 flex flex-col items-center shadow-lg"
-            >
-              <div className="text-xl font-bold mb-1 text-center leading-tight">{guest.name || '—'}</div>
-              <div className="text-xs opacity-80">טלפון · לחץ לחיוג</div>
-              <div className="text-4xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
-            </div>
-            <input
-              type="tel"
-              dir="ltr"
-              value={guest.phone || ''}
-              onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
-              onBlur={() => saveGuestField({ ...guest, phone: guest.phone || '' })}
-              placeholder="050-0000000"
-              className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
-            />
-          </div>
+  <div
+    onClick={callPhone}
+    className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-5 py-4 flex flex-col items-center shadow-lg"
+  >
+    <div className="text-xl font-bold mb-1 text-center leading-tight">{guest.name || '—'}</div>
+    <div className="text-xs opacity-80">טלפון · לחץ לחיוג</div>
+    <div className="text-4xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
+  </div>
 
+  {/* תיבת עריכת שם קטנה */}
+  <input
+    type="text"
+    value={guest.name || ''}
+    onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+    onBlur={() => saveGuestField({ ...guest, name: guest.name || '' })}
+    placeholder="שם המוזמן"
+    className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base text-center focus:outline-none focus:border-blue-500"
+  />
+
+  <input
+    type="tel"
+    dir="ltr"
+    value={guest.phone || ''}
+    onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+    onBlur={() => saveGuestField({ ...guest, phone: guest.phone || '' })}
+    placeholder="050-0000000"
+    className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
+  />
+</div>
           <div className="flex-1 bg-white rounded-2xl px-6 py-4 shadow text-right text-[15px] leading-7">
             <div className="font-bold text-lg text-slate-900">{event.owners || '—'}</div>
             <div>{formatFullDate()}</div>
@@ -489,7 +499,7 @@ const markAsNotComing = () => {
               </select>
             </div>
 
-            {hasTransport && (
+            {hasTransport && guest.needsTransport && (
               <div className="bg-white rounded-2xl px-4 py-3 shadow flex items-center gap-3">
                 <label className="text-sm text-gray-500 whitespace-nowrap">הסעה</label>
                 <select

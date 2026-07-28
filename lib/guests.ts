@@ -39,6 +39,7 @@ export function normalizeGuest(guest: any) {
     separation: guest.separation ?? '',
     confirmedSource: guest.confirmedSource ?? guest.confirmed_source ?? null,
     confirmedAt: guest.confirmedAt ?? guest.confirmed_at ?? null,
+    needsTransport: guest.needsTransport ?? guest.needs_transport ?? false,
   };
 }
 
@@ -70,6 +71,7 @@ function toRow(g: any, eventId: string | number) {
     arrived_count: Number(n.arrivedCount) || 0,
     confirmed_source: n.confirmedSource || null,
     confirmed_at: n.confirmedAt || null,
+    needs_transport: n.needsTransport === true,
   };
 }
 
@@ -91,10 +93,10 @@ function fromRow(row: any) {
     arrivedCount: row.arrived_count ?? 0,
     confirmedSource: row.confirmed_source || null,
     confirmedAt: row.confirmed_at || null,
+    needsTransport: row.needs_transport === true,
   });
 }
 
-/** מסיר כפילויות לפי id — שומר את האחרון */
 function dedupeById(guests: any[]): any[] {
   const map = new Map<string, any>();
   for (const g of guests || []) {
@@ -106,7 +108,6 @@ function dedupeById(guests: any[]): any[] {
   return Array.from(map.values());
 }
 
-/** קריאה סינכרונית מה-cache המקומי */
 export function getGuests(eventId: string | number): any[] {
   if (!eventId) return [];
   if (typeof window === 'undefined') return [];
@@ -125,9 +126,6 @@ export function getGuests(eventId: string | number): any[] {
   }
 }
 
-/**
- * מקור האמת: קודם Supabase, אחר כך cache מקומי.
- */
 export async function loadGuests(eventId: string | number): Promise<any[]> {
   if (!eventId) return [];
 
@@ -162,9 +160,6 @@ export async function loadGuests(eventId: string | number): Promise<any[]> {
   return [];
 }
 
-/**
- * שמירה: cache מקומי + upsert ל-Supabase
- */
 export function saveGuests(eventId: string | number, guests: any[]) {
   if (!eventId) return;
 

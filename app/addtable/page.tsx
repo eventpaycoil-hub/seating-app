@@ -98,6 +98,15 @@ function AddTableContent() {
 
   return (
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
+     {/* כפתור שלטי שולחנות - למעלה משמאל */}
+<div className="fixed top-4 left-4 z-50">
+  <Link
+    href={`/event/${eventId}/table-signs`}
+    className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-2xl shadow-lg text-sm font-medium flex items-center gap-2"
+  >
+    🖨️ שלטי שולחנות
+  </Link>
+</div>
       <div className="max-w-3xl mx-auto">
         <Link
           href={`/event/${eventId}/seating`}

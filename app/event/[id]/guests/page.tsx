@@ -385,32 +385,53 @@ export default function GuestsPage() {
   };
 
   const deleteSelected = () => {
-    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
-    if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
-    const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
-    saveGuests(eventId, updated);
-    setGuests(updated);
-    setSelectedGuests([]);
-  };
+  if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+  if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
+  const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
+  saveGuests(eventId, updated);
+  setGuests(updated);
+  setSelectedGuests([]);
+};
 
-  const sendSMS = () => {
-    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
-    localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
-    window.location.href = `/event/${eventId}/sms`;
-  };
+const setNeedsTransportForSelected = (value: boolean) => {
+  if (selectedGuests.length === 0) {
+    alert('לא נבחרו מוזמנים');
+    return;
+  }
 
-  const sendWhatsApp = () => {
-    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
-    localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
+  const updated = guests.map((g) =>
+    selectedGuests.includes(g.id)
+      ? { ...g, needsTransport: value }
+      : g
+  );
 
-    const first = guests.find((g: any) => g.id === selectedGuests[0]);
-    const qs = first?.phone
-      ? `?phone=${encodeURIComponent(first.phone)}&guestId=${encodeURIComponent(String(first.id))}`
-      : '';
+  saveGuests(eventId, updated);
+  setGuests(updated);
+  setSelectedGuests([]);
+  alert(
+    value
+      ? `הופעלה אפשרות הסעה ל-${selectedGuests.length} מוזמנים`
+      : `בוטלה אפשרות הסעה מ-${selectedGuests.length} מוזמנים`
+  );
+};
 
-    window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
-  };
+const sendSMS = () => {
+  if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+  localStorage.setItem('selectedForSMS', JSON.stringify(selectedGuests));
+  window.location.href = `/event/${eventId}/sms`;
+};
 
+const sendWhatsApp = () => {
+  if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+  localStorage.setItem('selectedForWhatsApp', JSON.stringify(selectedGuests));
+
+  const first = guests.find((g: any) => g.id === selectedGuests[0]);
+  const qs = first?.phone
+    ? `?phone=${encodeURIComponent(first.phone)}&guestId=${encodeURIComponent(String(first.id))}`
+    : '';
+
+  window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
+};
   // === הורדות אקסל ===
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
@@ -679,50 +700,71 @@ export default function GuestsPage() {
         </div>
 
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col md:flex-row gap-3 items-stretch">
-              <input
-                type="text"
-                placeholder="חיפוש לפי שם או טלפון..."
-                className="flex-1 p-4 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:outline-none"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {isFullAdmin && (
-                <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                  <button
-                    onClick={downloadAllGuests}
-                    className="bg-teal-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap"
-                  >
-                    📥 כל המוזמנים
-                  </button>
-                  <button
-                    onClick={downloadConfirmedGuests}
-                    className="bg-emerald-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap"
-                  >
-                    📥 שאישרו הגעה
-                  </button>
-                  <button
-                    onClick={sendSMS}
-                    className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
-                  >
-                    📩 SMS
-                  </button>
-                  <button
-                    onClick={sendWhatsApp}
-                    className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
-                  >
-                    💬 ווטסאפ
-                  </button>
-                  <button
-                    onClick={deleteSelected}
-                    className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
-                  >
-                    🗑 מחק
-                  </button>
-                </div>
-              )}
-            </div>
+  <div className="flex flex-col gap-3">
+    <div className="flex flex-col md:flex-row gap-3 items-stretch">
+      <input
+        type="text"
+        placeholder="חיפוש לפי שם או טלפון..."
+        className="flex-1 p-4 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:outline-none"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      {isFullAdmin && (
+        <div className="flex gap-2 flex-shrink-0 flex-wrap">
+          {/* הורדות */}
+          <button
+            onClick={downloadAllGuests}
+            className="bg-teal-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap"
+          >
+            📥 כל המוזמנים
+          </button>
+          <button
+            onClick={downloadConfirmedGuests}
+            className="bg-emerald-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap"
+          >
+            📥 שאישרו הגעה
+          </button>
+
+          {/* הסעות */}
+          {hasTransport && (
+            <>
+              <button
+                onClick={() => setNeedsTransportForSelected(true)}
+                className="bg-cyan-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-cyan-700 whitespace-nowrap"
+              >
+                הוסף הסעה למסומנים
+              </button>
+              <button
+                onClick={() => setNeedsTransportForSelected(false)}
+                className="bg-slate-500 text-white px-5 py-4 rounded-2xl font-medium hover:bg-slate-600 whitespace-nowrap"
+              >
+                בטל הסעה למסומנים
+              </button>
+            </>
+          )}
+
+          {/* פעולות */}
+          <button
+            onClick={sendSMS}
+            className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
+          >
+            📩 SMS
+          </button>
+          <button
+            onClick={sendWhatsApp}
+            className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
+          >
+            💬 ווטסאפ
+          </button>
+          <button
+            onClick={deleteSelected}
+            className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
+          >
+            🗑 מחק
+          </button>
+        </div>
+      )}
+    </div>
 
             {allGroupNames.length > 0 && (
               <div className="flex items-center gap-3">
