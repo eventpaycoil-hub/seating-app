@@ -299,97 +299,77 @@ function LandingPageContent() {
   };
 
   const handleRsvp = async (count: number) => {
-    if (!eventId) {
-      alert(t.invalidLinkAlert);
-      return;
-    }
-    if (!code) {
-      setRsvpStatus('general');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const guestIndex = findGuestIndex(guests, String(code));
-    if (guestIndex === -1) {
-      setRsvpStatus('notFound');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const updated = [...guests];
-    updated[guestIndex] = {
-      ...updated[guestIndex],
-      confirmed: String(count),
-      confirmedCount: count,
-      count: count,
-    };
-
-    await persistGuestUpdate(updated, updated[guestIndex]);
-
-    setRsvpCount(count);
-    setGuestName(updated[guestIndex].name || '');
-    setRsvpStatus('confirmed');
+  if (!eventId) {
+    alert(t.invalidLinkAlert);
+    return;
+  }
+  if (!code) {
+    setRsvpStatus('general');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
 
-    if (event?.hasSeparation === 'כן') {
-      setTimeout(() => {
-        window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
-      }, 1800);
-    }
+  const guestIndex = findGuestIndex(guests, String(code));
+  if (guestIndex === -1) {
+    setRsvpStatus('notFound');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const updated = [...guests];
+  updated[guestIndex] = {
+    ...updated[guestIndex],
+    confirmed: String(count),
+    confirmedCount: count,
+    count: count,
+    confirmedSource: 'link',
+    confirmedAt: now,
   };
 
-  const handleNotComing = async () => {
-    if (!eventId || !code) {
-      setRsvpStatus('general');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
+  await persistGuestUpdate(updated, updated[guestIndex]);
 
-    const guestIndex = findGuestIndex(guests, String(code));
-    if (guestIndex === -1) {
-      setRsvpStatus('notFound');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
+  setRsvpCount(count);
+  setGuestName(updated[guestIndex].name || '');
+  setRsvpStatus('confirmed');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const updated = [...guests];
-    updated[guestIndex] = {
-      ...updated[guestIndex],
-      confirmed: 'לא מגיע',
-      confirmedCount: 0,
-      count: 0,
-    };
+  if (event?.hasSeparation === 'כן') {
+    setTimeout(() => {
+      window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
+    }, 1800);
+  }
+};
 
-    await persistGuestUpdate(updated, updated[guestIndex]);
-    setRsvpStatus('notComing');
+const handleNotComing = async () => {
+  if (!eventId || !code) {
+    setRsvpStatus('general');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const guestIndex = findGuestIndex(guests, String(code));
+  if (guestIndex === -1) {
+    setRsvpStatus('notFound');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const updated = [...guests];
+  updated[guestIndex] = {
+    ...updated[guestIndex],
+    confirmed: 'לא מגיע',
+    confirmedCount: 0,
+    count: 0,
+    confirmedSource: 'link',
+    confirmedAt: now,
   };
 
-  const handleUnknown = async () => {
-    if (!eventId || !code) {
-      setRsvpStatus('general');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const guestIndex = findGuestIndex(guests, String(code));
-    if (guestIndex === -1) {
-      setRsvpStatus('notFound');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const updated = [...guests];
-    updated[guestIndex] = {
-      ...updated[guestIndex],
-      confirmed: 'לא ידוע',
-      confirmedCount: 0,
-    };
-
-    await persistGuestUpdate(updated, updated[guestIndex]);
-    setRsvpStatus('pending');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  await persistGuestUpdate(updated, updated[guestIndex]);
+  setRsvpStatus('notComing');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
     const handlePersonalNoteSubmit = async () => {
     if (!personalNote.trim()) {

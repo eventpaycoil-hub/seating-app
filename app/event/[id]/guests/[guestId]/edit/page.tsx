@@ -185,21 +185,32 @@ export default function EditGuestPage() {
   };
 
     const setCountAndConfirm = (num: number) => {
-    const updatedGuest = {
-      ...guest,
-      confirmed: String(num),
-      confirmedCount: num,
-      count: num,
-    };
-    saveGuestField(updatedGuest);
-    goNextOrList();
+  const now = new Date().toISOString();
+  const updatedGuest = {
+    ...guest,
+    confirmed: String(num),
+    confirmedCount: num,
+    count: num,
+    confirmedSource: 'manual',
+    confirmedAt: now,
   };
+  saveGuestField(updatedGuest);
+  goNextOrList();
+};
 
-  const markAsNotComing = () => {
-    const updatedGuest = { ...guest, count: 0, confirmed: 'לא מגיע' };
-    saveGuestField(updatedGuest);
-    goNextOrList();
+const markAsNotComing = () => {
+  const now = new Date().toISOString();
+  const updatedGuest = {
+    ...guest,
+    count: 0,
+    confirmed: 'לא מגיע',
+    confirmedCount: 0,
+    confirmedSource: 'manual',
+    confirmedAt: now,
   };
+  saveGuestField(updatedGuest);
+  goNextOrList();
+};
 
   const handleTransportChange = (value: string) => {
     saveGuestField({ ...guest, transportation: value });

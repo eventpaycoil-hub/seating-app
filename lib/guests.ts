@@ -37,6 +37,8 @@ export function normalizeGuest(guest: any) {
     transportation: guest.transportation ?? '',
     customerExpectation: guest.customerExpectation ?? guest.customer_expectation ?? '',
     separation: guest.separation ?? '',
+    confirmedSource: guest.confirmedSource ?? guest.confirmed_source ?? null,
+    confirmedAt: guest.confirmedAt ?? guest.confirmed_at ?? null,
   };
 }
 
@@ -66,6 +68,8 @@ function toRow(g: any, eventId: string | number) {
     separation: n.separation || null,
     invite_code: n.inviteCode || null,
     arrived_count: Number(n.arrivedCount) || 0,
+    confirmed_source: n.confirmedSource || null,
+    confirmed_at: n.confirmedAt || null,
   };
 }
 
@@ -85,6 +89,8 @@ function fromRow(row: any) {
     inviteCode: row.invite_code || undefined,
     code: row.invite_code || undefined,
     arrivedCount: row.arrived_count ?? 0,
+    confirmedSource: row.confirmed_source || null,
+    confirmedAt: row.confirmed_at || null,
   });
 }
 
@@ -179,7 +185,6 @@ async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
   const valid = guests.filter((g) => g.name && String(g.name).trim() !== '');
   if (!valid.length) return;
 
-  // חשוב: dedupe נוסף לפני upsert
   const rowsMap = new Map<number, any>();
   for (const g of valid) {
     const row = toRow(g, eid);
@@ -199,9 +204,6 @@ async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
   }
 
   console.log('✅ מוזמנים נשמרו ב-Supabase (upsert):', rows.length);
-
-  
-    
 }
 
 export async function fetchGuestsFromSupabase(

@@ -3,7 +3,7 @@ import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadGuests, saveGuests, getGuests } from '../../../../lib/guests';
-
+import * as XLSX from 'xlsx';
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
 const EDITOR_ALLOWED = [
   'home',
@@ -79,6 +79,60 @@ function getPhoneFlag(phone: string): string {
 function isPending(g: any) {
   return !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
 }
+
+function formatConfirmedAt(iso: string | null | undefined): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const time = d.toLocaleTimeString('he-IL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const date = d.toLocaleDateString('he-IL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    return `${time} ${date}`;
+  } catch {
+    return '';
+  }
+}
+
+/** הורדת קובץ CSV שפותח מצוין באקסל (עם תמיכה בעברית) */
+function downloadGuestsExcel(guestsList: any[], filename: string) {
+  const data = guestsList.map((g) => {
+    const qty =
+      g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
+        ? Number(g.confirmed)
+        : g.quantity || g.count || '';
+
+    return {
+      שם: g.name || '',
+      טלפון: g.phone ? String(g.phone) : '',
+      קבוצה: g.group || '',
+      כמות: qty,
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  worksheet['!cols'] = [
+    { wch: 25 }, // שם
+    { wch: 15 }, // טלפון
+    { wch: 18 }, // קבוצה
+    { wch: 10 }, // כמות
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'מוזמנים');
+
+  XLSX.writeFile(workbook, `${filename}.xlsx`);
+}
+
 export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
@@ -102,7 +156,7 @@ export default function GuestsPage() {
 
   const isFullAdmin = !isClientMode && !isEditorMode;
 
-    useEffect(() => {
+  useEffect(() => {
     if (!eventId) return;
 
     let cancelled = false;
@@ -143,8 +197,8 @@ export default function GuestsPage() {
     };
   }, [eventId]);
 
-    useEffect(() => {
-        const role = (localStorage.getItem('userRole') || '').toLowerCase();
+  useEffect(() => {
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
     const clientMode = localStorage.getItem('clientMode') === 'true';
     const isClient = role === 'client' || clientMode;
     const isEditor = role === 'editor';
@@ -164,10 +218,8 @@ export default function GuestsPage() {
         setVisibleActions(isClient ? [...DEFAULT_CLIENT_ACTIONS] : []);
       }
     } else if (isClient) {
-      // לקוח בלי הגדרות מנהל → רק ברירת מחדל, לא הכל
       setVisibleActions([...DEFAULT_CLIENT_ACTIONS]);
     } else {
-      // מנהל / טלפנית — הסינון לא מגביל (או רשימה מלאה)
       setVisibleActions([
         'home', 'fix-phones', 'video', 'photo', 'calculator', 'groups',
         'guests-arrived', 'tables-status', 'waze', 'add-guests', 'seating',
@@ -178,7 +230,7 @@ export default function GuestsPage() {
     }
   }, [eventId]);
 
-    const getTransportDisplay = (guest: any) => {
+  const getTransportDisplay = (guest: any) => {
     const value = (guest.transportation || guest.transport || '').toString().trim();
     if (!value) return '-';
     const markers = ['*', 'כן', 'הסעה', 'yes', '1', 'true'];
@@ -235,7 +287,7 @@ export default function GuestsPage() {
 
   const { men: menCount, women: womenCount } = countSeparation();
 
-    const yesCount = guests.filter(
+  const yesCount = guests.filter(
     (g: any) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
   ).length;
 
@@ -359,6 +411,22 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
 
+  // === הורדות אקסל ===
+  const downloadAllGuests = () => {
+    if (guests.length === 0) return alert('אין מוזמנים להורדה');
+    const safeTitle = (eventTitle || 'אירוע').replace(/[\\/:*?"<>|]/g, '-');
+    downloadGuestsExcel(guests, `כל-המוזמנים-${safeTitle}`);
+  };
+
+  const downloadConfirmedGuests = () => {
+    const confirmed = guests.filter(
+      (g) => g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1
+    );
+    if (confirmed.length === 0) return alert('אין מוזמנים שאישרו הגעה');
+    const safeTitle = (eventTitle || 'אירוע').replace(/[\\/:*?"<>|]/g, '-');
+    downloadGuestsExcel(confirmed, `מוזמנים-שאישרו-${safeTitle}`);
+  };
+
   const baseCols = isFullAdmin ? 10 : 9;
   const colSpan = baseCols + (hasTransport ? 1 : 0) + (hasSeparation ? 1 : 0);
 
@@ -392,7 +460,7 @@ export default function GuestsPage() {
             )}
           </div>
 
-                    {/* סרגל מצב */}
+          {/* סרגל מצב */}
           <div
             className={`mb-4 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-3 border ${
               isFullAdmin
@@ -493,7 +561,7 @@ export default function GuestsPage() {
           </div>
         )}
 
-                <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
           {hasSeparation && (
             <>
               <div className="bg-blue-50 border border-blue-200 text-blue-800 px-5 py-3 rounded-2xl font-medium flex items-center gap-3">
@@ -609,9 +677,7 @@ export default function GuestsPage() {
             </button>
           ))}
         </div>
-         
 
-        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4"></div>
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3 items-stretch">
@@ -623,7 +689,19 @@ export default function GuestsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {isFullAdmin && (
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                  <button
+                    onClick={downloadAllGuests}
+                    className="bg-teal-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap"
+                  >
+                    📥 כל המוזמנים
+                  </button>
+                  <button
+                    onClick={downloadConfirmedGuests}
+                    className="bg-emerald-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap"
+                  >
+                    📥 שאישרו הגעה
+                  </button>
                   <button
                     onClick={sendSMS}
                     className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
@@ -704,7 +782,7 @@ export default function GuestsPage() {
                   <th className="px-4 py-4 text-right text-xs font-bold text-slate-700 border border-slate-300">
                     קבוצה
                   </th>
-                                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
+                  <th className="px-4 py-4 text-center text-xs font-bold text-slate-700 border border-slate-300">
                     כמות (הערכה)
                   </th>
                   {hasTransport && (
@@ -793,7 +871,22 @@ export default function GuestsPage() {
                               </td>
                             )}
                             <td className="px-4 py-3.5 text-center text-slate-500 font-medium border border-slate-200">
-                              {rowNumber}
+                              <div className="flex flex-col items-center">
+                                <div className="text-base font-bold text-slate-700">{rowNumber}</div>
+                                {guest.confirmedAt &&
+                                  (guest.confirmed === 'לא מגיע' ||
+                                    (guest.confirmed &&
+                                      !isNaN(Number(guest.confirmed)) &&
+                                      Number(guest.confirmed) >= 1)) && (
+                                    <div className="text-[11px] text-slate-500 mt-1 leading-tight">
+                                      {guest.confirmedSource === 'manual'
+                                        ? 'אושר ידנית'
+                                        : 'אושר בקישור'}
+                                      <br />
+                                      {formatConfirmedAt(guest.confirmedAt)}
+                                    </div>
+                                  )}
+                              </div>
                             </td>
                             <td className="px-4 py-3.5 text-center text-blue-700 font-medium border border-slate-200">
                               {eventTitle}
@@ -854,7 +947,10 @@ export default function GuestsPage() {
                                     ✅
                                   </div>
                                   <div className="text-emerald-700 font-bold text-sm mt-1">
-                                   {Number(guest.confirmed) || guest.confirmedCount || guest.count || 1}
+                                    {Number(guest.confirmed) ||
+                                      guest.confirmedCount ||
+                                      guest.count ||
+                                      1}
                                   </div>
                                 </div>
                               ) : (
