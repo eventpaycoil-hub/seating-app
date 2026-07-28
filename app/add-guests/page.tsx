@@ -39,9 +39,16 @@ function isValidIsraeliMobile(phone: string): boolean {
   return phone.length === 10 && phone.startsWith('05');
 }
 
+let idCounter = 0;
+function makeId() {
+  idCounter += 1;
+  // בסיס גדול + מונה + רנדום קטן
+  return Date.now() * 10000 + idCounter * 100 + Math.floor(Math.random() * 100);
+}
+
 function emptyGuest(partial?: Partial<Guest>): Guest {
   return {
-    id: Date.now() + Math.random(),
+    id: makeId(),
     name: '',
     phone: '',
     quantity: '',
@@ -100,7 +107,7 @@ function extractGuestsFromBlocks(
   const seen = new Set<string>();
 
   blocks.forEach((block) => {
-    rows.forEach((row) => {
+    rows.forEach((row, rowIdx) => {
       const name = String(row[block.nameCol] ?? '').trim();
       if (!name) return;
       if (/שם|name|טלפון|phone/i.test(name) && name.length < 20) return;
@@ -117,7 +124,8 @@ function extractGuestsFromBlocks(
         if (g) group = g;
       }
 
-      const key = `${name}|${phone}`;
+      // מפתח ייחודי יותר – גם אם אין טלפון
+      const key = `${name}|${phone}|${rowIdx}|${block.nameCol}`;
       if (seen.has(key)) return;
       seen.add(key);
 
@@ -185,7 +193,6 @@ function AddGuestsContent() {
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
 
-    // Contact Picker API – בעיקר כרום באנדרואיד
     setContactsSupported(
       typeof window !== 'undefined' &&
         'contacts' in navigator &&
@@ -202,38 +209,26 @@ function AddGuestsContent() {
     if (field === 'phone') finalValue = normalizePhone(value);
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, [field]: finalValue } : g)));
   };
+
   const handleKeyDown = (
-  e: React.KeyboardEvent<HTMLInputElement>,
-  rowIndex: number,
-  field: keyof Guest
-) => {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    field: keyof Guest
+  ) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
 
-  if (rowIndex >= guests.length - 1) {
-    setGuests(prev => [
-      ...prev,
-      {
-        id: Date.now() + Math.random(),
-        name: '',
-        phone: '',
-        quantity: '',
-        group: '',
-        transportation: '',
-        confirmed: '',
-        customerExpectation: '',
-        notes: '',
-      },
-    ]);
-  }
+    if (rowIndex >= guests.length - 1) {
+      setGuests((prev) => [...prev, emptyGuest()]);
+    }
 
-  setTimeout(() => {
-    const next = document.querySelector(
-      `input[data-row="${rowIndex + 1}"][data-field="${field}"]`
-    ) as HTMLInputElement | null;
-    next?.focus();
-  }, 0);
-};
+    setTimeout(() => {
+      const next = document.querySelector(
+        `input[data-row="${rowIndex + 1}"][data-field="${field}"]`
+      ) as HTMLInputElement | null;
+      next?.focus();
+    }, 0);
+  };
 
   const deleteRow = (id: number) => {
     if (!confirm('למחוק את השורה?')) return;
@@ -312,6 +307,8 @@ function AddGuestsContent() {
       (g) => !existingKeys.has(`${g.name.trim()}|${normalizePhone(g.phone)}`)
     );
 
+    console.log('saveListToEvent → valid:', valid.length, 'unique:', unique.length, 'existing:', existing.length);
+
     saveGuests(eventId, [...existing, ...unique]);
     return unique.length;
   };
@@ -321,6 +318,8 @@ function AddGuestsContent() {
     if (count > 0) {
       alert(`✅ ${count} מוזמנים נשמרו לאירוע!`);
       setGuests(Array.from({ length: 30 }, () => emptyGuest()));
+    } else {
+      alert('לא נוספו מוזמנים חדשים (ייתכן שכולם כבר קיימים)');
     }
   };
 
@@ -363,6 +362,8 @@ function AddGuestsContent() {
         group: selectedGroup,
         transportation: allTransportation ? 'כן' : '',
       });
+
+      console.log('Excel preview:', preview.length, 'blocks:', blocks.length);
 
       setExcelHeaders(headerRow);
       setExcelRows(body);
@@ -465,7 +466,6 @@ function AddGuestsContent() {
     alert(count > 0 ? `✅ ${count} מוזמנים נשמרו ישירות לאירוע!` : 'כל המוזמנים כבר קיימים');
   };
 
-  /** ייבוא מאנשי קשר בטלפון */
   const importFromContacts = async () => {
     try {
       const nav: any = navigator;
@@ -574,7 +574,6 @@ function AddGuestsContent() {
         <button
           onClick={importFromContacts}
           className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold"
-          title={contactsSupported ? 'בחירה מאנשי הקשר' : 'נתמך בעיקר בכרום באנדרואיד'}
         >
           📱 מאנשי קשר
         </button>
@@ -622,94 +621,94 @@ function AddGuestsContent() {
                   <td className="text-center text-slate-500 py-3 border-r">{idx + 1}</td>
                   <td className="pr-6 border-r">
                     <input
-  value={guest.name}
-  onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
-  onPaste={(e) => handlePaste(e, idx, 'name')}
-  onKeyDown={(e) => handleKeyDown(e, idx, 'name')}
-  data-row={idx}
-  data-field="name"
-  className="w-full py-3.5 outline-none bg-transparent"
-/>
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.phone}
-    onChange={(e) => updateGuest(guest.id, 'phone', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'phone')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'phone')}
-    data-row={idx}
-    data-field="phone"
-    className={`w-full py-3.5 outline-none bg-transparent ${
-      phoneInvalid ? 'text-red-600 font-semibold' : ''
-    }`}
-  />
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.quantity}
-    onChange={(e) => updateGuest(guest.id, 'quantity', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'quantity')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'quantity')}
-    data-row={idx}
-    data-field="quantity"
-    className="w-full py-3.5 outline-none text-center bg-transparent"
-  />
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.group}
-    onChange={(e) => updateGuest(guest.id, 'group', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'group')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'group')}
-    data-row={idx}
-    data-field="group"
-    className="w-full py-3.5 outline-none bg-transparent"
-  />
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.transportation}
-    onChange={(e) => updateGuest(guest.id, 'transportation', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'transportation')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'transportation')}
-    data-row={idx}
-    data-field="transportation"
-    className="w-full py-3.5 outline-none bg-transparent"
-  />
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.confirmed}
-    onChange={(e) => updateGuest(guest.id, 'confirmed', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'confirmed')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'confirmed')}
-    data-row={idx}
-    data-field="confirmed"
-    className="w-full py-3.5 outline-none bg-transparent"
-  />
-</td>
-<td className="pr-6 border-r">
-  <input
-    value={guest.customerExpectation}
-    onChange={(e) => updateGuest(guest.id, 'customerExpectation', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'customerExpectation')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'customerExpectation')}
-    data-row={idx}
-    data-field="customerExpectation"
-    className="w-full py-3.5 outline-none bg-transparent"
-  />
-</td>
-<td className="pr-6">
-  <input
-    value={guest.notes}
-    onChange={(e) => updateGuest(guest.id, 'notes', e.target.value)}
-    onPaste={(e) => handlePaste(e, idx, 'notes')}
-    onKeyDown={(e) => handleKeyDown(e, idx, 'notes')}
-    data-row={idx}
-    data-field="notes"
-    className="w-full py-3.5 outline-none bg-transparent"
-  />
-</td>
+                      value={guest.name}
+                      onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'name')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'name')}
+                      data-row={idx}
+                      data-field="name"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.phone}
+                      onChange={(e) => updateGuest(guest.id, 'phone', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'phone')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'phone')}
+                      data-row={idx}
+                      data-field="phone"
+                      className={`w-full py-3.5 outline-none bg-transparent ${
+                        phoneInvalid ? 'text-red-600 font-semibold' : ''
+                      }`}
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.quantity}
+                      onChange={(e) => updateGuest(guest.id, 'quantity', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'quantity')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'quantity')}
+                      data-row={idx}
+                      data-field="quantity"
+                      className="w-full py-3.5 outline-none text-center bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.group}
+                      onChange={(e) => updateGuest(guest.id, 'group', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'group')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'group')}
+                      data-row={idx}
+                      data-field="group"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.transportation}
+                      onChange={(e) => updateGuest(guest.id, 'transportation', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'transportation')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'transportation')}
+                      data-row={idx}
+                      data-field="transportation"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.confirmed}
+                      onChange={(e) => updateGuest(guest.id, 'confirmed', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'confirmed')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'confirmed')}
+                      data-row={idx}
+                      data-field="confirmed"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6 border-r">
+                    <input
+                      value={guest.customerExpectation}
+                      onChange={(e) => updateGuest(guest.id, 'customerExpectation', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'customerExpectation')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'customerExpectation')}
+                      data-row={idx}
+                      data-field="customerExpectation"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
+                  <td className="pr-6">
+                    <input
+                      value={guest.notes}
+                      onChange={(e) => updateGuest(guest.id, 'notes', e.target.value)}
+                      onPaste={(e) => handlePaste(e, idx, 'notes')}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 'notes')}
+                      data-row={idx}
+                      data-field="notes"
+                      className="w-full py-3.5 outline-none bg-transparent"
+                    />
+                  </td>
                   <td className="text-center">
                     <button onClick={() => deleteRow(guest.id)} className="text-red-500 text-xl px-3">
                       ×

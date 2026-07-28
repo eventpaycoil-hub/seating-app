@@ -8,7 +8,12 @@ export function generateInviteCode(): string {
 export function normalizeGuest(guest: any) {
   if (!guest) return guest;
 
-  const id = guest.id ?? Date.now() + Math.floor(Math.random() * 100000);
+  const id =
+  guest.id ??
+  Date.now() * 1000000 +
+    Math.floor(Math.random() * 1000000) +
+    Math.floor(Math.random() * 100000) +
+    Math.floor(Math.random() * 10000);
 
   return {
     ...guest,
@@ -46,7 +51,11 @@ export function normalizeGuest(guest: any) {
 function toRow(g: any, eventId: string | number) {
   const n = normalizeGuest(g);
   const eid = Number(eventId);
-  const idNum = Math.floor(Number(n.id));
+  const idNum = Number(n.id);
+if (!Number.isFinite(idNum) || idNum <= 0) {
+  // אם משום מה אין ID תקין – צור חדש
+  return null as any;
+}
   const countValue =
     Number(n.confirmedCount) ||
     Number(n.count) ||
@@ -178,14 +187,45 @@ export function saveGuests(eventId: string | number, guests: any[]) {
 async function syncGuestsToSupabase(eventId: string | number, guests: any[]) {
   const eid = Number(eventId);
   const valid = guests.filter((g) => g.name && String(g.name).trim() !== '');
+
+  // 1. מביא את כל ה-IDs הקיימים בענן לאירוע הזה
+  const { data: existingRows, error: fetchError } = await supabase
+    .from('guests')
+    .select('id')
+    .eq('event_id', eid);
+
+  if (fetchError) {
+    console.warn('Supabase fetch ids error:', fetchError.message);
+  }
+
+  const existingIds = new Set((existingRows || []).map((r: any) => Number(r.id)));
+  const newIds = new Set(valid.map((g) => Number(g.id)).filter((id) => !Number.isNaN(id)));
+
+  // 2. מוחק מהענן את מה שכבר לא קיים ברשימה
+  const toDelete = [...existingIds].filter((id) => !newIds.has(id));
+  if (toDelete.length > 0) {
+    const { error: delError } = await supabase
+      .from('guests')
+      .delete()
+      .eq('event_id', eid)
+      .in('id', toDelete);
+
+    if (delError) {
+      console.warn('Supabase delete error:', delError.message);
+    } else {
+      console.log('🗑 נמחקו מ-Supabase:', toDelete.length);
+    }
+  }
+
+  // 3. Upsert של מה שנשאר
   if (!valid.length) return;
 
   const rowsMap = new Map<number, any>();
   for (const g of valid) {
-    const row = toRow(g, eid);
-    if (!row.id || Number.isNaN(row.id)) continue;
-    rowsMap.set(row.id, row);
-  }
+  const row = toRow(g, eid);
+  if (!row || !row.id || Number.isNaN(row.id)) continue;
+  rowsMap.set(row.id, row);
+}
   const rows = Array.from(rowsMap.values());
   if (!rows.length) return;
 
