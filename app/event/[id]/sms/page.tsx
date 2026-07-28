@@ -59,18 +59,19 @@ export default function SMSPage() {
   }, []);
 
   useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const event = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (event) setCurrentEvent(event);
+  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+  const event = events.find((e: any) => e.id.toString() === eventId.toString());
+  if (event) setCurrentEvent(event);
 
-    const normalizedGuests = getGuests(String(eventId));
-    setGuests(normalizedGuests);
-    saveGuests(String(eventId), normalizedGuests);
+  (async () => {
+    const { loadGuests } = await import('../../../../lib/guests');
+    const list = await loadGuests(String(eventId));
+    setGuests(list);
+  })();
 
-    const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
-    setSeatingTables(seating);
-  }, [eventId]);
-
+  const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
+  setSeatingTables(seating);
+}, [eventId]);
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('selectedForSMS');
@@ -92,10 +93,9 @@ export default function SMSPage() {
   }, [guests, selectedGuestIds]);
 
   const activeGuest = useMemo(() => {
-    if (selectedGuestsList.length > 0) return selectedGuestsList[0];
-    return guests[0];
-  }, [guests, selectedGuestsList]);
-
+  if (selectedGuestsList.length > 0) return selectedGuestsList[0];
+  return null; // אל תיקח אוטומטית את הראשון
+}, [guests, selectedGuestsList]);
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     if (dateStr.includes('/')) return dateStr;
