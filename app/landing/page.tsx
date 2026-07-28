@@ -391,7 +391,7 @@ function LandingPageContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePersonalNoteSubmit = async () => {
+    const handlePersonalNoteSubmit = async () => {
     if (!personalNote.trim()) {
       alert(t.writeMessage);
       return;
@@ -400,9 +400,11 @@ function LandingPageContent() {
       const guestIndex = findGuestIndex(guests, String(code));
       if (guestIndex !== -1) {
         const updated = [...guests];
+        const existing = (updated[guestIndex].notes || '').trim();
+        const noteText = `הערת מוזמן: ${personalNote.trim()}`;
         updated[guestIndex] = {
           ...updated[guestIndex],
-          notes: personalNote,
+          notes: existing ? `${existing}\n${noteText}` : noteText,
         };
         await persistGuestUpdate(updated, updated[guestIndex]);
       }
@@ -429,7 +431,6 @@ function LandingPageContent() {
       </div>
     );
   }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
