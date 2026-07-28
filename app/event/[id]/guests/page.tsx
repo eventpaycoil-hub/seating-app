@@ -283,7 +283,7 @@ export default function GuestsPage() {
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     filteredGuests.forEach((g) => {
-      const key = (g.group && String(g.group).trim()) || 'ללא קבוצה';
+      const key = (g.group && String(g.group).trim()) || 'כללי';
       if (!map[key]) map[key] = [];
       map[key].push(g);
     });
@@ -293,7 +293,7 @@ export default function GuestsPage() {
   const allGroupNames = useMemo(() => {
     const set = new Set<string>();
     guests.forEach((g: any) => {
-      const key = (g.group && String(g.group).trim()) || 'ללא קבוצה';
+      const key = (g.group && String(g.group).trim()) || 'כללי';
       set.add(key);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
