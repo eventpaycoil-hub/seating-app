@@ -38,6 +38,8 @@ export default function SMSPage() {
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const [customEmojis, setCustomEmojis] = useState<string[]>([]);
   const [newEmoji, setNewEmoji] = useState('');
+  // כבוי = ברירת מחדל "משפחה וחברים יקרים" | דלוק = שם האורח מהרשימה
+  const [useGuestName, setUseGuestName] = useState(false);
 
   const emojis = useMemo(
     () => [...DEFAULT_EMOJIS, ...customEmojis],
@@ -113,7 +115,7 @@ export default function SMSPage() {
 
   const getBaseUrl = () => {
     if (typeof window !== 'undefined') return window.location.origin;
-    return 'https://seating-app-dusky.vercel.app';
+    return 'https://www.eventpay1.co.il';
   };
 
   const buildDynamicMessage = (template: any, guestOverride?: any) => {
@@ -129,9 +131,16 @@ export default function SMSPage() {
       message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
     }
 
-    if (guest?.name && [1, 2, 6].includes(template.id)) {
-      message = message.replace(/\*שם\*/g, guest.name);
-      message = message.replace(/\*name\*/g, guest.name);
+    // הודעות 1, 2, 6 — שם אורח או ברירת מחדל
+    if ([1, 2, 6].includes(template.id)) {
+      let displayName: string;
+      if (useGuestName && guest?.name) {
+        displayName = guest.name;
+      } else {
+        displayName = en ? 'family and friends' : 'משפחה וחברים יקרים';
+      }
+      message = message.replace(/\*שם\*/g, displayName);
+      message = message.replace(/\*name\*/g, displayName);
     }
 
     if (template.id === 1 || template.id === 6) {
@@ -221,7 +230,7 @@ export default function SMSPage() {
     const base =
       typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://seating-app-dusky.vercel.app';
+        : 'https://www.eventpay1.co.il';
 
     if (isEnglishEvent) {
       return [
@@ -297,6 +306,14 @@ export default function SMSPage() {
     setEditedMessage('');
     setIsEditing(false);
   }, [isEnglishEvent]);
+
+  // רענון הודעה כשמשנים מתג שם אורח (רק 1/2/6, בלי לדרוס עריכה ידנית)
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    if (![1, 2, 6].includes(selectedTemplate.id)) return;
+    if (isEditing) return;
+    setEditedMessage(buildDynamicMessage(selectedTemplate));
+  }, [useGuestName, activeGuest, selectedTemplate?.id]);
 
   const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
@@ -413,7 +430,7 @@ export default function SMSPage() {
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -508,6 +525,35 @@ export default function SMSPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* מתג שם אורח — רק הודעות 1, 2, 6 */}
+                {[1, 2, 6].includes(selectedTemplate.id) && (
+                  <div className="mb-4 p-4 rounded-2xl bg-slate-50 border flex items-center justify-between gap-4">
+                    <div className="text-sm text-gray-700">
+                      {useGuestName
+                        ? isEnglishEvent
+                          ? 'Using guest name from list'
+                          : 'משתמש בשם האורח מהרשימה'
+                        : isEnglishEvent
+                          ? 'Default: family and friends'
+                          : 'ברירת מחדל: משפחה וחברים יקרים'}
+                    </div>
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <span className="text-sm font-medium">
+                        {isEnglishEvent ? 'Use guest name' : 'שם האורח'}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={useGuestName}
+                        onChange={(e) => {
+                          setUseGuestName(e.target.checked);
+                          setIsEditing(false);
+                        }}
+                        className="w-5 h-5"
+                      />
+                    </label>
+                  </div>
+                )}
 
                 {showEmojiPicker && (
                   <div className="mb-6 bg-white border rounded-2xl p-4 shadow-inner">
