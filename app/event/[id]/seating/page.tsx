@@ -253,7 +253,7 @@ console.log('arrivedMap', map);
           Number(g.count) ||
           Number(g.quantity) ||
           1;
-        const group = (g.group || '').trim() || 'ללא קבוצה';
+        const group = (g.group || '').trim() || 'כללי';
         meta[g.name] = { group };
         qtyMap[g.name] = num;
         if (!assigned.has(g.name)) {
@@ -297,7 +297,7 @@ console.log('arrivedMap', map);
     
     table.guestSeats?.[name] ?? getGuestQty(name);
   const getGuestGroup = (name: string, fallback?: string) => {
-    return guestMetaRef.current?.[name]?.group || fallback || 'ללא קבוצה';
+    return guestMetaRef.current?.[name]?.group || fallback || 'כללי';
   };
   const getOccupiedSeats = (table: PlacedTable) =>
     (table.assignedGuests || []).reduce(
@@ -896,8 +896,8 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
       map[g.group].push(g);
     });
     return Object.entries(map).sort(([a], [b]) => {
-      if (a === 'ללא קבוצה') return 1;
-      if (b === 'ללא קבוצה') return -1;
+      if (a === 'כללי') return 1;
+      if (b === 'כללי') return -1;
       return a.localeCompare(b, 'he');
     });
   }, [filteredUnassigned]);
