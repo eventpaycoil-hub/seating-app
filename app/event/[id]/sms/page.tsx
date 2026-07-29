@@ -46,7 +46,7 @@ function getEventInvitePhrase(event: any, en = false) {
 function getWelcomeBlock(event: any, en = false) {
   const line = (event?.welcomeLine || '').trim();
   if (line) {
-    return en ? `We look forward to seeing you, ${line}` : `נשמח לראותכם ${line}`;
+    return en ? `We look forward to seeing you, ${line}` : `נשמח לראותכם: ${line}`;
   }
 
   const type = event?.eventType || 'חתונה';
