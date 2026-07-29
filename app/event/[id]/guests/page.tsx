@@ -142,9 +142,9 @@ export default function GuestsPage() {
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
-  const [activeFilter, setActiveFilter] = useState<
+    const [activeFilter, setActiveFilter] = useState<
     'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'
-  >('unknownEmpty');
+  >('all');
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
@@ -332,26 +332,33 @@ export default function GuestsPage() {
   const waitingCount = Math.max(0, totalGuests - willComeCount - wontComeCount);
   const pct = (n: number) => (totalGuests === 0 ? 0 : Math.round((n / totalGuests) * 100));
 
-  const grouped = useMemo(() => {
+    const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     filteredGuests.forEach((g) => {
       const key = (g.group && String(g.group).trim()) || 'כללי';
       if (!map[key]) map[key] = [];
       map[key].push(g);
     });
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'he'));
+    return Object.entries(map).sort((a, b) => {
+      if (a[0] === 'כללי') return 1;
+      if (b[0] === 'כללי') return -1;
+      return a[0].localeCompare(b[0], 'he');
+    });
   }, [filteredGuests]);
 
-  const allGroupNames = useMemo(() => {
+     const allGroupNames = useMemo(() => {
     const set = new Set<string>();
+    let hasGeneral = false;
     guests.forEach((g: any) => {
-      const key = (g.group && String(g.group).trim()) || 'כללי';
-      set.add(key);
+      const raw = (g.group && String(g.group).trim()) || '';
+      if (raw) set.add(raw);
+      else hasGeneral = true;
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
+    const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
+    if (hasGeneral) list.push('כללי');
+    return list;
   }, [guests]);
-
-  const scrollToGroup = (groupName: string) => {
+     const scrollToGroup = (groupName: string) => {
     setJumpGroup(groupName);
     if (!groupName) return;
     setTimeout(() => {
@@ -489,6 +496,7 @@ export default function GuestsPage() {
               { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
               { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },
               { id: 'waze', href: '/venue', label: 'רשומות WAZE', icon: '📍' },
+              { id: 'gifts', href: `/event/${eventId}/gifts`, label: 'מתנות שקיבלנו', icon: '🎁' },
               { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: 'הוספת מוזמנים', icon: '➕' },
               { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: 'הושבת מוזמנים', icon: '🪑' },
               { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: 'הושבה מהירה', icon: '⚡' },
@@ -837,7 +845,7 @@ const groupStartNumber = totalInFilter - guestsBefore;
 
 return (
                     <Fragment key={`group-${groupName}`}>
-                      <tr id={`group-header-${groupName}`}>
+                     <tr id={`group-header-${groupName}`} style={{ scrollMarginTop: '140px' }}>
                         {isFullAdmin && (
                           <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
