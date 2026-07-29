@@ -11,24 +11,20 @@ interface QuickAction {
 
 const allActions: QuickAction[] = [
   { id: 'home', label: 'עמוד הבית', icon: '🏠' },
+  { id: 'fix-phones', label: 'תיקון מספרים', icon: '📞' },
   { id: 'video', label: 'וידאו האירוע', icon: '🎥' },
-  { id: 'photo', label: 'תמונת האירוע', icon: '🖼️' },
-  { id: 'groups', label: 'קבוצות המוזמנים', icon: '👥' },
-  { id: 'waze', label: 'רשומות WAZE', icon: '📍' },
+  { id: 'photo', label: 'תמונות האירוע', icon: '🖼' },
+  { id: 'groups', label: 'קבוצות מוזמנים', icon: '👥' },
+  { id: 'guests-arrived', label: 'אורחים שהגיעו', icon: '✅' },
+  { id: 'gifts', label: 'מתנות שקיבלנו', icon: '🎁' },
   { id: 'add-guests', label: 'הוספת מוזמנים', icon: '➕' },
   { id: 'seating', label: 'הושבת מוזמנים', icon: '🪑' },
   { id: 'fast-seating', label: 'הושבה מהירה', icon: '⚡' },
-  { id: 'arrived', label: 'אורחים שהגיעו', icon: '✅' },
-  { id: 'add-tables', label: 'הוספת שולחנות', icon: '➕' },
-  { id: 'pricing', label: 'הצעות מחיר', icon: '💰' },
-  { id: 'pricing-view', label: 'צפייה בהצעות', icon: '👀' },
-  { id: 'events-list', label: 'רשימת אירועים', icon: '📅' },
-  { id: 'edit-event', label: 'עריכת אירוע', icon: '✏️' },
-  { id: 'sms', label: 'SMS', icon: '📩' },
-  { id: 'whatsapp', label: 'תבניות ווטסאפ', icon: '💬' },
-  { id: 'transport', label: 'הסעות', icon: '🚌' },
+  { id: 'checkin', label: 'סריקת כניסה', icon: '📷' },
+  { id: 'duplicate-phones', label: 'מספרים כפולים', icon: '🔁' },
   { id: 'seating-sketch', label: 'סקיצה אולם', icon: '🪑' },
-  { id: 'new-event', label: 'פתח אירוע חדש', icon: '➕' },
+  { id: 'seating-view', label: 'תצוגת אולם', icon: '🗺️' },
+  { id: 'transport', label: 'הסעות', icon: '🚌' },
 ];
 
 interface SeatingPermissions {

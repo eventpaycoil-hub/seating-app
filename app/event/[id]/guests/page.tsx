@@ -155,7 +155,26 @@ export default function GuestsPage() {
   const [roleLabel, setRoleLabel] = useState('');
 
   const isFullAdmin = !isClientMode && !isEditorMode;
-
+  const ADMIN_ONLY = useMemo(
+    () =>
+      new Set([
+        'calculator',
+        'tables-status',
+        'waze',
+        'add-tables',
+        'pricing',
+        'pricing-view',
+        'events-list',
+        'edit-event',
+        'sms',
+        'email',
+        'whatsapp',
+        'landing',
+        'new-event',
+        'admin-settings',
+      ]),
+    []
+  );
   useEffect(() => {
     if (!eventId) return;
 
@@ -477,10 +496,23 @@ export default function GuestsPage() {
                 : 'bg-indigo-100 border-indigo-300'
             }`}
           >
-            <div className="font-bold text-lg">
+            <div className="font-bold text-lg flex flex-wrap items-center gap-2">
               {roleLabel || (isFullAdmin ? '🔑 מצב מנהל' : isEditorMode ? '📞 מצב טלפנית' : '👤 מצב לקוח')}
               {' · '}
               {eventTitle}
+              {isClientMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('userRole', 'admin');
+                    localStorage.removeItem('clientMode');
+                    window.location.reload();
+                  }}
+                  className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-full hover:bg-slate-900"
+                >
+                  🔑 חזרה למנהל
+                </button>
+              )}
             </div>
             <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
           </div>
@@ -517,12 +549,13 @@ export default function GuestsPage() {
               { id: 'new-event', href: '/create-event', label: 'פתח אירוע חדש', icon: '➕' },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
-              .filter((item) => {
-                if (isFullAdmin) return true;
-                if (isEditorMode) return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
-                if (item.id === 'admin-settings' || item.id === 'new-event' || item.id === 'pricing') return false;
-                return visibleActions.includes(item.id);
-              })
+                  .filter((item) => {
+      if (isFullAdmin) return true;
+      if (isEditorMode)
+        return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
+      if (ADMIN_ONLY.has(item.id)) return false;
+      return visibleActions.includes(item.id);
+    })
               .map((item) => (
                 <Link
                   key={item.id}
@@ -697,7 +730,7 @@ export default function GuestsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              {isFullAdmin && (
+                           {isFullAdmin && (
                 <div className="flex gap-2 flex-shrink-0 flex-wrap">
                   <button
                     onClick={downloadAllGuests}

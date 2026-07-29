@@ -25,6 +25,10 @@ function GalleryInner() {
   const [eventTitle, setEventTitle] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  const [cover1, setCover1] = useState('');
+  const [cover2, setCover2] = useState('');
+  const [activeLanding, setActiveLanding] = useState<1 | 2>(1);
+
   const storageKey = eventId ? `eventpay-media_${eventId}` : 'eventpay-media_unknown';
 
   useEffect(() => {
@@ -33,7 +37,6 @@ function GalleryInner() {
       return;
     }
 
-    // 1) local cache
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       try {
@@ -45,14 +48,20 @@ function GalleryInner() {
       setMedia([]);
     }
 
-    // 2) event title
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const current = events.find((e: any) => e.id.toString() === eventId.toString());
-      if (current) setEventTitle(current.owners || current.title || '');
+      if (current) {
+        setEventTitle(current.owners || current.title || '');
+        if (current.coverUrl) setCover1(current.coverUrl);
+        if (current.coverUrl2) setCover2(current.coverUrl2);
+        if (current.landingCover === 2) setActiveLanding(2);
+      }
     } catch {}
 
-    // 3) נסה לטעון cover מ-Supabase events
+    const slot = localStorage.getItem(`landing_cover_slot_${eventId}`);
+    if (slot === '2') setActiveLanding(2);
+
     (async () => {
       try {
         const { data } = await supabase
@@ -66,6 +75,7 @@ function GalleryInner() {
         }
 
         if (data?.cover_url) {
+          setCover1((prev) => prev || data.cover_url);
           setMedia((prev) => {
             if (prev.some((m) => m.url === data.cover_url)) return prev;
             const coverItem: MediaItem = {
@@ -99,6 +109,43 @@ function GalleryInner() {
     }
   };
 
+  const persistEventCovers = (c1: string, c2: string, slot: 1 | 2) => {
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const next = events.map((ev: any) =>
+        String(ev.id) === String(eventId)
+          ? { ...ev, coverUrl: c1, coverUrl2: c2, landingCover: slot }
+          : ev
+      );
+      localStorage.setItem('myEvents', JSON.stringify(next));
+    } catch {}
+    localStorage.setItem(`landing_cover_slot_${eventId}`, String(slot));
+  };
+
+  const setAsCover = async (url: string, slot: 1 | 2) => {
+    const next1 = slot === 1 ? url : cover1;
+    const next2 = slot === 2 ? url : cover2;
+    setCover1(next1);
+    setCover2(next2);
+    persistEventCovers(next1, next2, activeLanding);
+
+    if (slot === 1) {
+      try {
+        await supabase.from('events').upsert(
+          { id: Number(eventId), cover_url: url },
+          { onConflict: 'id' }
+        );
+      } catch (e) {
+        console.warn('save cover_url failed', e);
+      }
+    }
+  };
+
+  const chooseLanding = (slot: 1 | 2) => {
+    setActiveLanding(slot);
+    persistEventCovers(cover1, cover2, slot);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -121,7 +168,6 @@ function GalleryInner() {
       const ext = selectedFile.name.split('.').pop() || (isImage ? 'jpg' : 'pdf');
       const path = `${eventId}/${Date.now()}.${ext}`;
 
-      // העלאה ל-Storage
       const { error: uploadError } = await supabase.storage
         .from('event-media')
         .upload(path, selectedFile, {
@@ -137,7 +183,6 @@ function GalleryInner() {
         return;
       }
 
-      // כתובת ציבורית
       const { data: pub } = supabase.storage.from('event-media').getPublicUrl(path);
       const publicUrl = pub?.publicUrl;
 
@@ -159,30 +204,9 @@ function GalleryInner() {
       const updated = [newItem, ...media];
       saveToLocal(updated);
 
-      // אם זו תמונה — שמור כ-cover של האירוע
-      if (isImage) {
-        try {
-          await supabase
-            .from('events')
-            .upsert(
-              {
-                id: Number(eventId),
-                cover_url: publicUrl,
-              },
-              { onConflict: 'id' }
-            );
-        } catch (e) {
-          console.warn('save cover_url failed (ייתכן שחסרה עמודה cover_url)', e);
-        }
-
-        // גם ב-localStorage של האירוע
-        try {
-          const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-          const next = events.map((ev: any) =>
-            String(ev.id) === String(eventId) ? { ...ev, coverUrl: publicUrl } : ev
-          );
-          localStorage.setItem('myEvents', JSON.stringify(next));
-        } catch {}
+      // תמונה ראשונה בלי cover1 → אוטומטית תמונה 1
+      if (isImage && !cover1) {
+        await setAsCover(publicUrl, 1);
       }
 
       setSelectedFile(null);
@@ -209,6 +233,17 @@ function GalleryInner() {
 
     const updated = media.filter((m) => m.id !== item.id);
     saveToLocal(updated);
+
+    if (item.url === cover1) {
+      setCover1('');
+      persistEventCovers('', cover2, activeLanding === 1 ? 1 : activeLanding);
+    }
+    if (item.url === cover2) {
+      setCover2('');
+      const slot = activeLanding === 2 ? 1 : activeLanding;
+      setActiveLanding(slot);
+      persistEventCovers(cover1, '', slot);
+    }
   };
 
   return (
@@ -235,7 +270,7 @@ function GalleryInner() {
           </div>
         )}
 
-        <div className="bg-white rounded-3xl shadow p-8 mb-10">
+        <div className="bg-white rounded-3xl shadow p-8 mb-8">
           <h2 className="text-xl font-bold mb-4">העלה תמונה או PDF</h2>
           <input
             type="file"
@@ -256,6 +291,64 @@ function GalleryInner() {
               {uploading ? 'מעלה...' : 'העלה עכשיו לענן'}
             </button>
           )}
+        </div>
+
+        <div className="bg-white rounded-3xl shadow p-6 mb-8">
+          <h2 className="text-lg font-bold mb-4">תמונות לדף הנחיתה</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div
+              className={`border-2 rounded-2xl p-3 ${
+                activeLanding === 1 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
+              }`}
+            >
+              <div className="text-sm font-bold mb-2">תמונה 1 (ברירת מחדל)</div>
+              {cover1 ? (
+                <img src={cover1} alt="cover1" className="h-40 w-full object-cover rounded-xl mb-3" />
+              ) : (
+                <div className="h-40 bg-gray-100 rounded-xl mb-3 flex items-center justify-center text-gray-400 text-sm">
+                  לא נבחרה
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => chooseLanding(1)}
+                className={`w-full py-2 rounded-xl font-medium ${
+                  activeLanding === 1 ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {activeLanding === 1 ? '✓ מוצגת בדף נחיתה' : 'הצג בדף נחיתה'}
+              </button>
+            </div>
+
+            <div
+              className={`border-2 rounded-2xl p-3 ${
+                activeLanding === 2 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'
+              }`}
+            >
+              <div className="text-sm font-bold mb-2">תמונה 2 (אנגלית / חלופית)</div>
+              {cover2 ? (
+                <img src={cover2} alt="cover2" className="h-40 w-full object-cover rounded-xl mb-3" />
+              ) : (
+                <div className="h-40 bg-gray-100 rounded-xl mb-3 flex items-center justify-center text-gray-400 text-sm">
+                  לא נבחרה
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => chooseLanding(2)}
+                disabled={!cover2}
+                className={`w-full py-2 rounded-xl font-medium disabled:opacity-40 ${
+                  activeLanding === 2 ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {activeLanding === 2 ? '✓ מוצגת בדף נחיתה' : 'הצג בדף נחיתה'}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            ברירת מחדל = תמונה 1. בחר תמונה מהגלריה למטה ← &quot;הגדר כתמונה 1/2&quot; ← ואז איזו תוצג בדף
+            הנחיתה.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -295,6 +388,28 @@ function GalleryInner() {
                     פתח
                   </a>
                 </div>
+                {item.type === 'image' && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAsCover(item.url, 1)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-medium ${
+                        cover1 === item.url ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-800'
+                      }`}
+                    >
+                      {cover1 === item.url ? '✓ תמונה 1' : 'הגדר כתמונה 1'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAsCover(item.url, 2)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-medium ${
+                        cover2 === item.url ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-800'
+                      }`}
+                    >
+                      {cover2 === item.url ? '✓ תמונה 2' : 'הגדר כתמונה 2'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -306,7 +421,13 @@ function GalleryInner() {
 
 export default function GalleryPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" dir="rtl">טוען גלריה...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center" dir="rtl">
+          טוען גלריה...
+        </div>
+      }
+    >
       <GalleryInner />
     </Suspense>
   );

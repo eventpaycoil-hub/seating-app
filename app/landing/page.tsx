@@ -100,6 +100,23 @@ function findGuestIndex(saved: any[], searchCode: string) {
   });
 }
 
+function getPreferredCover(eventId: string, event: any) {
+  try {
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const current =
+      events.find((e: any) => String(e.id) === String(eventId)) || event || {};
+    const slot =
+      Number(localStorage.getItem(`landing_cover_slot_${eventId}`)) === 2 ||
+      current?.landingCover === 2
+        ? 2
+        : 1;
+    if (slot === 2 && current?.coverUrl2) return current.coverUrl2;
+    return current?.coverUrl || event?.coverUrl || '';
+  } catch {
+    return event?.coverUrl || '';
+  }
+}
+
 function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
@@ -109,7 +126,9 @@ function LandingPageContent() {
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroMedia, setHeroMedia] = useState<{ type: 'video' | 'image'; url: string } | null>(null);
-  const [rsvpStatus, setRsvpStatus] = useState<'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'>('none');
+  const [rsvpStatus, setRsvpStatus] = useState<
+    'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'
+  >('none');
   const [rsvpCount, setRsvpCount] = useState(0);
   const [showMore, setShowMore] = useState(false);
   const [showPersonalNote, setShowPersonalNote] = useState(false);
@@ -135,7 +154,6 @@ function LandingPageContent() {
     let cancelled = false;
 
     (async () => {
-      // localStorage
       try {
         const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
         const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
@@ -153,7 +171,6 @@ function LandingPageContent() {
         console.error('load event local error', e);
       }
 
-      // Supabase events (אם קיים)
       try {
         const { data, error } = await supabase
           .from('events')
@@ -229,13 +246,19 @@ function LandingPageContent() {
     };
   }, [eventId, code]);
 
-  // מדיה
+  // מדיה — תמונה 1 / 2 לפי הגלריה
   useEffect(() => {
     if (!eventId) return;
 
     let cancelled = false;
 
     (async () => {
+      const preferred = getPreferredCover(String(eventId), event);
+      if (!cancelled && preferred) {
+        setHeroMedia({ type: 'image', url: preferred });
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('events')
@@ -278,7 +301,7 @@ function LandingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, event?.coverUrl]);
+  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -299,113 +322,113 @@ function LandingPageContent() {
   };
 
   const handleRsvp = async (count: number) => {
-  if (!eventId) {
-    alert(t.invalidLinkAlert);
-    return;
-  }
-  if (!code) {
-    setRsvpStatus('general');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
+    if (!eventId) {
+      alert(t.invalidLinkAlert);
+      return;
+    }
+    if (!code) {
+      setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-  const guestIndex = findGuestIndex(guests, String(code));
-  if (guestIndex === -1) {
-    setRsvpStatus('notFound');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
+    const guestIndex = findGuestIndex(guests, String(code));
+    if (guestIndex === -1) {
+      setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-  const now = new Date().toISOString();
-  const updated = [...guests];
-  updated[guestIndex] = {
-    ...updated[guestIndex],
-    confirmed: String(count),
-    confirmedCount: count,
-    count: count,
-    confirmedSource: 'link',
-    confirmedAt: now,
+    const now = new Date().toISOString();
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: String(count),
+      confirmedCount: count,
+      count: count,
+      confirmedSource: 'link',
+      confirmedAt: now,
+    };
+
+    await persistGuestUpdate(updated, updated[guestIndex]);
+
+    setRsvpCount(count);
+    setGuestName(updated[guestIndex].name || '');
+    setRsvpStatus('confirmed');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (event?.hasSeparation === 'כן') {
+      setTimeout(() => {
+        window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
+      }, 1800);
+    }
   };
 
-  await persistGuestUpdate(updated, updated[guestIndex]);
+  const handleNotComing = async () => {
+    if (!eventId || !code) {
+      setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-  setRsvpCount(count);
-  setGuestName(updated[guestIndex].name || '');
-  setRsvpStatus('confirmed');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    const guestIndex = findGuestIndex(guests, String(code));
+    if (guestIndex === -1) {
+      setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-  if (event?.hasSeparation === 'כן') {
-    setTimeout(() => {
-      window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
-    }, 1800);
-  }
-};
+    const now = new Date().toISOString();
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: 'לא מגיע',
+      confirmedCount: 0,
+      count: 0,
+      confirmedSource: 'link',
+      confirmedAt: now,
+    };
 
-const handleNotComing = async () => {
-  if (!eventId || !code) {
-    setRsvpStatus('general');
+    await persistGuestUpdate(updated, updated[guestIndex]);
+    setRsvpStatus('notComing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const guestIndex = findGuestIndex(guests, String(code));
-  if (guestIndex === -1) {
-    setRsvpStatus('notFound');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const updated = [...guests];
-  updated[guestIndex] = {
-    ...updated[guestIndex],
-    confirmed: 'לא מגיע',
-    confirmedCount: 0,
-    count: 0,
-    confirmedSource: 'link',
-    confirmedAt: now,
   };
 
-  await persistGuestUpdate(updated, updated[guestIndex]);
-  setRsvpStatus('notComing');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+  const handleUnknown = async () => {
+    if (!eventId || !code) {
+      setRsvpStatus('general');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-const handleUnknown = async () => {
-  if (!eventId || !code) {
-    setRsvpStatus('general');
+    const guestIndex = findGuestIndex(guests, String(code));
+    if (guestIndex === -1) {
+      setRsvpStatus('notFound');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const updated = [...guests];
+    updated[guestIndex] = {
+      ...updated[guestIndex],
+      confirmed: 'ממתין',
+      confirmedCount: 0,
+      count: 0,
+      confirmedSource: 'link',
+      confirmedAt: now,
+      notes:
+        (updated[guestIndex].notes || '') +
+        (updated[guestIndex].notes ? '\n' : '') +
+        'המוזמן סימן: לא יודע כרגע',
+    };
+
+    await persistGuestUpdate(updated, updated[guestIndex]);
+    setRsvpStatus('pending');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const guestIndex = findGuestIndex(guests, String(code));
-  if (guestIndex === -1) {
-    setRsvpStatus('notFound');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const updated = [...guests];
-  updated[guestIndex] = {
-    ...updated[guestIndex],
-    confirmed: 'ממתין',
-    confirmedCount: 0,
-    count: 0,
-    confirmedSource: 'link',
-    confirmedAt: now,
-    notes:
-      (updated[guestIndex].notes || '') +
-      (updated[guestIndex].notes ? '\n' : '') +
-      'המוזמן סימן: לא יודע כרגע',
   };
 
-  await persistGuestUpdate(updated, updated[guestIndex]);
-  setRsvpStatus('pending');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-    const handlePersonalNoteSubmit = async () => {
+  const handlePersonalNoteSubmit = async () => {
     if (!personalNote.trim()) {
       alert(t.writeMessage);
       return;
