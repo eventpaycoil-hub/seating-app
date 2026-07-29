@@ -224,6 +224,13 @@ function LandingPageContent() {
         if (!error && data && !cancelled) {
           const mapped = {
             id: data.id,
+                        rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
+            welcomeLine: data.welcome_line || data.welcomeLine || '',
+            useExternalLanding:
+              data.use_external_landing || data.useExternalLanding || 'לא',
+            externalLandingUrl:
+              data.external_landing_url || data.externalLandingUrl || '',
+            eventType: data.event_type || data.eventType || '',
             owners: data.owners || data.title || '',
             title: data.title || data.owners || '',
             hallName: data.hall_name || data.hallName || '',
