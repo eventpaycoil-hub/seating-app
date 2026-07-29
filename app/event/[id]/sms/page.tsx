@@ -20,6 +20,74 @@ const DEFAULT_EMOJIS = [
   '✅', '❌', '💯', '📌', '📍', '🏠', '🚗', '⏰', '📅', '📸',
 ];
 
+function getEventInvitePhrase(event: any, en = false) {
+  const owners = event?.owners || (en ? 'the hosts' : 'בעלי השמחה');
+  const type = event?.eventType || 'חתונה';
+
+  if (en) {
+    if (type === 'בר מצוה') return `You are invited to the Bar Mitzvah of ${owners}`;
+    if (type === 'בת מצוה') return `You are invited to the Bat Mitzvah of ${owners}`;
+    if (type === 'בר ובת מצוה') return `You are invited to the Bar & Bat Mitzvah of ${owners}`;
+    if (type === 'ברית') return `You are invited to the Brit of ${owners}`;
+    if (type === 'בריתה') return `You are invited to the Brita of ${owners}`;
+    if (type === 'כנס') return `You are invited to the event of ${owners}`;
+    return `You are invited to the wedding of ${owners}`;
+  }
+
+  if (type === 'בר מצוה') return `הוזמנתם לבר המצווה של ${owners}`;
+  if (type === 'בת מצוה') return `הוזמנתם לבת המצווה של ${owners}`;
+  if (type === 'בר ובת מצוה') return `הוזמנתם לבר ובת המצווה של ${owners}`;
+  if (type === 'ברית') return `הוזמנתם לברית של ${owners}`;
+  if (type === 'בריתה') return `הוזמנתם לבריתה של ${owners}`;
+  if (type === 'כנס') return `הוזמנתם לכנס של ${owners}`;
+  return `הוזמנתם לחתונה של ${owners}`;
+}
+
+function getWelcomeBlock(event: any, en = false) {
+  const line = (event?.welcomeLine || '').trim();
+  if (line) {
+    return en ? `We look forward to seeing you, ${line}` : `נשמח לראותכם ${line}`;
+  }
+
+  const type = event?.eventType || 'חתונה';
+  const g = (event?.groomParents || '').trim();
+  const b = (event?.brideParents || '').trim();
+
+  if ((type === 'חתונה' || type === 'אחר') && (g || b)) {
+    if (en) {
+      const parts = [];
+      if (g) parts.push(`Groom's parents: ${g}`);
+      if (b) parts.push(`Bride's parents: ${b}`);
+      return parts.join('\n');
+    }
+    const parts = [];
+    if (g) parts.push(`הורי החתן: ${g}.`);
+    if (b) parts.push(`הורי הכלה: ${b}.`);
+    return parts.join('\n');
+  }
+  return '';
+}
+
+function getShortEventNoun(event: any, en = false) {
+  const type = event?.eventType || 'חתונה';
+  if (en) {
+    if (type === 'בר מצוה') return 'Bar Mitzvah';
+    if (type === 'בת מצוה') return 'Bat Mitzvah';
+    if (type === 'בר ובת מצוה') return 'Bar & Bat Mitzvah';
+    if (type === 'ברית') return 'Brit';
+    if (type === 'בריתה') return 'Brita';
+    if (type === 'כנס') return 'event';
+    return 'wedding';
+  }
+  if (type === 'בר מצוה') return 'בר המצווה';
+  if (type === 'בת מצוה') return 'בת המצווה';
+  if (type === 'בר ובת מצוה') return 'בר ובת המצווה';
+  if (type === 'ברית') return 'הברית';
+  if (type === 'בריתה') return 'הבריתה';
+  if (type === 'כנס') return 'הכנס';
+  return 'החתונה';
+}
+
 export default function SMSPage() {
   const params = useParams();
   const eventId = params.id || '1';
@@ -38,7 +106,6 @@ export default function SMSPage() {
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const [customEmojis, setCustomEmojis] = useState<string[]>([]);
   const [newEmoji, setNewEmoji] = useState('');
-  // כבוי = ברירת מחדל "משפחה וחברים יקרים" | דלוק = שם האורח מהרשימה
   const [useGuestName, setUseGuestName] = useState(false);
 
   const emojis = useMemo(
@@ -59,19 +126,20 @@ export default function SMSPage() {
   }, []);
 
   useEffect(() => {
-  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-  const event = events.find((e: any) => e.id.toString() === eventId.toString());
-  if (event) setCurrentEvent(event);
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const event = events.find((e: any) => e.id.toString() === eventId.toString());
+    if (event) setCurrentEvent(event);
 
-  (async () => {
-    const { loadGuests } = await import('../../../../lib/guests');
-    const list = await loadGuests(String(eventId));
-    setGuests(list);
-  })();
+    (async () => {
+      const { loadGuests } = await import('../../../../lib/guests');
+      const list = await loadGuests(String(eventId));
+      setGuests(list);
+    })();
 
-  const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
-  setSeatingTables(seating);
-}, [eventId]);
+    const seating = JSON.parse(localStorage.getItem('seatingTables') || '[]');
+    setSeatingTables(seating);
+  }, [eventId]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('selectedForSMS');
@@ -93,9 +161,10 @@ export default function SMSPage() {
   }, [guests, selectedGuestIds]);
 
   const activeGuest = useMemo(() => {
-  if (selectedGuestsList.length > 0) return selectedGuestsList[0];
-  return null; // אל תיקח אוטומטית את הראשון
-}, [guests, selectedGuestsList]);
+    if (selectedGuestsList.length > 0) return selectedGuestsList[0];
+    return null;
+  }, [guests, selectedGuestsList]);
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     if (dateStr.includes('/')) return dateStr;
@@ -131,22 +200,34 @@ export default function SMSPage() {
       message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
     }
 
-    // הודעות 1, 2, 6 — שם אורח או ברירת מחדל
+    // שם אורח / משפחה וחברים — בלי "שלום" לפני משפחה וחברים
     if ([1, 2, 6].includes(template.id)) {
-      let displayName: string;
       if (useGuestName && guest?.name) {
-        displayName = guest.name;
+        message = message.replace(/\*שם\*/g, guest.name);
+        message = message.replace(/\*name\*/g, guest.name);
+      } else if (en) {
+        message = message.replace(/Hi \*name\*,?\s*/gi, 'Dear family and friends,\n\n');
+        message = message.replace(/\*name\*/g, 'family and friends');
       } else {
-        displayName = en ? 'family and friends' : 'משפחה וחברים יקרים';
+        message = message.replace(/שלום \*שם\*,?\s*/g, 'משפחה וחברים יקרים,\n\n');
+        message = message.replace(/\*שם\*/g, 'משפחה וחברים יקרים');
       }
-      message = message.replace(/\*שם\*/g, displayName);
-      message = message.replace(/\*name\*/g, displayName);
     }
 
     if (template.id === 1 || template.id === 6) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
       const guestCode = guest?.inviteCode || guest?.id || 'TEST123';
-      const rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
+
+      let rsvplink = '';
+      if (
+        currentEvent?.useExternalLanding === 'כן' &&
+        currentEvent?.externalLandingUrl
+      ) {
+        rsvplink = String(currentEvent.externalLandingUrl).trim();
+      } else {
+        rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
+      }
+
       message = message.replace(/\*guestId\*/g, String(guestCode));
       message = message.replace(/\*RSVP_LINK\*/g, rsvplink);
       message = message.replace(/ref=\*guestId\*/g, `ref=${guestCode}`);
@@ -167,11 +248,14 @@ export default function SMSPage() {
           let seatingText = '';
           if (en) {
             if (peopleCount === 1) seatingText = `You are seated at table number ${tableNum}`;
-            else if (peopleCount === 2) seatingText = `Both of you are seated at table number ${tableNum}`;
-            else seatingText = `All of you (${peopleCount}) are seated at table number ${tableNum}`;
+            else if (peopleCount === 2)
+              seatingText = `Both of you are seated at table number ${tableNum}`;
+            else
+              seatingText = `All of you (${peopleCount}) are seated at table number ${tableNum}`;
           } else {
             if (peopleCount === 1) seatingText = `הנך יושב בשולחן מספר ${tableNum}`;
-            else if (peopleCount === 2) seatingText = `שניכם יושבים בשולחן מספר ${tableNum}`;
+            else if (peopleCount === 2)
+              seatingText = `שניכם יושבים בשולחן מספר ${tableNum}`;
             else seatingText = `כולכם (${peopleCount}) יושבים בשולחן מספר ${tableNum}`;
           }
 
@@ -225,8 +309,11 @@ export default function SMSPage() {
     const hall = currentEvent?.hallName || (isEnglishEvent ? 'the venue' : 'האולם');
     const city = currentEvent?.city || '';
     const time = currentEvent?.time || '';
-    const groom = currentEvent?.groomParents || '';
-    const bride = currentEvent?.brideParents || '';
+    const invite = getEventInvitePhrase(currentEvent, isEnglishEvent);
+    const welcome = getWelcomeBlock(currentEvent, isEnglishEvent);
+    const noun = getShortEventNoun(currentEvent, isEnglishEvent);
+    // פעם אחת בלבד — אם יש welcome מפורט, לא מוסיפים עוד "נשמח לראותכם"
+    const welcomeBlock = welcome ? `\n\n${welcome}` : (isEnglishEvent ? '' : '\n\nנשמח לראותכם!');
     const base =
       typeof window !== 'undefined'
         ? window.location.origin
@@ -237,12 +324,12 @@ export default function SMSPage() {
         {
           id: 1,
           title: 'Message 1 – RSVP',
-          content: `Hi *name*,\n\nYou are invited to the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm attendance:\n\n👉 Confirm here:\n*RSVP_LINK*`,
+          content: `Hi *name*,\n\n${invite} at "${hall}" in ${city} on ${formattedDate} at ${time}.${welcomeBlock}\n\nPlease confirm attendance:\n\n👉 Confirm here:\n*RSVP_LINK*`,
         },
         {
           id: 2,
           title: 'Message 2 – Reminder',
-          content: `Hi *name*,\n\nTonight we celebrate the wedding of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK*\n*CREDIT_LINK*`,
+          content: `Hi *name*,\n\nTonight we celebrate the ${noun} of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK*\n*CREDIT_LINK*`,
         },
         {
           id: 3,
@@ -252,17 +339,17 @@ export default function SMSPage() {
         {
           id: 4,
           title: 'Message 4 – Transport',
-          content: `You confirmed attendance at the wedding of ${owners}.\n\nTo join transportation click here:\n*TRANSPORT_LINK*`,
+          content: `You confirmed attendance at the ${noun} of ${owners}.\n\nTo join transportation click here:\n*TRANSPORT_LINK*`,
         },
         {
           id: 5,
           title: 'Message 5 – QR code',
-          content: `For quick check-in at the wedding of ${owners}:\n\nShow entrance QR:\n${base}/qr/*guestId*?eventId=${eventId}`,
+          content: `For quick check-in at the ${noun} of ${owners}:\n\nShow entrance QR:\n${base}/qr/*guestId*?eventId=${eventId}`,
         },
         {
           id: 6,
           title: 'Message 6 – Not yet confirmed',
-          content: `Hi *name*,\n\nYou have not yet confirmed attendance at the wedding of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.\n\nGroom's parents: ${groom}.\nBride's parents: ${bride}.\n\nPlease confirm:\n\n👉 Confirm here:\n*RSVP_LINK*`,
+          content: `Hi *name*,\n\nYou have not yet confirmed attendance for the ${noun} of ${owners} at "${hall}" in ${city} on ${formattedDate} at ${time}.${welcomeBlock}\n\nPlease confirm:\n\n👉 Confirm here:\n*RSVP_LINK*`,
         },
       ];
     }
@@ -271,12 +358,12 @@ export default function SMSPage() {
       {
         id: 1,
         title: 'הודעה מס 1 אישור הגעה',
-        content: `שלום *שם*,\n\nהוזמנתם לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנשמח לראותכם!\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
+        content: `שלום *שם*,\n\n${invite} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
       },
       {
         id: 2,
         title: 'הודעה מס 2 תזכורת',
-        content: `שלום *שם*,\n\nהערב נפגשים בחתונה של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK*\n*CREDIT_LINK*`,
+        content: `שלום *שם*,\n\nהערב נפגשים ב${noun} של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK*\n*CREDIT_LINK*`,
       },
       {
         id: 3,
@@ -286,17 +373,17 @@ export default function SMSPage() {
       {
         id: 4,
         title: 'הודעה מס 4 הסעה',
-        content: `אישרתם הגעה לחתונה של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n*TRANSPORT_LINK*`,
+        content: `אישרתם הגעה ל${noun} של ${owners}.\n\nלהצטרפות להסעה לחצו כאן:\n*TRANSPORT_LINK*`,
       },
       {
         id: 5,
         title: 'הודעה מס 5 ברקוד',
-        content: `לרישום מהיר בכניסה לאולם בחתונה של ${owners}:\n\nהצג QR כניסה:\n${base}/qr/*guestId*?eventId=${eventId}&phone=*PHONE*&name=*NAME*`,
+        content: `לרישום מהיר בכניסה לאולם ב${noun} של ${owners}:\n\nהצג QR כניסה:\n${base}/qr/*guestId*?eventId=${eventId}&phone=*PHONE*&name=*NAME*`,
       },
       {
         id: 6,
         title: 'הודעה מס 6 טרם אישרת',
-        content: `שלום *שם*,\n\nטרם אישרתם הגעה לחתונה של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.\n\nהורי החתן: ${groom}.\nהורי הכלה: ${bride}.\n\nנא לאשר הגעה:\n\n👉 לאישור הגעה לחצו על הקישור:\n*RSVP_LINK*`,
+        content: `שלום *שם*,\n\nטרם אישרתם הגעה ל${noun} של ${owners} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\nנא לאשר הגעה:\n\n👉 לאישור הגעה לחצו על הקישור:\n*RSVP_LINK*`,
       },
     ];
   }, [currentEvent, eventId, isEnglishEvent]);
@@ -305,9 +392,8 @@ export default function SMSPage() {
     setSelectedTemplate(null);
     setEditedMessage('');
     setIsEditing(false);
-  }, [isEnglishEvent]);
+  }, [isEnglishEvent, currentEvent?.eventType, currentEvent?.welcomeLine]);
 
-  // רענון הודעה כשמשנים מתג שם אורח (רק 1/2/6, בלי לדרוס עריכה ידנית)
   useEffect(() => {
     if (!selectedTemplate) return;
     if (![1, 2, 6].includes(selectedTemplate.id)) return;
@@ -430,7 +516,7 @@ export default function SMSPage() {
     }
   };
 
-    return (
+  return (
     <div className="min-h-screen bg-zinc-100 p-8" dir="rtl">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -439,6 +525,12 @@ export default function SMSPage() {
             {isEnglishEvent && (
               <p className="text-sm text-blue-600 mt-1 font-medium">
                 🌐 אירוע באנגלית – התבניות מוצגות באנגלית
+              </p>
+            )}
+            {currentEvent?.eventType && (
+              <p className="text-sm text-slate-500 mt-1">
+                סוג אירוע: {currentEvent.eventType}
+                {currentEvent.welcomeLine ? ` · ${currentEvent.welcomeLine}` : ''}
               </p>
             )}
           </div>
@@ -526,7 +618,6 @@ export default function SMSPage() {
                   </div>
                 </div>
 
-                {/* מתג שם אורח — רק הודעות 1, 2, 6 */}
                 {[1, 2, 6].includes(selectedTemplate.id) && (
                   <div className="mb-4 p-4 rounded-2xl bg-slate-50 border flex items-center justify-between gap-4">
                     <div className="text-sm text-gray-700">
@@ -592,11 +683,6 @@ export default function SMSPage() {
                         ＋ הוסף סמייל
                       </button>
                     </div>
-                    {customEmojis.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        {customEmojis.length} סמיילים אישיים נשמרו במכשיר
-                      </p>
-                    )}
                   </div>
                 )}
 

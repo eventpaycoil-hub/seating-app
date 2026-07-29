@@ -43,6 +43,7 @@ const TEXTS = {
     messageSaved: 'ההודעה נשמרה בהצלחה!',
     invalidLinkAlert: 'קישור לא תקין',
     loading: 'טוען...',
+    redirecting: 'מעביר לדף הנחיתה...',
   },
   en: {
     invalidLink: 'Invalid link',
@@ -80,6 +81,7 @@ const TEXTS = {
     messageSaved: 'Message saved successfully!',
     invalidLinkAlert: 'Invalid link',
     loading: 'Loading...',
+    redirecting: 'Redirecting to the event page...',
   },
 };
 
@@ -117,6 +119,34 @@ function getPreferredCover(eventId: string, event: any) {
   }
 }
 
+function resolveRsvpMode(event: any) {
+  if (event?.rsvpMode) return event.rsvpMode;
+  const t = event?.eventType || '';
+  if (t === '2 כפתורים') return '2 כפתורים';
+  if (t === '3 כפתורים' || t === 'אחר 3') return '3 כפתורים';
+  return 'רגיל';
+}
+
+function getEventTitlePrefix(event: any, lang: 'he' | 'en') {
+  const type = event?.eventType || 'חתונה';
+  if (lang === 'en') {
+    if (type === 'בר מצוה') return 'The Bar Mitzvah of';
+    if (type === 'בת מצוה') return 'The Bat Mitzvah of';
+    if (type === 'בר ובת מצוה') return 'The Bar & Bat Mitzvah of';
+    if (type === 'ברית') return 'The Brit of';
+    if (type === 'בריתה') return 'The Brita of';
+    if (type === 'כנס') return 'The event of';
+    return 'The wedding of';
+  }
+  if (type === 'בר מצוה') return 'בר המצווה של';
+  if (type === 'בת מצוה') return 'בת המצווה של';
+  if (type === 'בר ובת מצוה') return 'בר ובת המצווה של';
+  if (type === 'ברית') return 'הברית של';
+  if (type === 'בריתה') return 'הבריתה של';
+  if (type === 'כנס') return 'הכנס של';
+  return 'החתונה של';
+}
+
 function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
@@ -135,6 +165,7 @@ function LandingPageContent() {
   const [personalNote, setPersonalNote] = useState('');
   const [lang, setLang] = useState<'he' | 'en'>('he');
   const [guestName, setGuestName] = useState('');
+  const [externalRedirect, setExternalRedirect] = useState(false);
 
   const isEnglishEvent =
     event?.englishEvent === 'כן' ||
@@ -144,7 +175,10 @@ function LandingPageContent() {
   const t = TEXTS[lang];
   const dir = lang === 'he' ? 'rtl' : 'ltr';
 
-  // טעינת אירוע
+  const rsvpMode = resolveRsvpMode(event);
+  const isTwoButtons = rsvpMode === '2 כפתורים';
+  const isThreeButtons = rsvpMode === '3 כפתורים';
+
   useEffect(() => {
     if (!eventId) {
       setLoading(false);
@@ -165,6 +199,15 @@ function LandingPageContent() {
             currentEvent.englishEvent === 'yes'
           ) {
             setLang('en');
+          }
+
+          if (
+            currentEvent.useExternalLanding === 'כן' &&
+            currentEvent.externalLandingUrl
+          ) {
+            setExternalRedirect(true);
+            window.location.href = String(currentEvent.externalLandingUrl).trim();
+            return;
           }
         }
       } catch (e) {
@@ -210,12 +253,12 @@ function LandingPageContent() {
     };
   }, [eventId]);
 
-  // טעינת מוזמנים
   useEffect(() => {
     if (!eventId) {
       setLoading(false);
       return;
     }
+    if (externalRedirect) return;
 
     let cancelled = false;
     const timeoutId = setTimeout(() => {
@@ -244,11 +287,10 @@ function LandingPageContent() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [eventId, code]);
+  }, [eventId, code, externalRedirect]);
 
-  // מדיה — תמונה 1 / 2 לפי הגלריה
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || externalRedirect) return;
 
     let cancelled = false;
 
@@ -301,7 +343,7 @@ function LandingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover]);
+  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover, externalRedirect]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -453,10 +495,8 @@ function LandingPageContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const eventType = event?.eventType || '';
-  const isTwoButtons = eventType === '2 כפתורים' || eventType === 'אחר';
-  const isThreeButtons = eventType === '3 כפתורים' || eventType === 'אחר 2';
   const displayTitle = event?.owners || event?.title || event?.hallName || t.ourEvent;
+  const titlePrefix = getEventTitlePrefix(event, lang);
 
   if (!eventId) {
     return (
@@ -468,6 +508,15 @@ function LandingPageContent() {
       </div>
     );
   }
+
+  if (externalRedirect) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
+        <div className="text-2xl text-gray-600">{t.redirecting}</div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
@@ -501,7 +550,7 @@ function LandingPageContent() {
 
       <div className="bg-[#3f2a1e] text-white py-6 text-center">
         <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
-          {event?.owners ? `${t.weddingOf} ${event.owners}` : displayTitle}
+          {event?.owners ? `${titlePrefix} ${event.owners}` : displayTitle}
         </h1>
         {guestName && rsvpStatus === 'none' && (
           <p className="mt-2 text-lg opacity-90">

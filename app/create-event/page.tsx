@@ -1,11 +1,14 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 export default function CreateEventPage() {
   const [formData, setFormData] = useState({
     eventType: '',
+    rsvpMode: 'רגיל',
+    welcomeLine: '',
+    useExternalLanding: 'לא',
+    externalLandingUrl: '',
     owners: '',
     hallName: '',
     city: '',
@@ -28,12 +31,11 @@ export default function CreateEventPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-    const generateUsername = (owners: string) => {
-    // רק אותיות קטנות באנגלית + ספרות
+  const generateUsername = (owners: string) => {
     let base = (owners || '')
       .toLowerCase()
       .replace(/\s+/g, '')
-      .replace(/[^a-z0-9]/g, ''); // מוחק עברית וסימנים
+      .replace(/[^a-z0-9]/g, '');
 
     if (!base || base.length < 2) {
       base = 'client';
@@ -43,7 +45,6 @@ export default function CreateEventPage() {
   };
 
   const generatePassword = () => {
-    // רק אותיות קטנות + ספרות (בלי תווים מבלבלים)
     const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
     let pass = '';
     for (let i = 0; i < 8; i++) {
@@ -51,6 +52,13 @@ export default function CreateEventPage() {
     }
     return pass.toLowerCase();
   };
+
+  const isBarBatType =
+    formData.eventType === 'בר מצוה' ||
+    formData.eventType === 'בת מצוה' ||
+    formData.eventType === 'בר ובת מצוה' ||
+    formData.eventType === 'ברית' ||
+    formData.eventType === 'בריתה';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +68,14 @@ export default function CreateEventPage() {
       return;
     }
 
+    if (formData.useExternalLanding === 'כן' && !formData.externalLandingUrl.trim()) {
+      alert('נא להזין קישור לדף הנחיתה החיצוני');
+      return;
+    }
+
     setSaving(true);
 
-        const username = generateUsername(formData.owners).toLowerCase();
+    const username = generateUsername(formData.owners).toLowerCase();
     const password = generatePassword().toLowerCase();
     const eventId = Date.now();
 
@@ -71,6 +84,10 @@ export default function CreateEventPage() {
       title: `${formData.hallName || 'אולם'} - ${formData.owners}`,
       owners: formData.owners,
       eventType: formData.eventType,
+      rsvpMode: formData.rsvpMode || 'רגיל',
+      welcomeLine: formData.welcomeLine || '',
+      useExternalLanding: formData.useExternalLanding || 'לא',
+      externalLandingUrl: formData.externalLandingUrl || '',
       hallName: formData.hallName,
       city: formData.city,
       date: formData.eventDate
@@ -93,41 +110,39 @@ export default function CreateEventPage() {
       clientPhone: formData.phone,
     };
 
-    // 1. localStorage — כמו תמיד (חובה)
     const existing = JSON.parse(localStorage.getItem('myEvents') || '[]');
     localStorage.setItem('myEvents', JSON.stringify([...existing, newEvent]));
 
-    // 2. Supabase — נוסף, לא חוסם אם נכשל
     try {
-     const { error } = await supabase.from('events').insert({
-  id: eventId,
-  title: newEvent.title,
-  owners: newEvent.owners,
-  event_type: newEvent.eventType,
-  hall_name: newEvent.hallName,
-  city: newEvent.city,
-  event_date: formData.eventDate || null,
-  full_date: formData.eventDate || null,
-  time: newEvent.time || null,
-  day: null,
-  groom_parents: newEvent.groomParents || null,
-  bride_parents: newEvent.brideParents || null,
-  email: newEvent.email || null,
-  price: newEvent.price || null,
-  deposit: newEvent.deposit || null,
-  service_type: newEvent.serviceType || null,
-  notes: newEvent.notes || null,
-  is_active: false,
-  credit_link: null,
-  has_separation: null,
-  has_transport: null,
-  seating_arrangement: null,
-  qr_code: null,
-  guest_notes: null,
-  show_seating_link: null,
-  sms_service: null,
-  steward_service: null,
-});
+      const { error } = await supabase.from('events').insert({
+        id: eventId,
+        title: newEvent.title,
+        owners: newEvent.owners,
+        event_type: newEvent.eventType,
+        hall_name: newEvent.hallName,
+        city: newEvent.city,
+        event_date: formData.eventDate || null,
+        full_date: formData.eventDate || null,
+        time: newEvent.time || null,
+        day: null,
+        groom_parents: newEvent.groomParents || null,
+        bride_parents: newEvent.brideParents || null,
+        email: newEvent.email || null,
+        price: newEvent.price || null,
+        deposit: newEvent.deposit || null,
+        service_type: newEvent.serviceType || null,
+        notes: newEvent.notes || null,
+        is_active: false,
+        credit_link: null,
+        has_separation: null,
+        has_transport: null,
+        seating_arrangement: null,
+        qr_code: null,
+        guest_notes: null,
+        show_seating_link: null,
+        sms_service: null,
+        steward_service: null,
+      });
 
       if (error) {
         console.warn('Supabase insert error:', error.message);
@@ -197,12 +212,78 @@ export default function CreateEventPage() {
               <option value="חתונה">חתונה</option>
               <option value="בר מצוה">בר מצוה</option>
               <option value="בת מצוה">בת מצוה</option>
+              <option value="בר ובת מצוה">בר ובת מצוה</option>
               <option value="ברית">ברית</option>
               <option value="בריתה">בריתה</option>
               <option value="כנס">כנס</option>
               <option value="אחר">אחר</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-lg font-semibold mb-2">
+              מצב אישור הגעה (דף נחיתה)
+            </label>
+            <select
+              name="rsvpMode"
+              value={formData.rsvpMode}
+              onChange={handleChange}
+              className="w-full p-5 border border-gray-300 rounded-2xl text-lg"
+            >
+              <option value="רגיל">רגיל (1–5 וכו׳)</option>
+              <option value="2 כפתורים">2 כפתורים — מגיע / לא מגיע</option>
+              <option value="3 כפתורים">3 כפתורים — 1 / 2 / לא מגיע</option>
+            </select>
+          </div>
+
+          {isBarBatType && (
+            <div>
+              <label className="block text-lg font-semibold mb-2">
+                נשמח לראותכם ________
+              </label>
+              <input
+                type="text"
+                name="welcomeLine"
+                value={formData.welcomeLine}
+                onChange={handleChange}
+                className="w-full p-5 border border-gray-300 rounded-2xl text-lg"
+                placeholder="משפחת כהן / הורי רון"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                יופיע בהודעות במקום הורי חתן/כלה
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-lg font-semibold mb-2">דף נחיתה</label>
+            <select
+              name="useExternalLanding"
+              value={formData.useExternalLanding}
+              onChange={handleChange}
+              className="w-full p-5 border border-gray-300 rounded-2xl text-lg"
+            >
+              <option value="לא">שלנו (EventPay)</option>
+              <option value="כן">חיצוני (של הלקוח)</option>
+            </select>
+          </div>
+
+          {formData.useExternalLanding === 'כן' && (
+            <div>
+              <label className="block text-lg font-semibold mb-2">
+                קישור לדף הנחיתה של הלקוח
+              </label>
+              <input
+                type="url"
+                name="externalLandingUrl"
+                value={formData.externalLandingUrl}
+                onChange={handleChange}
+                className="w-full p-5 border border-gray-300 rounded-2xl text-lg"
+                placeholder="https://..."
+                dir="ltr"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -250,28 +331,35 @@ export default function CreateEventPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-lg font-semibold mb-2">הורי החתן / בר מצוה</label>
-              <input
-                type="text"
-                name="groomParents"
-                value={formData.groomParents}
-                onChange={handleChange}
-                className="w-full p-5 border border-gray-300 rounded-2xl"
-              />
+          {formData.eventType === 'חתונה' || !formData.eventType ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-lg font-semibold mb-2">הורי החתן</label>
+                <input
+                  type="text"
+                  name="groomParents"
+                  value={formData.groomParents}
+                  onChange={handleChange}
+                  className="w-full p-5 border border-gray-300 rounded-2xl"
+                />
+              </div>
+              <div>
+                <label className="block text-lg font-semibold mb-2">הורי הכלה</label>
+                <input
+                  type="text"
+                  name="brideParents"
+                  value={formData.brideParents}
+                  onChange={handleChange}
+                  className="w-full p-5 border border-gray-300 rounded-2xl"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-lg font-semibold mb-2">הורי הכלה</label>
-              <input
-                type="text"
-                name="brideParents"
-                value={formData.brideParents}
-                onChange={handleChange}
-                className="w-full p-5 border border-gray-300 rounded-2xl"
-              />
+          ) : (
+            <div className="text-sm text-gray-600 bg-amber-50 border border-amber-100 rounded-2xl p-4">
+              באירוע מסוג <b>{formData.eventType}</b> משתמשים בשדה &quot;נשמח לראותכם&quot;
+              (לא חובה למלא הורי חתן/כלה).
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-lg font-semibold mb-2">מחיר כולל</label>

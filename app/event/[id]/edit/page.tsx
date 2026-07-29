@@ -15,19 +15,23 @@ export default function EditEventPage() {
 
   const [formData, setFormData] = useState({
     eventType: 'חתונה',
+    rsvpMode: 'רגיל',
+    welcomeLine: '',
+    useExternalLanding: 'לא',
+    externalLandingUrl: '',
     eventDate: '',
-    owners: 'שלומי ויעל',
-    hallName: 'אולם אירועים סאו',
-    city: 'אשדוד',
-    year: '2026',
-    month: 'יולי',
-    day: '29',
+    owners: '',
+    hallName: '',
+    city: '',
+    year: '',
+    month: '',
+    day: '',
     time: '19:30',
-    groomParents: 'משה ומזל וקנין',
-    brideParents: 'אבי ואורנה כחלון',
-    email: 'eventpay.co.il@gmail.com',
-    price: '35000',
-    deposit: '10000',
+    groomParents: '',
+    brideParents: '',
+    email: '',
+    price: '',
+    deposit: '',
     serviceType: 'אישורי הגעה וסידורי הושבה',
     seatingArrangement: 'כן',
     qrCode: 'כן',
@@ -51,11 +55,8 @@ export default function EditEventPage() {
     fullDate: '',
     hasTransport: 'לא',
     hasSeparation: 'לא',
-    
-    clientPhone: '',
-        hasTransport: 'לא',
-    hasSeparation: 'לא',
     presenceOnly: 'לא',
+    clientPhone: '',
   });
 
   const [showDeleteZone, setShowDeleteZone] = useState(false);
@@ -65,12 +66,33 @@ export default function EditEventPage() {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) {
+      // תאימות לאחור: אם eventType היה "2 כפתורים" וכו'
+      let eventType = currentEvent.eventType || 'חתונה';
+      let rsvpMode = currentEvent.rsvpMode || 'רגיל';
+      if (eventType === '2 כפתורים') {
+        rsvpMode = '2 כפתורים';
+        eventType = 'חתונה';
+      } else if (eventType === '3 כפתורים' || eventType === 'אחר 3') {
+        rsvpMode = '3 כפתורים';
+        eventType = 'חתונה';
+      } else if (eventType === 'אירוע עם דף נחיתה פנימי') {
+        eventType = 'חתונה';
+      }
+
       setFormData((prev) => ({
         ...prev,
         ...currentEvent,
+        eventType,
+        rsvpMode: currentEvent.rsvpMode || rsvpMode,
+        welcomeLine: currentEvent.welcomeLine || '',
+        useExternalLanding:
+          currentEvent.useExternalLanding ||
+          (currentEvent.eventType === 'אירוע עם דף נחיתה פנימי' ? 'כן' : 'לא'),
+        externalLandingUrl: currentEvent.externalLandingUrl || '',
         time: currentEvent.time || '19:30',
         hasTransport: currentEvent.hasTransport || 'לא',
         hasSeparation: currentEvent.hasSeparation || 'לא',
+        presenceOnly: currentEvent.presenceOnly || 'לא',
         clientPhone: currentEvent.clientPhone || '',
       }));
     }
@@ -80,14 +102,7 @@ export default function EditEventPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-    const generateUsername = (owners: string) => {
-    return (
-      (owners || 'event').replace(/\s+/g, '').toLowerCase().slice(0, 12) +
-      Math.floor(1000 + Math.random() * 9000)
-    );
-  };
-
-      const generatePassword = () => {
+  const generatePassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let pass = '';
     for (let i = 0; i < 8; i++) {
@@ -95,10 +110,17 @@ export default function EditEventPage() {
     }
     return pass;
   };
+
+  const isBarBatType =
+    formData.eventType === 'בר מצוה' ||
+    formData.eventType === 'בת מצוה' ||
+    formData.eventType === 'בר ובת מצוה' ||
+    formData.eventType === 'ברית' ||
+    formData.eventType === 'בריתה';
+
   const toggleActivate = () => {
     const turningOn = !formData.isActive;
 
-    // כיבוי – בלי שליחה
     if (!turningOn) {
       const updatedData = {
         ...formData,
@@ -115,7 +137,6 @@ export default function EditEventPage() {
       return;
     }
 
-       // תמיד פרטי כניסה חדשים בהפעלה
     const username =
       'ep' +
       Math.random().toString(36).slice(2, 6) +
@@ -137,10 +158,7 @@ export default function EditEventPage() {
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
 
-    const phone =
-      (formData as any).clientPhone ||
-      (formData as any).phone ||
-      '';
+    const phone = formData.clientPhone || formData.phone || '';
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const loginUrl = `${origin}/`;
@@ -172,17 +190,27 @@ export default function EditEventPage() {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
+
+    if (formData.useExternalLanding === 'כן' && !String(formData.externalLandingUrl || '').trim()) {
+      alert('נא להזין קישור לדף הנחיתה החיצוני');
+      return;
+    }
+
     const updatedEvent = {
       ...formData,
       id: parseInt(eventId),
       creditLink: formData.creditLink || '',
+      rsvpMode: formData.rsvpMode || 'רגיל',
+      welcomeLine: formData.welcomeLine || '',
+      useExternalLanding: formData.useExternalLanding || 'לא',
+      externalLandingUrl: formData.externalLandingUrl || '',
     };
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const index = events.findIndex((e: any) => e.id.toString() === eventId);
 
     if (index !== -1) {
-      events[index] = updatedEvent;
+      events[index] = { ...events[index], ...updatedEvent };
     } else {
       events.push(updatedEvent);
     }
@@ -231,11 +259,9 @@ export default function EditEventPage() {
     'ברית',
     'בריתה',
     'כנס',
-    '2 כפתורים',
-    '3 כפתורים',
-    'אחר 3',
-    'אירוע עם דף נחיתה פנימי',
+    'אחר',
   ];
+
   const serviceTypes = [
     'אישורי הגעה בלבד',
     'אישורי הגעה וסידורי הושבה',
@@ -244,7 +270,7 @@ export default function EditEventPage() {
   ];
 
   const publicLink =
-    typeof window !== 'undefined' ? `${window.location.origin}/event/${eventId}/landing` : '';
+    typeof window !== 'undefined' ? `${window.location.origin}/landing?eventId=${eventId}` : '';
 
   const copyPublicLink = () => {
     if (publicLink) {
@@ -283,7 +309,7 @@ export default function EditEventPage() {
               </button>
             </div>
             <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-700 break-all">
-              {publicLink || `http://localhost:3000/event/${eventId}/landing`}
+              {publicLink || `https://www.eventpay1.co.il/landing?eventId=${eventId}`}
             </div>
           </div>
 
@@ -319,6 +345,7 @@ export default function EditEventPage() {
               className="w-full p-4 border rounded-2xl text-lg"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-2">
               טלפון הלקוח (לשליחת פרטי כניסה):
@@ -326,14 +353,13 @@ export default function EditEventPage() {
             <input
               type="tel"
               name="clientPhone"
-              value={(formData as any).clientPhone || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, clientPhone: e.target.value } as any)
-              }
+              value={formData.clientPhone || ''}
+              onChange={handleChange}
               className="w-full p-4 border rounded-2xl text-lg"
               placeholder="050-5270152"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-2">סוג האירוע:</label>
             <select
@@ -349,6 +375,71 @@ export default function EditEventPage() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              מצב אישור הגעה (דף נחיתה):
+            </label>
+            <select
+              name="rsvpMode"
+              value={formData.rsvpMode || 'רגיל'}
+              onChange={handleChange}
+              className="w-full p-4 border rounded-2xl text-lg"
+            >
+              <option value="רגיל">רגיל (1–5 וכו׳)</option>
+              <option value="2 כפתורים">2 כפתורים — מגיע / לא מגיע</option>
+              <option value="3 כפתורים">3 כפתורים — 1 / 2 / לא מגיע</option>
+            </select>
+          </div>
+
+          {isBarBatType && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                נשמח לראותכם ________
+              </label>
+              <input
+                type="text"
+                name="welcomeLine"
+                value={formData.welcomeLine || ''}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl text-lg"
+                placeholder="משפחת כהן / הורי רון"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                יופיע בהודעות במקום הורי חתן/כלה
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2">דף נחיתה:</label>
+            <select
+              name="useExternalLanding"
+              value={formData.useExternalLanding || 'לא'}
+              onChange={handleChange}
+              className="w-full p-4 border rounded-2xl text-lg"
+            >
+              <option value="לא">שלנו (EventPay)</option>
+              <option value="כן">חיצוני (של הלקוח)</option>
+            </select>
+          </div>
+
+          {formData.useExternalLanding === 'כן' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                קישור לדף הנחיתה של הלקוח:
+              </label>
+              <input
+                type="url"
+                name="externalLandingUrl"
+                value={formData.externalLandingUrl || ''}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl text-lg"
+                placeholder="https://..."
+                dir="ltr"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -397,28 +488,35 @@ export default function EditEventPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">הורי החתן:</label>
-              <input
-                type="text"
-                name="groomParents"
-                value={formData.groomParents}
-                onChange={handleChange}
-                className="w-full p-4 border rounded-2xl"
-              />
+          {formData.eventType === 'חתונה' || formData.eventType === 'אחר' || !formData.eventType ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">הורי החתן:</label>
+                <input
+                  type="text"
+                  name="groomParents"
+                  value={formData.groomParents}
+                  onChange={handleChange}
+                  className="w-full p-4 border rounded-2xl"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">הורי הכלה:</label>
+                <input
+                  type="text"
+                  name="brideParents"
+                  value={formData.brideParents}
+                  onChange={handleChange}
+                  className="w-full p-4 border rounded-2xl"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">הורי הכלה:</label>
-              <input
-                type="text"
-                name="brideParents"
-                value={formData.brideParents}
-                onChange={handleChange}
-                className="w-full p-4 border rounded-2xl"
-              />
+          ) : (
+            <div className="text-sm text-gray-600 bg-amber-50 border border-amber-100 rounded-2xl p-4">
+              באירוע מסוג <b>{formData.eventType}</b> משתמשים בשדה &quot;נשמח לראותכם&quot;
+              (לא חובה למלא הורי חתן/כלה).
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2">קישור לאשראי (מתנה):</label>
@@ -488,12 +586,11 @@ export default function EditEventPage() {
               <label key={field.name} className="flex items-center gap-3 text-lg">
                 <input
                   type="checkbox"
-                  checked={formData[field.name as keyof typeof formData] === 'כן'}
+                  checked={formData[field.name] === 'כן'}
                   onChange={() =>
                     setFormData({
                       ...formData,
-                      [field.name]:
-                        formData[field.name as keyof typeof formData] === 'כן' ? 'לא' : 'כן',
+                      [field.name]: formData[field.name] === 'כן' ? 'לא' : 'כן',
                     })
                   }
                 />
@@ -512,7 +609,6 @@ export default function EditEventPage() {
           </div>
         </form>
 
-        {/* ===== אזור מסוכן – מחיקת אירוע ===== */}
         <div className="mt-16 border-t-2 border-rose-200 pt-10">
           <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
