@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
-import { loadGuests, saveGuests } from '../../../../lib/guests';
+import { loadGuests, updateGuestInSupabase } from '../../../../lib/guests';
 
 export default function SeatingArrivalFastPage() {
   const params = useParams();
@@ -113,7 +113,7 @@ useEffect(() => {
       }
     };
 
-    const id = setInterval(tick, 4000);
+    const id = setInterval(tick, 12000);
     return () => clearInterval(id);
   }, [eventId]);
 
@@ -177,13 +177,11 @@ useEffect(() => {
     recognition.start();
   };
 
-  const markArrival = (id: number, count: number) => {
+    const markArrival = async (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
     setAllGuests(updated);
-
-    saveGuests(String(eventId), updated);
 
     const arrivedOnly = updated
       .filter((g) => Number(g.arrivedCount) > 0)
@@ -197,11 +195,26 @@ useEffect(() => {
       JSON.stringify(arrivedOnly)
     );
 
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+    try {
+  await updateGuestInSupabase(newGuest, String(eventId));
+} catch (e) {
+  console.warn('add live guest sync failed', e);
+}
+
+    const guest = updated.find((g) => g.id === id);
+    if (guest) {
+      try {
+        await updateGuestInSupabase(guest, String(eventId));
+      } catch (e) {
+        console.warn('arrival sync failed', e);
+      }
+    }
+
     setSearchTerm('');
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
-
   const clearSearch = () => {
     setSearchTerm('');
     setForceEmptyList(false);
@@ -212,38 +225,6 @@ useEffect(() => {
     setForceEmptyList(false);
     setTableMapVersion((prev) => prev + 1);
   };
-
-  const addLiveGuest = () => {
-    const name = newName.trim();
-    if (!name) {
-      alert('נא להזין שם');
-      return;
-    }
-    const qty = Math.min(5, Math.max(1, Number(newQty) || 1));
-    const newGuest = {
-      id: Date.now() + Math.random(),
-      name,
-      phone: '',
-      quantity: String(qty),
-      confirmed: String(qty),
-      confirmedCount: qty,
-      arrivedCount: qty,
-      notes: 'נוסף בלייב – ללא הושבה',
-      group: '',
-      transportation: '',
-      customerExpectation: '',
-    };
-    const updated = [...allGuests, newGuest];
-    setAllGuests(updated);
-    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
-    setNewName('');
-    setNewQty(1);
-    setShowAddModal(false);
-    setSearchTerm('');
-    setForceEmptyList(true);
-    setTimeout(() => searchInputRef.current?.focus(), 80);
-  };
-
   const printPage = () => {
     let seatingData: any[] = [];
     try {
