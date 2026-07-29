@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-
+import { supabase } from '../../../../lib/supabase.js';
 export default function EditEventPage() {
   const params = useParams();
   const router = useRouter();
@@ -188,7 +188,7 @@ export default function EditEventPage() {
     }
   };
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     if (formData.useExternalLanding === 'כן' && !String(formData.externalLandingUrl || '').trim()) {
@@ -215,7 +215,24 @@ export default function EditEventPage() {
       events.push(updatedEvent);
     }
 
-    localStorage.setItem('myEvents', JSON.stringify(events));
+        localStorage.setItem('myEvents', JSON.stringify(events));
+
+    // שמירה ל-Supabase — כדי שדף הנחיתה בחי יראה rsvpMode
+    try {
+      await supabase
+        .from('events')
+        .update({
+          rsvp_mode: formData.rsvpMode || 'רגיל',
+          welcome_line: formData.welcomeLine || '',
+          use_external_landing: formData.useExternalLanding || 'לא',
+          external_landing_url: formData.externalLandingUrl || '',
+          event_type: formData.eventType || null,
+        })
+        .eq('id', Number(eventId));
+    } catch (err) {
+      console.warn('Supabase event update failed', err);
+    }
+
     alert('✅ נשמר!');
   };
 
