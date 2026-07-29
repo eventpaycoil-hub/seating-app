@@ -234,32 +234,39 @@ try {
 setArrivedMap(map);
 console.log('arrivedMap', map);
 
-      const qtyMap: Record<string, number> = {};
-      const list: UnassignedGuest[] = [];
-      const assigned = new Set<string>();
-      tables.forEach((t) => (t.assignedGuests || []).forEach((name: string) => assigned.add(name)));
+     const qtyMap: Record<string, number> = {};
+const list: UnassignedGuest[] = [];
+const meta: Record<string, { group: string }> = {};
 
-      const meta: Record<string, { group: string }> = {};
-      savedGuests.forEach((g: any) => {
-        if (!g.name || !g.name.trim()) return;
-        const status = (g.confirmed ?? '').toString().trim();
-        const confirmedNum = Number(status);
-        if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
+savedGuests.forEach((g: any) => {
+  if (!g.name || !g.name.trim()) return;
+  const status = (g.confirmed ?? '').toString().trim();
+  const confirmedNum = Number(status);
+  if (isNaN(confirmedNum) || confirmedNum < 1 || confirmedNum > 16) return;
 
-                // הכמות = מה שאישרו (confirmed), לא quantity ישן
-        const num =
-          confirmedNum ||
-          Number(g.confirmedCount) ||
-          Number(g.count) ||
-          Number(g.quantity) ||
-          1;
-        const group = (g.group || '').trim() || 'כללי';
-        meta[g.name] = { group };
-        qtyMap[g.name] = num;
-        if (!assigned.has(g.name)) {
-          list.push({ name: g.name, qty: num, group });
-        }
-      });
+  const num =
+    confirmedNum ||
+    Number(g.confirmedCount) ||
+    Number(g.count) ||
+    Number(g.quantity) ||
+    1;
+  const group = (g.group || '').trim() || 'כללי';
+  meta[g.name] = { group };
+  qtyMap[g.name] = num;
+
+  // כמה כבר יושבים בשולחנות (כולל הושבה חלקית)
+  let seated = 0;
+  tables.forEach((t) => {
+    if ((t.assignedGuests || []).includes(g.name)) {
+      seated += Number(t.guestSeats?.[g.name]) || num;
+    }
+  });
+
+  const remaining = num - seated;
+  if (remaining > 0) {
+    list.push({ name: g.name, qty: remaining, group });
+  }
+});
       guestMetaRef.current = meta;
       setGuestQtyMap(qtyMap);
       setGuests(list);
@@ -563,25 +570,37 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
     setDraggedId(null);
   };
 
-  const assignGuest = (guestName: string) => {
+      const assignGuest = (guestName: string) => {
     if (!selectedId) return;
     const table = placedTables.find((t) => t.id === selectedId);
     if (!table || table.isSpecial) return;
-    const qty = getGuestQty(guestName);
-    if (getOccupiedSeats(table) + qty > table.seats) {
+
+    // כמות מהרשימה הלא־מושבת (לא מהמפה המלאה)
+    const guestEntry = guests.find((g) => g.name === guestName);
+    const qty = guestEntry?.qty ?? getGuestQty(guestName);
+    if (qty <= 0) return;
+
+    const alreadyOnTable = table.assignedGuests.includes(guestName);
+    const free = table.seats - getOccupiedSeats(table);
+    if (qty > free) {
       alert('אין מספיק מקומות פנויים בשולחן');
       return;
     }
+
     setPlacedTables((prev) =>
-      prev.map((t) =>
-        t.id === selectedId
-          ? {
-              ...t,
-              assignedGuests: [...t.assignedGuests, guestName],
-              guestSeats: { ...(t.guestSeats || {}), [guestName]: qty },
-            }
-          : t
-      )
+      prev.map((t) => {
+        if (t.id !== selectedId) return t;
+        const nextSeats = { ...(t.guestSeats || {}) };
+        if (alreadyOnTable) {
+          nextSeats[guestName] = (nextSeats[guestName] ?? getGuestQty(guestName)) + qty;
+          return { ...t, guestSeats: nextSeats };
+        }
+        return {
+          ...t,
+          assignedGuests: [...t.assignedGuests, guestName],
+          guestSeats: { ...nextSeats, [guestName]: qty },
+        };
+      })
     );
     setGuests((prev) => prev.filter((g) => g.name !== guestName));
   };
@@ -599,34 +618,42 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
     if (!selectedId || selectedGuests.size === 0) return;
     const table = placedTables.find((t) => t.id === selectedId);
     if (!table || table.isSpecial) return;
+
     let occupied = getOccupiedSeats(table);
-    const toAssign: string[] = [];
+    const toAssign: { name: string; qty: number }[] = [];
+
     selectedGuests.forEach((name) => {
-      const qty = getGuestQty(name);
-      if (occupied + qty <= table.seats) {
-        toAssign.push(name);
+      const guestEntry = guests.find((g) => g.name === name);
+      const qty = guestEntry?.qty ?? getGuestQty(name);
+      if (qty > 0 && occupied + qty <= table.seats) {
+        toAssign.push({ name, qty });
         occupied += qty;
       }
     });
+
     if (toAssign.length === 0) {
       alert('אין מספיק מקומות');
       return;
     }
+
     setPlacedTables((prev) =>
       prev.map((t) => {
         if (t.id !== selectedId) return t;
         const nextSeats = { ...(t.guestSeats || {}) };
-        toAssign.forEach((name) => {
-          nextSeats[name] = getGuestQty(name);
+        const nextAssigned = [...t.assignedGuests];
+        toAssign.forEach(({ name, qty }) => {
+          if (nextAssigned.includes(name)) {
+            nextSeats[name] = (nextSeats[name] ?? 0) + qty;
+          } else {
+            nextAssigned.push(name);
+            nextSeats[name] = qty;
+          }
         });
-        return {
-          ...t,
-          assignedGuests: [...t.assignedGuests, ...toAssign],
-          guestSeats: nextSeats,
-        };
+        return { ...t, assignedGuests: nextAssigned, guestSeats: nextSeats };
       })
     );
-    setGuests((prev) => prev.filter((g) => !toAssign.includes(g.name)));
+    const names = toAssign.map((x) => x.name);
+    setGuests((prev) => prev.filter((g) => !names.includes(g.name)));
     setSelectedGuests(new Set());
   };
 
@@ -902,8 +929,11 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
     });
   }, [filteredUnassigned]);
 
-  const toggleGroup = (group: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
+   const toggleGroup = (group: string) => {
+    setCollapsedGroups((prev) => {
+      const currentlyCollapsed = prev[group] ?? true;
+      return { ...prev, [group]: !currentlyCollapsed };
+    });
   };
 
   return (
@@ -1227,7 +1257,9 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
                 <p className="text-center text-slate-500 text-xs py-6">אין מוזמנים שאישרו</p>
               ) : (
                 groupedGuests.map(([group, list]) => {
-                  const isCollapsed = collapsedGroups[group] ?? true;
+                  const isCollapsed = unassignedSearch.trim()
+  ? false
+  : (collapsedGroups[group] ?? true);
   
   
                   const groupTotal = list.reduce((s, g) => s + g.qty, 0);
