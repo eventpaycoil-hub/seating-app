@@ -508,6 +508,7 @@ export default function GuestsPage() {
               { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },
               { id: 'edit-event', href: `/event/${eventId}/edit`, label: 'עריכת אירוע', icon: '✏️' },
               { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: '📩' },
+              { id: 'email', href: `/event/${eventId}/email`, label: 'שליחת מיילים', icon: '📧' },
               { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: '💬' },
               { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: '🌐' },
               { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: '🚌' },
