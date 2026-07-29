@@ -113,7 +113,7 @@ useEffect(() => {
       }
     };
 
-    const id = setInterval(tick, 12000);
+    const id = setInterval(tick, 1800000); // 30 דקות
     return () => clearInterval(id);
   }, [eventId]);
 

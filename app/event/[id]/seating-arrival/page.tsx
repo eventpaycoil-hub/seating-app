@@ -5,7 +5,11 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
-import { loadGuests, saveGuests, fetchGuestsFromSupabase } from '../../../../lib/guests';
+import {
+  loadGuests,
+  updateGuestInSupabase,
+  fetchGuestsFromSupabase,
+} from '../../../../lib/guests';
 
 export default function SeatingArrivalPage() {
   const params = useParams();
@@ -106,7 +110,7 @@ export default function SeatingArrivalPage() {
     };
   }, [eventId]);
 
-  // סנכרון הגעות בין טאבלטים (כל 4 שניות)
+  // סנכרון בין טאבלטים — כל 60 שניות (ערב לחץ)
   useEffect(() => {
     if (!eventId) return;
 
@@ -114,7 +118,7 @@ export default function SeatingArrivalPage() {
       try {
         let list: any[] = [];
         if (typeof fetchGuestsFromSupabase === 'function') {
-          list = await fetchGuestsFromSupabase(String(eventId));
+          list = (await fetchGuestsFromSupabase(String(eventId))) || [];
         } else {
           list = await loadGuests(String(eventId));
         }
@@ -126,7 +130,7 @@ export default function SeatingArrivalPage() {
       }
     };
 
-    const id = setInterval(tick, 4000);
+    const id = setInterval(tick, 60000);
     return () => clearInterval(id);
   }, [eventId]);
 
@@ -143,7 +147,10 @@ export default function SeatingArrivalPage() {
   };
 
   const confirmedPeople = allGuests.reduce((total, g) => total + getConfirmedQty(g), 0);
-  const arrivedCount = allGuests.reduce((sum, g) => sum + (Number(g.arrivedCount) || 0), 0);
+  const arrivedCount = allGuests.reduce(
+    (sum, g) => sum + (Number(g.arrivedCount) || 0),
+    0
+  );
   const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
 
   const filteredGuests = useMemo(() => {
@@ -196,13 +203,11 @@ export default function SeatingArrivalPage() {
     recognition.start();
   };
 
-  const markArrival = (id: number, count: number) => {
+  const markArrival = async (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
     setAllGuests(updated);
-
-    saveGuests(String(eventId), updated);
 
     const arrivedOnly = updated
       .filter((g) => Number(g.arrivedCount) > 0)
@@ -215,6 +220,16 @@ export default function SeatingArrivalPage() {
       `arrived_event_${eventId}`,
       JSON.stringify(arrivedOnly)
     );
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    const guest = updated.find((g) => g.id === id);
+    if (guest) {
+      try {
+        await updateGuestInSupabase(guest, String(eventId));
+      } catch (e) {
+        console.warn('arrival sync failed', e);
+      }
+    }
 
     setSearchTerm('');
     setDebouncedTerm('');
@@ -228,14 +243,27 @@ export default function SeatingArrivalPage() {
     setForceEmptyList(false);
   };
 
-  const refresh = () => {
+  const refresh = async () => {
     setSearchTerm('');
     setDebouncedTerm('');
     setForceEmptyList(false);
     setTableMapVersion((prev) => prev + 1);
+    try {
+      let list: any[] = [];
+      if (typeof fetchGuestsFromSupabase === 'function') {
+        list = (await fetchGuestsFromSupabase(String(eventId))) || [];
+      } else {
+        list = await loadGuests(String(eventId));
+      }
+      if (Array.isArray(list) && list.length > 0) {
+        setAllGuests(list);
+      }
+    } catch (e) {
+      console.log('manual refresh failed', e);
+    }
   };
 
-  const addLiveGuest = () => {
+  const addLiveGuest = async () => {
     const name = newName.trim();
     if (!name) {
       alert('נא להזין שם');
@@ -257,7 +285,14 @@ export default function SeatingArrivalPage() {
     };
     const updated = [...allGuests, newGuest];
     setAllGuests(updated);
-    saveGuests(String(eventId), updated);
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    try {
+      await updateGuestInSupabase(newGuest, String(eventId));
+    } catch (e) {
+      console.warn('add live guest sync failed', e);
+    }
+
     setNewName('');
     setNewQty(1);
     setShowAddModal(false);
@@ -426,7 +461,7 @@ export default function SeatingArrivalPage() {
             onClick={refresh}
             className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"
           >
-            <RefreshCw size={20} /> רענן שולחנות
+            <RefreshCw size={20} /> רענן
           </button>
 
           <button
@@ -466,7 +501,10 @@ export default function SeatingArrivalPage() {
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest: any) => {
                   const confirmed =
-                    getConfirmedQty(guest) || guest.confirmedCount || guest.quantity || 1;
+                    getConfirmedQty(guest) ||
+                    guest.confirmedCount ||
+                    guest.quantity ||
+                    1;
                   const isAlreadyArrived = guest.arrivedCount > 0;
                   const isNotComing = guest.confirmed === 'לא מגיע';
                   const isPending =
@@ -491,19 +529,25 @@ export default function SeatingArrivalPage() {
                             <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
                               ❌
                             </div>
-                            <div className="text-red-600 font-semibold text-sm mt-1">לא מגיע</div>
+                            <div className="text-red-600 font-semibold text-sm mt-1">
+                              לא מגיע
+                            </div>
                           </div>
                         ) : isPending ? (
                           <div className="flex flex-col items-center">
                             <div className="text-4xl">⏳</div>
-                            <div className="text-amber-600 font-medium text-sm mt-1">ממתין</div>
+                            <div className="text-amber-600 font-medium text-sm mt-1">
+                              ממתין
+                            </div>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
                             <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
                               ✅
                             </div>
-                            <div className="text-emerald-700 font-semibold text-lg mt-1">{confirmed}</div>
+                            <div className="text-emerald-700 font-semibold text-lg mt-1">
+                              {confirmed}
+                            </div>
                           </div>
                         )}
                       </td>
@@ -513,7 +557,9 @@ export default function SeatingArrivalPage() {
                             <div className="bg-gray-400 text-white px-8 py-4 rounded-3xl font-bold text-2xl shadow">
                               אורח זה כבר הגיע
                             </div>
-                            <div className="text-gray-600 font-semibold">הגיע {guest.arrivedCount}</div>
+                            <div className="text-gray-600 font-semibold">
+                              הגיע {guest.arrivedCount}
+                            </div>
                           </div>
                         ) : (
                           <button
@@ -564,7 +610,9 @@ export default function SeatingArrivalPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">הוסף מוזמן (ללא הושבה)</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center">
+              הוסף מוזמן (ללא הושבה)
+            </h2>
             <label className="block text-sm font-medium mb-2">שם</label>
             <input
               type="text"
