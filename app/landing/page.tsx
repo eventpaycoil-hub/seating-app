@@ -666,15 +666,14 @@ function LandingPageContent() {
 
               {!isTwoButtons && !isThreeButtons && (
                 <>
-                  <p className="text-xl mb-2">{t.howMany}</p>
+                                    <p className="text-xl mb-3">{t.howMany}</p>
 
-                  {/* כפתורים בגודל המקורי — w-20 h-20 */}
-                  <div className="flex flex-wrap gap-4 justify-center">
+                  <div className="flex flex-wrap gap-5 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
+                        className="w-28 h-28 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-5xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
                       >
                         {num}
                       </button>
@@ -683,18 +682,18 @@ function LandingPageContent() {
 
                   <button
                     onClick={() => setShowMore(!showMore)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-12 py-4 rounded-2xl text-xl font-medium"
                   >
                     {t.moreThan5}
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-4 justify-center pt-2">
+                    <div className="flex flex-wrap gap-5 justify-center pt-2">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           onClick={() => handleRsvp(num)}
-                          className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                          className="w-24 h-24 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-4xl font-bold rounded-full active:scale-95"
                         >
                           {num}
                         </button>
@@ -702,22 +701,22 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-2 max-w-md mx-auto space-y-3">
+                  <div className="pt-3 max-w-md mx-auto space-y-3">
                     <button
                       onClick={handleNotComing}
-                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-5 rounded-2xl text-xl font-medium transition-all"
                     >
                       {t.notComing}
                     </button>
                     <button
                       onClick={handleUnknown}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-5 rounded-2xl text-xl font-medium transition-all"
                     >
                       {t.unknown}
                     </button>
                     <button
                       onClick={() => setShowPersonalNote(true)}
-                      className="w-full px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
+                      className="w-full px-8 py-4 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-xl font-medium transition-all"
                     >
                       {t.personalNote}
                     </button>
