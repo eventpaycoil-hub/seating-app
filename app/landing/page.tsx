@@ -159,7 +159,7 @@ function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const code = searchParams.get('code') || searchParams.get('ref');
-  const imgParam = searchParams.get('img'); // '1' | '2' | null
+  const imgParam = searchParams.get('img');
   const [event, setEvent] = useState<any>(null);
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +232,7 @@ function LandingPageContent() {
         if (!error && data && !cancelled) {
           const mapped = {
             id: data.id,
-                        rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
+            rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
             welcomeLine: data.welcome_line || data.welcomeLine || '',
             useExternalLanding:
               data.use_external_landing || data.useExternalLanding || 'לא',
@@ -246,13 +246,11 @@ function LandingPageContent() {
             time: data.time || '19:30',
             eventDate: data.event_date || data.eventDate || '',
             fullDate: data.full_date || data.fullDate || data.event_date || '',
-            eventType: data.event_type || data.eventType || '',
             englishEvent: data.english_event || data.englishEvent || 'לא',
             hasSeparation: data.has_separation || data.hasSeparation || 'לא',
             hasTransport: data.has_transport || data.hasTransport || 'לא',
             guestNotes: data.guest_notes || data.guestNotes || 'כן',
             coverUrl: data.cover_url || data.coverUrl || '',
-                        coverUrl: data.cover_url || data.coverUrl || '',
             coverUrl2: data.cover_url2 || data.coverUrl2 || '',
           };
           setEvent((prev: any) => ({ ...(prev || {}), ...mapped }));
@@ -360,7 +358,7 @@ function LandingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover, externalRedirect]);
+  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover, externalRedirect, imgParam]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -517,10 +515,10 @@ function LandingPageContent() {
 
   if (!eventId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
+        <div className="text-center px-6">
           <h2 className="text-3xl font-bold text-red-600 mb-4">{TEXTS.he.invalidLink}</h2>
-          <p>{TEXTS.he.missingDetails}</p>
+          <p className="text-slate-600">{TEXTS.he.missingDetails}</p>
         </div>
       </div>
     );
@@ -528,24 +526,27 @@ function LandingPageContent() {
 
   if (externalRedirect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
-        <div className="text-2xl text-gray-600">{t.redirecting}</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
+        <div className="text-xl text-slate-600 animate-pulse">{t.redirecting}</div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
-        <div className="text-2xl text-gray-600">{t.loading}</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-[#3f2a1e]/30 border-t-[#3f2a1e] rounded-full animate-spin" />
+          <div className="text-lg text-slate-600">{t.loading}</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f1e3]" dir={dir}>
+    <div className="min-h-screen bg-[#f7f0e6]" dir={dir}>
       {isEnglishEvent && (
-        <div className="bg-[#2a1c14] text-white py-2 px-4 flex justify-center gap-2 text-sm">
+        <div className="bg-[#2a1c14] text-white py-2.5 px-4 flex justify-center gap-2 text-sm sticky top-0 z-40">
           <button
             onClick={() => setLang('he')}
             className={`px-4 py-1.5 rounded-full font-medium transition ${
@@ -565,123 +566,138 @@ function LandingPageContent() {
         </div>
       )}
 
-      <div className="bg-[#3f2a1e] text-white py-6 text-center">
-        <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
-          {event?.owners ? `${titlePrefix} ${event.owners}` : displayTitle}
+      {/* כותרת */}
+      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-7 sm:py-9 text-center px-4 shadow-lg">
+        <p className="text-[11px] sm:text-xs tracking-[0.25em] uppercase opacity-70 mb-2 font-light">
+          {lang === 'he' ? 'הזמנה לאירוע' : 'Event Invitation'}
+        </p>
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
+          {event?.owners ? (
+            <>
+              <span className="opacity-80">{titlePrefix}</span>
+              <br className="sm:hidden" />
+              <span className="font-semibold"> {event.owners}</span>
+            </>
+          ) : (
+            displayTitle
+          )}
         </h1>
-        {guestName && rsvpStatus === 'none' && (
-          <p className="mt-2 text-lg opacity-90">
-            {lang === 'he' ? `שלום ${guestName}` : `Hi ${guestName}`}
-          </p>
-        )}
-      </div>
+        
+      </header>
 
       {rsvpStatus !== 'none' ? (
-        <div className="max-w-xl mx-auto px-6 py-16 text-center">
+        <div className="max-w-lg mx-auto px-5 py-12 sm:py-16 text-center">
           {rsvpStatus === 'confirmed' && (
-            <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-12 shadow-xl">
-              <div className="text-7xl mb-6">🎉</div>
-              <h3 className="text-4xl font-bold text-green-800 mb-3">{t.thanks}</h3>
-              {guestName && (
-                <p className="text-xl text-green-700 mb-2">
-                  {lang === 'he' ? `תודה ${guestName}!` : `Thank you ${guestName}!`}
-                </p>
-              )}
-              <p className="text-2xl text-green-700 mb-4">
+            <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-8 sm:p-12 shadow-xl backdrop-blur">
+              <div className="text-6xl sm:text-7xl mb-5">🎉</div>
+              <h3 className="text-3xl sm:text-4xl font-bold text-emerald-800 mb-2">{t.thanks}</h3>
+              
+              <p className="text-xl sm:text-2xl text-emerald-700 mb-3">
                 {t.confirmedFor}
                 {rsvpCount} {t.guests}
               </p>
-              <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
+              <p className="text-lg text-emerald-600 font-medium">{t.seeYou}</p>
               {event?.hasSeparation === 'כן' && (
-                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+                <p className="text-sm text-emerald-600 mt-4 opacity-80">{t.redirectSeparation}</p>
               )}
             </div>
           )}
 
           {rsvpStatus === 'notComing' && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
-              <div className="text-6xl mb-6">😔</div>
-              <h3 className="text-3xl font-bold text-red-800 mb-3">{t.sorryNotComing}</h3>
-              <p className="text-xl text-red-700">{t.thanksUpdate}</p>
+            <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
+              <div className="text-5xl sm:text-6xl mb-5">😔</div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-rose-800 mb-3">{t.sorryNotComing}</h3>
+              <p className="text-lg text-rose-700">{t.thanksUpdate}</p>
             </div>
           )}
 
           {rsvpStatus === 'pending' && (
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-3xl p-12 shadow-xl">
-              <div className="text-6xl mb-6">📞</div>
-              <h3 className="text-3xl font-bold text-blue-800 mb-3">{t.thanksShort}</h3>
-              <p className="text-xl text-blue-700">{t.willContact}</p>
+            <div className="bg-white/90 border border-sky-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
+              <div className="text-5xl sm:text-6xl mb-5">📞</div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-sky-800 mb-3">{t.thanksShort}</h3>
+              <p className="text-lg text-sky-700">{t.willContact}</p>
             </div>
           )}
 
           {rsvpStatus === 'notFound' && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
-              <h3 className="text-2xl font-bold text-red-700 mb-4">{t.guestNotFound}</h3>
-              <p>{t.invalidCode}</p>
-              <p className="text-sm text-gray-500 mt-3">ref: {code}</p>
+            <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-rose-700 mb-3">{t.guestNotFound}</h3>
+              <p className="text-slate-600">{t.invalidCode}</p>
+              <p className="text-xs text-slate-400 mt-3 font-mono">ref: {code}</p>
             </div>
           )}
 
           {rsvpStatus === 'general' && (
-            <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-12 shadow-xl">
-              <h3 className="text-2xl font-bold text-amber-700 mb-4">{t.generalLink}</h3>
-              <p className="whitespace-pre-line">{t.generalLinkText}</p>
+            <div className="bg-white/90 border border-amber-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-amber-800 mb-3">{t.generalLink}</h3>
+              <p className="whitespace-pre-line text-slate-700">{t.generalLinkText}</p>
             </div>
           )}
         </div>
       ) : (
         <>
-          <div className="flex justify-center pt-8 pb-4">
-            <div className="w-full max-w-[1100px] px-4">
-              <div className="relative w-full aspect-[3/2] rounded-3xl overflow-hidden shadow-2xl">
-                {heroMedia?.type === 'video' ? (
-                  <video
-                    src={heroMedia.url}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={heroMedia?.url || '/chatan-kala.jpg'}
-                    alt="Invitation"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
+          {/* תמונה עם מסגרת בטוחה */}
+          <div className="flex justify-center pt-6 sm:pt-10 pb-2 px-4">
+            <div className="w-full max-w-[420px] sm:max-w-[520px] md:max-w-[640px]">
+              {/* מסגרת חיצונית — לא נשברת עם גדלים שונים */}
+              <div className="p-[3px] sm:p-1 rounded-[1.25rem] sm:rounded-[1.75rem] bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/20">
+                <div className="p-1.5 sm:p-2.5 rounded-[1.1rem] sm:rounded-[1.5rem] bg-[#f7f0e6]">
+                  <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] max-h-[70vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
+                    {heroMedia?.type === 'video' ? (
+                      <video
+                        src={heroMedia.url}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                    ) : (
+                      <img
+                        src={heroMedia?.url || '/chatan-kala.jpg'}
+                        alt="Invitation"
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="max-w-2xl mx-auto px-6 pt-6 pb-16 text-center">
-            <div className="mb-10 text-[#3f2a1e]">
-              <div className="text-4xl font-semibold mb-3 tracking-wide">
+          {/* פרטי אירוע + כפתורים */}
+          <div className="max-w-xl mx-auto px-5 pt-8 pb-16 text-center">
+            <div className="mb-8 text-[#3f2a1e]">
+              <div className="text-3xl sm:text-4xl font-semibold tracking-wide mb-2">
                 {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
-              <div className="text-2xl mb-1.5">{event?.hallName}</div>
-              {event?.city && <div className="text-xl mb-1.5">{event.city}</div>}
-              <div className="text-xl">
+              {event?.hallName && (
+                <div className="text-xl sm:text-2xl font-medium opacity-90">{event.hallName}</div>
+              )}
+              {event?.city && (
+                <div className="text-lg sm:text-xl opacity-75 mt-0.5">{event.city}</div>
+              )}
+              <div className="text-base sm:text-lg opacity-70 mt-1">
                 {t.atHour} {event?.time || '19:30'}
               </div>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-bold mb-10 text-[#3f2a1e]">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-[#3f2a1e] leading-snug">
               {t.gladToSee}
             </h2>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               {isTwoButtons && (
-                <div className="flex flex-col sm:flex-row gap-5 justify-center">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 sm:max-w-[220px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-5 sm:py-6 rounded-2xl shadow-lg shadow-emerald-900/20 transition-all"
                   >
                     {t.coming}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 sm:max-w-[220px] bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl sm:text-2xl font-bold py-5 sm:py-6 rounded-2xl border-2 border-rose-200 shadow-sm transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -689,22 +705,22 @@ function LandingPageContent() {
               )}
 
               {isThreeButtons && (
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-lg sm:text-xl font-bold py-5 rounded-2xl shadow-lg transition-all"
                   >
                     {t.coming1}
                   </button>
                   <button
                     onClick={() => handleRsvp(2)}
-                    className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-lg sm:text-xl font-bold py-5 rounded-2xl shadow-lg transition-all"
                   >
                     {t.coming2}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 max-w-xs bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-lg sm:text-xl font-bold py-5 rounded-2xl border-2 border-rose-200 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -713,13 +729,14 @@ function LandingPageContent() {
 
               {!isTwoButtons && !isThreeButtons && (
                 <>
-                  <p className="text-xl">{t.howMany}</p>
-                  <div className="flex flex-wrap gap-4 justify-center">
+                  <p className="text-lg sm:text-xl text-[#3f2a1e]/80 font-medium">{t.howMany}</p>
+
+                  <div className="flex flex-wrap gap-3 sm:gap-4 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
+                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
                       >
                         {num}
                       </button>
@@ -728,18 +745,18 @@ function LandingPageContent() {
 
                   <button
                     onClick={() => setShowMore(!showMore)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
+                    className="inline-flex items-center justify-center bg-amber-500/90 hover:bg-amber-600 text-white px-8 py-3 rounded-full text-base sm:text-lg font-medium shadow-md transition-all active:scale-[0.98]"
                   >
                     {t.moreThan5}
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-4 justify-center pt-4 border-t">
+                    <div className="flex flex-wrap gap-3 justify-center pt-2">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           onClick={() => handleRsvp(num)}
-                          className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                          className="w-12 h-12 sm:w-14 sm:h-14 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-xl font-bold rounded-2xl shadow transition-all"
                         >
                           {num}
                         </button>
@@ -747,27 +764,26 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-4">
+                  <div className="pt-2 space-y-3 max-w-md mx-auto">
                     <button
                       onClick={handleNotComing}
-                      className="w-full max-w-md mx-auto bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all mb-3"
+                      className="w-full bg-white hover:bg-rose-50 text-rose-600 py-4 rounded-2xl text-base sm:text-lg font-semibold border border-rose-200 transition-all active:scale-[0.99]"
                     >
                       {t.notComing}
                     </button>
                     <button
                       onClick={handleUnknown}
-                      className="w-full max-w-md mx-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
+                      className="w-full bg-white/70 hover:bg-white text-slate-600 py-4 rounded-2xl text-base sm:text-lg font-medium border border-slate-200 transition-all active:scale-[0.99]"
                     >
                       {t.unknown}
                     </button>
+                    <button
+                      onClick={() => setShowPersonalNote(true)}
+                      className="w-full text-[#3f2a1e] hover:bg-[#3f2a1e]/5 py-3 rounded-2xl text-base font-medium border border-dashed border-[#3f2a1e]/30 transition-all"
+                    >
+                      {t.personalNote}
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => setShowPersonalNote(true)}
-                    className="mt-4 px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
-                  >
-                    {t.personalNote}
-                  </button>
                 </>
               )}
             </div>
@@ -776,25 +792,25 @@ function LandingPageContent() {
       )}
 
       {showPersonalNote && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md mx-4" dir={dir}>
-            <h3 className="text-2xl font-bold mb-4">{t.personalMessage}</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[1.75rem] p-6 sm:p-8 w-full max-w-md shadow-2xl" dir={dir}>
+            <h3 className="text-xl sm:text-2xl font-bold mb-4 text-[#3f2a1e]">{t.personalMessage}</h3>
             <textarea
               value={personalNote}
               onChange={(e) => setPersonalNote(e.target.value)}
-              className="w-full h-40 p-4 border rounded-2xl mb-6"
+              className="w-full h-36 sm:h-40 p-4 border border-slate-200 rounded-2xl mb-5 focus:outline-none focus:ring-2 focus:ring-[#3f2a1e]/30"
               placeholder={t.personalPlaceholder}
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPersonalNote(false)}
-                className="flex-1 py-3 border rounded-2xl"
+                className="flex-1 py-3 border border-slate-200 rounded-2xl font-medium text-slate-600"
               >
                 {t.cancel}
               </button>
               <button
                 onClick={handlePersonalNoteSubmit}
-                className="flex-1 py-3 bg-[#3f2a1e] text-white rounded-2xl"
+                className="flex-1 py-3 bg-[#3f2a1e] text-white rounded-2xl font-bold"
               >
                 {t.send}
               </button>
@@ -808,7 +824,13 @@ function LandingPageContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">טוען...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
+          טוען...
+        </div>
+      }
+    >
       <LandingPageContent />
     </Suspense>
   );
