@@ -192,7 +192,20 @@ export default function EditGuestPage() {
     saveGuests(eventId, savedGuests);
   };
 
-  const addToNotes = (text: string) => {
+     const isAdmin =
+    typeof window !== 'undefined' &&
+    (localStorage.getItem('userRole') || '').toLowerCase() === 'admin' &&
+    localStorage.getItem('clientMode') !== 'true';
+
+      const addToNotes = (text: string) => {
+    if (text === 'אפס הערה') {
+      const role = (localStorage.getItem('userRole') || '').toLowerCase();
+      const clientMode = localStorage.getItem('clientMode') === 'true';
+      if (role !== 'admin' || clientMode) return;
+      saveGuestField({ ...guest, notes: '' });
+      return;
+    }
+
     const date = new Date().toLocaleString('he-IL');
     const newNote = `${text} - ${date}`;
     const updated = {
@@ -509,7 +522,7 @@ export default function EditGuestPage() {
               className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
             />
 
-            <div className="bg-white rounded-xl border border-gray-300 px-3 py-2">
+                        <div className="bg-white rounded-xl border border-gray-300 px-3 py-2">
               <label className="block text-xs text-gray-500 mb-1 text-center">כמות (הערכה)</label>
               <input
                 type="text"
@@ -549,16 +562,16 @@ export default function EditGuestPage() {
 
         <div className="bg-white rounded-2xl px-3 py-2.5 shadow">
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5">
-            {quickActions.map((text, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => addToNotes(text)}
-                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs py-2 px-1 rounded-xl active:scale-[0.98]"
-              >
-                {text}
-              </button>
-            ))}
+                         {quickActions.map((text, i) => (
+                <button
+                  key={`${text}-${i}`}
+                  type="button"
+                  onClick={() => addToNotes(text)}
+                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs py-2 px-1 rounded-xl active:scale-[0.98]"
+                >
+                  {text}
+                </button>
+              ))}
           </div>
         </div>
 

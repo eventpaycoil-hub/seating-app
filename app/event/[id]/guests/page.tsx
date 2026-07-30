@@ -438,7 +438,16 @@ export default function GuestsPage() {
 
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
-
+  const setNeedsTransportForSelected = (value: boolean) => {
+    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+    const updated = guests.map((g: any) =>
+      selectedGuests.includes(g.id) ? { ...g, needsTransport: value } : g
+    );
+    saveGuests(eventId, updated);
+    setGuests(updated);
+    setSelectedGuests([]);
+    alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
+  };
   // === הורדות אקסל ===
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
@@ -574,12 +583,63 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="text-3xl font-bold text-slate-800">רשימת מוזמנים</div>
-          <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
-            <div className="text-sm opacity-90">סה״כ אישרו</div>
-            <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
+            <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="text-3xl font-bold text-slate-800">רשימת מוזמנים</div>
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-3xl shadow-lg flex items-center gap-3">
+              <div className="text-sm opacity-90">סה״כ אישרו</div>
+              <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={downloadAllGuests}
+              className="bg-teal-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap text-sm"
+            >
+              📥 הורד את כל הרשימה
+            </button>
+            <button
+              onClick={downloadConfirmedGuests}
+              className="bg-emerald-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap text-sm"
+            >
+              📥 הורד רשימת מאושרים
+            </button>
+            {hasTransport && (
+              <>
+                <button
+                  onClick={() => setNeedsTransportForSelected(true)}
+                  className="bg-cyan-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-cyan-700 whitespace-nowrap text-sm"
+                >
+                  הוסף הסעה למסומנים
+                </button>
+                <button
+                  onClick={() => setNeedsTransportForSelected(false)}
+                  className="bg-slate-500 text-white px-4 py-3 rounded-2xl font-medium hover:bg-slate-600 whitespace-nowrap text-sm"
+                >
+                  בטל הסעה למסומנים
+                </button>
+              </>
+            )}
+            <button
+              onClick={sendSMS}
+              className="bg-blue-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
+            >
+              📩 SMS
+            </button>
+            <button
+              onClick={sendWhatsApp}
+              className="bg-green-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap text-sm"
+            >
+              💬 ווטסאפ
+            </button>
+            <button
+              onClick={deleteSelected}
+              className="bg-red-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap text-sm"
+            >
+              🗑 מחק
+            </button>
           </div>
         </div>
 
@@ -726,49 +786,13 @@ export default function GuestsPage() {
 
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col md:flex-row gap-3 items-stretch">
-              <input
-                type="text"
-                placeholder="חיפוש לפי שם או טלפון..."
-                className="flex-1 p-4 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:outline-none"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-                           {isFullAdmin && (
-                <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                  <button
-                    onClick={downloadAllGuests}
-                    className="bg-teal-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap"
-                  >
-                    📥 כל המוזמנים
-                  </button>
-                  <button
-                    onClick={downloadConfirmedGuests}
-                    className="bg-emerald-600 text-white px-5 py-4 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap"
-                  >
-                    📥 שאישרו הגעה
-                  </button>
-                  <button
-                    onClick={sendSMS}
-                    className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap"
-                  >
-                    📩 SMS
-                  </button>
-                  <button
-                    onClick={sendWhatsApp}
-                    className="bg-green-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap"
-                  >
-                    💬 ווטסאפ
-                  </button>
-                  <button
-                    onClick={deleteSelected}
-                    className="bg-red-600 text-white px-6 py-4 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap"
-                  >
-                    🗑 מחק
-                  </button>
-                </div>
-              )}
-            </div>
+            <input
+              type="text"
+              placeholder="חיפוש לפי שם או טלפון..."
+              className="w-full p-4 border-2 border-slate-200 rounded-2xl focus:border-blue-400 focus:outline-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
 
             {allGroupNames.length > 0 && (
               <div className="flex items-center gap-3">
@@ -874,16 +898,16 @@ export default function GuestsPage() {
 
                   const displayGuests = [...groupGuests].reverse();
 
-const guestsBefore = grouped
-  .slice(0, grouped.findIndex(([name]) => name === groupName))
-  .reduce((sum, [, g]) => sum + g.length, 0);
+                  const guestsBefore = grouped
+                    .slice(0, grouped.findIndex(([name]) => name === groupName))
+                    .reduce((sum, [, g]) => sum + g.length, 0);
 
-const totalInFilter = grouped.reduce((sum, [, g]) => sum + g.length, 0);
-const groupStartNumber = totalInFilter - guestsBefore;
+                  const totalInFilter = grouped.reduce((sum, [, g]) => sum + g.length, 0);
+                  const groupStartNumber = totalInFilter - guestsBefore;
 
-return (
+                  return (
                     <Fragment key={`group-${groupName}`}>
-                     <tr id={`group-header-${groupName}`} style={{ scrollMarginTop: '140px' }}>
+                      <tr id={`group-header-${groupName}`} style={{ scrollMarginTop: '140px' }}>
                         {isFullAdmin && (
                           <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
