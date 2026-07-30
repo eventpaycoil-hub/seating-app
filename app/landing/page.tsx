@@ -585,7 +585,7 @@ function LandingPageContent() {
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
-                  <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] max-h-[62vh] rounded-2xl overflow-hidden bg-[#e8dfd0]">
+                  <div className="relative w-full aspect-[3/3.4] sm:aspect-[3/3.2] max-h-[54vh] rounded-2xl overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -673,8 +673,7 @@ function LandingPageContent() {
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-28 h-28 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-5xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
-                      >
+className="w-32 h-32 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-5xl font-bold rounded-full active:scale-95 transition-all shadow-lg"                      >
                         {num}
                       </button>
                     ))}
@@ -702,21 +701,21 @@ function LandingPageContent() {
                   )}
 
                   <div className="pt-1 max-w-md mx-auto space-y-3">
-                    <button
+                                        <button
                       onClick={handleNotComing}
-                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-5 rounded-2xl text-xl font-medium transition-all"
+                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-5 rounded-2xl text-xl font-bold transition-all"
                     >
                       {t.notComing}
                     </button>
                     <button
                       onClick={handleUnknown}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-5 rounded-2xl text-xl font-medium transition-all"
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-5 rounded-2xl text-lg sm:text-xl font-semibold transition-all"
                     >
                       {t.unknown}
                     </button>
-                    <button
+                                        <button
                       onClick={() => setShowPersonalNote(true)}
-                      className="w-full px-8 py-4 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-xl font-medium transition-all"
+                      className="w-full px-6 py-5 border-2 border-[#3f2a1e] text-[#3f2a1e] bg-white hover:bg-[#3f2a1e] hover:text-white rounded-2xl text-xl font-bold transition-all shadow-sm"
                     >
                       {t.personalNote}
                     </button>
