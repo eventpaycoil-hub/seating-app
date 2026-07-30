@@ -1417,33 +1417,90 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
         </div>
       )}
 
-      {showEditModal && editingTable && (
+            {showEditModal && editingTable && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-2xl p-6 w-80 shadow-2xl border border-slate-600" dir="rtl">
             <h2 className="text-lg font-bold mb-4 text-white">עריכת שולחן</h2>
+
             <div className="mb-3">
               <label className="block text-xs font-medium mb-1 text-slate-300">מספר שולחן</label>
-              <input type="number" value={editingTable.tableNumber || ''} onChange={(e) => setEditingTable({ ...editingTable, tableNumber: parseInt(e.target.value) || 0 })} className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white" />
+              <input
+                type="number"
+                value={editingTable.tableNumber || ''}
+                onChange={(e) =>
+                  setEditingTable({
+                    ...editingTable,
+                    tableNumber: parseInt(e.target.value) || 0,
+                  })
+                }
+                className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white"
+              />
             </div>
+
             <div className="mb-3">
               <label className="block text-xs font-medium mb-1 text-slate-300">שם שולחן</label>
-              <input type="text" value={editingTable.tableName || ''} onChange={(e) => setEditingTable({ ...editingTable, tableName: e.target.value })} className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white" placeholder="למשל: חברים כלה" />
+              <input
+                type="text"
+                value={editingTable.tableName || ''}
+                onChange={(e) =>
+                  setEditingTable({ ...editingTable, tableName: e.target.value })
+                }
+                className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white"
+                placeholder="למשל: חברים כלה"
+              />
             </div>
-            {(isAdmin || can('editTableInfo')) && (
-              <div className="mb-3">
-                <label className="block text-xs font-medium mb-1 text-slate-300">מספר כסאות (תפוסים: {getOccupiedSeats(editingTable)})</label>
-                <input type="number" min={getOccupiedSeats(editingTable)} max={50} value={editingTable.seats} onChange={(e) => setEditingTable({ ...editingTable, seats: parseInt(e.target.value) || 0 })} className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white" />
-              </div>
-            )}
+
+            {/* רק מנהל — לא ללקוח */}
             {isAdmin && (
-              <label className="flex items-center gap-2 mb-4 text-sm text-white">
-                <input type="checkbox" checked={!!editingTable.isReserve} onChange={(e) => setEditingTable({ ...editingTable, isReserve: e.target.checked })} />
-                שולחן רזרבה (יופיע באדום)
-              </label>
+              <>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium mb-1 text-slate-300">
+                    מספר כסאות (תפוסים: {getOccupiedSeats(editingTable)})
+                  </label>
+                  <input
+                    type="number"
+                    min={getOccupiedSeats(editingTable)}
+                    max={50}
+                    value={editingTable.seats}
+                    onChange={(e) =>
+                      setEditingTable({
+                        ...editingTable,
+                        seats: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full p-2 border border-slate-600 rounded-xl text-sm bg-slate-900 text-white"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 mb-4 text-sm text-white">
+                  <input
+                    type="checkbox"
+                    checked={!!editingTable.isReserve}
+                    onChange={(e) =>
+                      setEditingTable({
+                        ...editingTable,
+                        isReserve: e.target.checked,
+                      })
+                    }
+                  />
+                  שולחן רזרבה (יופיע באדום)
+                </label>
+              </>
             )}
+
             <div className="flex gap-2">
-              <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 border border-slate-600 rounded-xl text-sm text-slate-300">ביטול</button>
-              <button onClick={saveEdit} className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">שמור</button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 py-2 border border-slate-600 rounded-xl text-sm text-slate-300"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={saveEdit}
+                className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold"
+              >
+                שמור
+              </button>
             </div>
           </div>
         </div>

@@ -107,7 +107,8 @@ export default function SMSPage() {
   const [customEmojis, setCustomEmojis] = useState<string[]>([]);
   const [newEmoji, setNewEmoji] = useState('');
   const [useGuestName, setUseGuestName] = useState(false);
-    const [landingImage, setLandingImage] = useState<1 | 2>(1);
+  const [landingImage, setLandingImage] = useState<1 | 2>(1);
+  const [isClientMode, setIsClientMode] = useState(false);
 
   const emojis = useMemo(
     () => [...DEFAULT_EMOJIS, ...customEmojis],
@@ -118,6 +119,14 @@ export default function SMSPage() {
     currentEvent?.englishEvent === 'כן' ||
     currentEvent?.englishEvent === true ||
     currentEvent?.englishEvent === 'yes';
+
+  useEffect(() => {
+    try {
+      const role = localStorage.getItem('userRole');
+      const client = localStorage.getItem('clientMode');
+      setIsClientMode(role === 'client' || client === '1' || client === 'true');
+    } catch {}
+  }, []);
 
   useEffect(() => {
     try {
@@ -201,11 +210,13 @@ export default function SMSPage() {
       message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
     }
 
-    // שם אורח / משפחה וחברים — בלי "שלום" לפני משפחה וחברים
     if ([1, 2, 6].includes(template.id)) {
       if (useGuestName && guest?.name) {
         message = message.replace(/\*שם\*/g, guest.name);
         message = message.replace(/\*name\*/g, guest.name);
+      } else if (useGuestName && !guest?.name) {
+        message = message.replace(/\*שם\*/g, '____');
+        message = message.replace(/\*name\*/g, '____');
       } else if (en) {
         message = message.replace(/Hi \*name\*,?\s*/gi, 'Dear family and friends,\n\n');
         message = message.replace(/\*name\*/g, 'family and friends');
@@ -226,7 +237,7 @@ export default function SMSPage() {
       ) {
         rsvplink = String(currentEvent.externalLandingUrl).trim();
       } else {
-                rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}&img=${landingImage}`;
+        rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}&img=${landingImage}`;
       }
 
       message = message.replace(/\*guestId\*/g, String(guestCode));
@@ -313,8 +324,7 @@ export default function SMSPage() {
     const invite = getEventInvitePhrase(currentEvent, isEnglishEvent);
     const welcome = getWelcomeBlock(currentEvent, isEnglishEvent);
     const noun = getShortEventNoun(currentEvent, isEnglishEvent);
-    // פעם אחת בלבד — אם יש welcome מפורט, לא מוסיפים עוד "נשמח לראותכם"
-    const welcomeBlock = welcome ? `\n\n${welcome}` : (isEnglishEvent ? '' : '\n\nנשמח לראותכם!');
+    const welcomeBlock = welcome ? `\n\n${welcome}` : isEnglishEvent ? '' : '\n\nנשמח לראותכם!';
     const base =
       typeof window !== 'undefined'
         ? window.location.origin
@@ -400,7 +410,7 @@ export default function SMSPage() {
     if (![1, 2, 6].includes(selectedTemplate.id)) return;
     if (isEditing) return;
     setEditedMessage(buildDynamicMessage(selectedTemplate));
-    }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage]);
+  }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage]);
 
   const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
@@ -444,6 +454,7 @@ export default function SMSPage() {
   };
 
   const sendRealSMS = async (phone: string) => {
+    if (isClientMode) return;
     if (!selectedTemplate) return alert(isEnglishEvent ? 'Select a template first' : 'בחר תבנית קודם');
     if (!editedMessage.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
 
@@ -472,6 +483,7 @@ export default function SMSPage() {
   };
 
   const sendToSelected = async () => {
+    if (isClientMode) return;
     if (!selectedTemplate) return alert('בחר תבנית קודם');
     if (selectedGuestsList.length === 0) return alert('לא נבחרו מוזמנים');
 
@@ -523,6 +535,11 @@ export default function SMSPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold">תבניות SMS</h1>
+            {isClientMode && (
+              <p className="text-sm text-amber-700 mt-1 font-medium">
+                מצב לקוח · ניתן לערוך ולשמור ניסוח · ללא שליחה
+              </p>
+            )}
             {isEnglishEvent && (
               <p className="text-sm text-blue-600 mt-1 font-medium">
                 🌐 אירוע באנגלית – התבניות מוצגות באנגלית
@@ -540,7 +557,7 @@ export default function SMSPage() {
           </Link>
         </div>
 
-        {selectedGuestsList.length > 0 && (
+        {!isClientMode && selectedGuestsList.length > 0 && (
           <div className="mb-6 p-5 rounded-3xl bg-emerald-50 border-2 border-emerald-300">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -572,7 +589,7 @@ export default function SMSPage() {
           </div>
         )}
 
-        {bulkResult && (
+        {bulkResult && !isClientMode && (
           <div className="mb-6 p-4 rounded-2xl bg-white border text-lg whitespace-pre-wrap">
             {bulkResult}
           </div>
@@ -646,7 +663,8 @@ export default function SMSPage() {
                     </label>
                   </div>
                 )}
-                {[1, 6].includes(selectedTemplate.id) && (
+
+                {[1, 6].includes(selectedTemplate.id) && !isClientMode && (
                   <div className="mb-4 p-4 rounded-2xl bg-amber-50 border flex flex-wrap items-center justify-between gap-3">
                     <div className="text-sm text-gray-700 font-medium">
                       תמונה בדף הנחיתה לקישור הזה
@@ -683,6 +701,7 @@ export default function SMSPage() {
                     </div>
                   </div>
                 )}
+
                 {showEmojiPicker && (
                   <div className="mb-6 bg-white border rounded-2xl p-4 shadow-inner">
                     <div className="grid grid-cols-10 gap-2 max-h-40 overflow-y-auto">
@@ -741,40 +760,49 @@ export default function SMSPage() {
                   </div>
                 )}
 
-                <div className="space-y-4 mt-8">
-                  {selectedGuestsList.length > 0 && (
+                {!isClientMode && (
+                  <div className="space-y-4 mt-8">
+                    {selectedGuestsList.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={sendToSelected}
+                        disabled={isSending}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-bold text-lg"
+                      >
+                        {isSending && sendingTo === 'bulk'
+                          ? '⏳ שולח למסומנים...'
+                          : `📱 שלח למסומנים (${selectedGuestsList.length})`}
+                      </button>
+                    )}
+
                     <button
-                      type="button"
-                      onClick={sendToSelected}
+                      onClick={() => sendRealSMS('0505270152')}
                       disabled={isSending}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-bold text-lg"
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
                     >
-                      {isSending && sendingTo === 'bulk'
-                        ? '⏳ שולח למסומנים...'
-                        : `📱 שלח למסומנים (${selectedGuestsList.length})`}
+                      {isSending && sendingTo === '0505270152'
+                        ? '⏳ שולח לשמעון...'
+                        : '📱 שלח דוגמא לשמעון (050-5270152)'}
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => sendRealSMS('0505270152')}
-                    disabled={isSending}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
-                  >
-                    {isSending && sendingTo === '0505270152'
-                      ? '⏳ שולח לשמעון...'
-                      : '📱 שלח דוגמא לשמעון (050-5270152)'}
-                  </button>
+                    <button
+                      onClick={() => sendRealSMS('0507666937')}
+                      disabled={isSending}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
+                    >
+                      {isSending && sendingTo === '0507666937'
+                        ? '⏳ שולח לנופר...'
+                        : '📱 שלח דוגמא לנופר (050-7666937)'}
+                    </button>
+                  </div>
+                )}
 
-                  <button
-                    onClick={() => sendRealSMS('0507666937')}
-                    disabled={isSending}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-5 rounded-2xl font-medium text-lg"
-                  >
-                    {isSending && sendingTo === '0507666937'
-                      ? '⏳ שולח לנופר...'
-                      : '📱 שלח דוגמא לנופר (050-7666937)'}
-                  </button>
-                </div>
+                {isClientMode && (
+                  <div className="mt-6 p-4 rounded-2xl bg-slate-50 border text-sm text-slate-600">
+                    במצב לקוח אפשר לערוך את נוסח ההודעה ולהוסיף סמיילים.
+                    שליחת SMS מתבצעת רק על ידי המנהל.
+                  </div>
+                )}
               </>
             ) : (
               <div className="h-96 flex items-center justify-center text-gray-400 text-2xl">

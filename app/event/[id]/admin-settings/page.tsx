@@ -25,6 +25,7 @@ const allActions: QuickAction[] = [
   { id: 'seating-sketch', label: 'סקיצה אולם', icon: '🪑' },
   { id: 'seating-view', label: 'תצוגת אולם', icon: '🗺️' },
   { id: 'transport', label: 'הסעות', icon: '🚌' },
+    { id: 'sms', label: 'SMS', icon: '📩' },
 ];
 
 interface SeatingPermissions {

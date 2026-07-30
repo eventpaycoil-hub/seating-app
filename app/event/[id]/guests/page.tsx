@@ -166,7 +166,7 @@ export default function GuestsPage() {
         'pricing-view',
         'events-list',
         'edit-event',
-        'sms',
+        
         'email',
         'whatsapp',
         'landing',
