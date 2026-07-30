@@ -19,6 +19,11 @@ const LINKS = [
     icon: '🎫',
     color: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400',
   },
+    {
+    title: 'Heyy Inbox',
+    url: 'https://app.heyy.io/inbox',
+    description: 'תיבת הודעות Heyy',
+  },
   {
     id: 'flex-vat',
     title: 'מחשבון מע״מ – Flex',
