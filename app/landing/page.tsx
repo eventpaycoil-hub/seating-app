@@ -192,9 +192,7 @@ function LandingPageContent() {
       setLoading(false);
       return;
     }
-
     let cancelled = false;
-
     (async () => {
       try {
         const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -208,11 +206,7 @@ function LandingPageContent() {
           ) {
             setLang('en');
           }
-
-          if (
-            currentEvent.useExternalLanding === 'כן' &&
-            currentEvent.externalLandingUrl
-          ) {
+          if (currentEvent.useExternalLanding === 'כן' && currentEvent.externalLandingUrl) {
             setExternalRedirect(true);
             window.location.href = String(currentEvent.externalLandingUrl).trim();
             return;
@@ -234,10 +228,8 @@ function LandingPageContent() {
             id: data.id,
             rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
             welcomeLine: data.welcome_line || data.welcomeLine || '',
-            useExternalLanding:
-              data.use_external_landing || data.useExternalLanding || 'לא',
-            externalLandingUrl:
-              data.external_landing_url || data.externalLandingUrl || '',
+            useExternalLanding: data.use_external_landing || data.useExternalLanding || 'לא',
+            externalLandingUrl: data.external_landing_url || data.externalLandingUrl || '',
             eventType: data.event_type || data.eventType || '',
             owners: data.owners || data.title || '',
             title: data.title || data.owners || '',
@@ -254,15 +246,12 @@ function LandingPageContent() {
             coverUrl2: data.cover_url2 || data.coverUrl2 || '',
           };
           setEvent((prev: any) => ({ ...(prev || {}), ...mapped }));
-          if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) {
-            setLang('en');
-          }
+          if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) setLang('en');
         }
       } catch (e) {
         console.warn('events table query failed', e);
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -274,12 +263,10 @@ function LandingPageContent() {
       return;
     }
     if (externalRedirect) return;
-
     let cancelled = false;
     const timeoutId = setTimeout(() => {
       if (!cancelled) setLoading(false);
     }, 4000);
-
     (async () => {
       try {
         const list = await loadGuests(String(eventId));
@@ -297,7 +284,6 @@ function LandingPageContent() {
         clearTimeout(timeoutId);
       }
     })();
-
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
@@ -306,23 +292,19 @@ function LandingPageContent() {
 
   useEffect(() => {
     if (!eventId || externalRedirect) return;
-
     let cancelled = false;
-
     (async () => {
       const preferred = getPreferredCover(String(eventId), event, imgParam);
       if (!cancelled && preferred) {
         setHeroMedia({ type: 'image', url: preferred });
         return;
       }
-
       try {
         const { data, error } = await supabase
           .from('events')
           .select('cover_url')
           .eq('id', Number(eventId))
           .maybeSingle();
-
         if (!cancelled && !error && data?.cover_url) {
           setHeroMedia({ type: 'image', url: data.cover_url });
           return;
@@ -330,12 +312,10 @@ function LandingPageContent() {
       } catch (e) {
         console.warn('cover_url query failed', e);
       }
-
       if (!cancelled && event?.coverUrl) {
         setHeroMedia({ type: 'image', url: event.coverUrl });
         return;
       }
-
       try {
         const videos = JSON.parse(localStorage.getItem(`videos_event_${eventId}`) || '[]');
         if (videos.length > 0 && videos[0].url) {
@@ -349,12 +329,8 @@ function LandingPageContent() {
           return;
         }
       } catch {}
-
-      if (!cancelled) {
-        setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
-      }
+      if (!cancelled) setHeroMedia({ type: 'image', url: '/chatan-kala.jpg' });
     })();
-
     return () => {
       cancelled = true;
     };
@@ -388,14 +364,12 @@ function LandingPageContent() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const now = new Date().toISOString();
     const updated = [...guests];
     updated[guestIndex] = {
@@ -406,14 +380,11 @@ function LandingPageContent() {
       confirmedSource: 'link',
       confirmedAt: now,
     };
-
     await persistGuestUpdate(updated, updated[guestIndex]);
-
     setRsvpCount(count);
     setGuestName(updated[guestIndex].name || '');
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
     if (event?.hasSeparation === 'כן') {
       setTimeout(() => {
         window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
@@ -427,14 +398,12 @@ function LandingPageContent() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const now = new Date().toISOString();
     const updated = [...guests];
     updated[guestIndex] = {
@@ -445,7 +414,6 @@ function LandingPageContent() {
       confirmedSource: 'link',
       confirmedAt: now,
     };
-
     await persistGuestUpdate(updated, updated[guestIndex]);
     setRsvpStatus('notComing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -457,14 +425,12 @@ function LandingPageContent() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     const now = new Date().toISOString();
     const updated = [...guests];
     updated[guestIndex] = {
@@ -479,7 +445,6 @@ function LandingPageContent() {
         (updated[guestIndex].notes ? '\n' : '') +
         'המוזמן סימן: לא יודע כרגע',
     };
-
     await persistGuestUpdate(updated, updated[guestIndex]);
     setRsvpStatus('pending');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -515,10 +480,10 @@ function LandingPageContent() {
 
   if (!eventId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
         <div className="text-center px-6">
           <h2 className="text-3xl font-bold text-red-600 mb-4">{TEXTS.he.invalidLink}</h2>
-          <p className="text-slate-600">{TEXTS.he.missingDetails}</p>
+          <p>{TEXTS.he.missingDetails}</p>
         </div>
       </div>
     );
@@ -526,27 +491,24 @@ function LandingPageContent() {
 
   if (externalRedirect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
-        <div className="text-xl text-slate-600 animate-pulse">{t.redirecting}</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
+        <div className="text-2xl text-gray-600">{t.redirecting}</div>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-[#3f2a1e]/30 border-t-[#3f2a1e] rounded-full animate-spin" />
-          <div className="text-lg text-slate-600">{t.loading}</div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
+        <div className="text-2xl text-gray-600">{t.loading}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f0e6] flex flex-col" dir={dir}>
+    <div className="min-h-screen bg-[#f8f1e3]" dir={dir}>
       {isEnglishEvent && (
-        <div className="bg-[#2a1c14] text-white py-2.5 px-4 flex justify-center gap-2 text-sm sticky top-0 z-40">
+        <div className="bg-[#2a1c14] text-white py-2 px-4 flex justify-center gap-2 text-sm">
           <button
             onClick={() => setLang('he')}
             className={`px-4 py-1.5 rounded-full font-medium transition ${
@@ -566,80 +528,64 @@ function LandingPageContent() {
         </div>
       )}
 
-      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-6 sm:py-8 text-center px-4 shadow-lg shrink-0">
-        <p className="text-[11px] sm:text-xs tracking-[0.25em] uppercase opacity-70 mb-2 font-light">
-          {lang === 'he' ? 'הזמנה לאירוע' : 'Event Invitation'}
-        </p>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
-          {event?.owners ? (
-            <>
-              <span className="opacity-80">{titlePrefix}</span>{' '}
-              <span className="font-semibold">{event.owners}</span>
-            </>
-          ) : (
-            displayTitle
-          )}
+      <div className="bg-[#3f2a1e] text-white py-6 text-center px-4">
+        <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
+          {event?.owners ? `${titlePrefix} ${event.owners}` : displayTitle}
         </h1>
-      </header>
+      </div>
 
       {rsvpStatus !== 'none' ? (
-        <div className="flex-1 flex items-center justify-center px-5 py-12">
-          <div className="max-w-lg w-full text-center">
-            {rsvpStatus === 'confirmed' && (
-              <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
-                <div className="text-7xl mb-6">🎉</div>
-                <h3 className="text-4xl font-bold text-emerald-800 mb-3">{t.thanks}</h3>
-                <p className="text-2xl text-emerald-700 mb-4">
-                  {t.confirmedFor}
-                  {rsvpCount} {t.guests}
-                </p>
-                <p className="text-xl text-emerald-600 font-medium">{t.seeYou}</p>
-                {event?.hasSeparation === 'כן' && (
-                  <p className="text-sm text-emerald-600 mt-4 opacity-80">{t.redirectSeparation}</p>
-                )}
-              </div>
-            )}
-
-            {rsvpStatus === 'notComing' && (
-              <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
-                <div className="text-6xl mb-6">😔</div>
-                <h3 className="text-3xl font-bold text-rose-800 mb-3">{t.sorryNotComing}</h3>
-                <p className="text-xl text-rose-700">{t.thanksUpdate}</p>
-              </div>
-            )}
-
-            {rsvpStatus === 'pending' && (
-              <div className="bg-white/90 border border-sky-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
-                <div className="text-6xl mb-6">📞</div>
-                <h3 className="text-3xl font-bold text-sky-800 mb-3">{t.thanksShort}</h3>
-                <p className="text-xl text-sky-700">{t.willContact}</p>
-              </div>
-            )}
-
-            {rsvpStatus === 'notFound' && (
-              <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
-                <h3 className="text-2xl font-bold text-rose-700 mb-4">{t.guestNotFound}</h3>
-                <p className="text-slate-600">{t.invalidCode}</p>
-                <p className="text-xs text-slate-400 mt-3 font-mono">ref: {code}</p>
-              </div>
-            )}
-
-            {rsvpStatus === 'general' && (
-              <div className="bg-white/90 border border-amber-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
-                <h3 className="text-2xl font-bold text-amber-800 mb-4">{t.generalLink}</h3>
-                <p className="whitespace-pre-line text-slate-700">{t.generalLinkText}</p>
-              </div>
-            )}
-          </div>
+        <div className="max-w-xl mx-auto px-6 py-16 text-center">
+          {rsvpStatus === 'confirmed' && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-12 shadow-xl">
+              <div className="text-7xl mb-6">🎉</div>
+              <h3 className="text-4xl font-bold text-green-800 mb-3">{t.thanks}</h3>
+              <p className="text-2xl text-green-700 mb-4">
+                {t.confirmedFor}
+                {rsvpCount} {t.guests}
+              </p>
+              <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
+              {event?.hasSeparation === 'כן' && (
+                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+              )}
+            </div>
+          )}
+          {rsvpStatus === 'notComing' && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
+              <div className="text-6xl mb-6">😔</div>
+              <h3 className="text-3xl font-bold text-red-800 mb-3">{t.sorryNotComing}</h3>
+              <p className="text-xl text-red-700">{t.thanksUpdate}</p>
+            </div>
+          )}
+          {rsvpStatus === 'pending' && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-3xl p-12 shadow-xl">
+              <div className="text-6xl mb-6">📞</div>
+              <h3 className="text-3xl font-bold text-blue-800 mb-3">{t.thanksShort}</h3>
+              <p className="text-xl text-blue-700">{t.willContact}</p>
+            </div>
+          )}
+          {rsvpStatus === 'notFound' && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-red-700 mb-4">{t.guestNotFound}</h3>
+              <p>{t.invalidCode}</p>
+              <p className="text-sm text-gray-500 mt-3">ref: {code}</p>
+            </div>
+          )}
+          {rsvpStatus === 'general' && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-12 shadow-xl">
+              <h3 className="text-2xl font-bold text-amber-700 mb-4">{t.generalLink}</h3>
+              <p className="whitespace-pre-line">{t.generalLinkText}</p>
+            </div>
+          )}
         </div>
       ) : (
         <>
-          {/* תמונה רחבה יותר */}
-          <div className="flex justify-center pt-5 sm:pt-8 px-3 sm:px-6 shrink-0">
+          {/* תמונה רחבה + מסגרת */}
+          <div className="flex justify-center pt-6 pb-2 px-3 sm:px-6">
             <div className="w-full max-w-[1100px]">
-              <div className="p-[3px] sm:p-1 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/15">
-                <div className="p-1.5 sm:p-2.5 rounded-[0.9rem] sm:rounded-[1.35rem] bg-[#f7f0e6]">
-                  <div className="relative w-full aspect-[3/2] rounded-xl sm:rounded-2xl overflow-hidden bg-[#e8dfd0]">
+              <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
+                <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
+                  <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -662,37 +608,33 @@ function LandingPageContent() {
             </div>
           </div>
 
-          {/* אזור תחתון — תופס את שאר המסך */}
-          <div className="flex-1 flex flex-col justify-between max-w-2xl mx-auto w-full px-5 pt-6 pb-8 text-center">
-            <div>
-              <div className="mb-6 text-[#3f2a1e]">
-                <div className="text-4xl font-semibold mb-2 tracking-wide">
-                  {formatDate(event?.fullDate || event?.eventDate || event?.date)}
-                </div>
-                {event?.hallName && <div className="text-2xl mb-1">{event.hallName}</div>}
-                {event?.city && <div className="text-xl mb-1">{event.city}</div>}
-                <div className="text-xl">
-                  {t.atHour} {event?.time || '19:30'}
-                </div>
+          {/* תוכן צמוד — בלי חור באמצע */}
+          <div className="max-w-2xl mx-auto px-5 pt-5 pb-12 text-center">
+            <div className="mb-6 text-[#3f2a1e]">
+              <div className="text-4xl font-semibold mb-2 tracking-wide">
+                {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
-
-              <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">
-                {t.gladToSee}
-              </h2>
+              <div className="text-2xl mb-1">{event?.hallName}</div>
+              {event?.city && <div className="text-xl mb-1">{event.city}</div>}
+              <div className="text-xl">
+                {t.atHour} {event?.time || '19:30'}
+              </div>
             </div>
 
-            <div className="space-y-6 pb-2">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">{t.gladToSee}</h2>
+
+            <div className="space-y-6">
               {isTwoButtons && (
                 <div className="flex flex-col sm:flex-row gap-5 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 max-w-xs mx-auto bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 max-w-xs mx-auto bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -703,19 +645,19 @@ function LandingPageContent() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 max-w-xs mx-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming1}
                   </button>
                   <button
                     onClick={() => handleRsvp(2)}
-                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 max-w-xs mx-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming2}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
+                    className="flex-1 max-w-xs mx-auto bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -724,9 +666,9 @@ function LandingPageContent() {
 
               {!isTwoButtons && !isThreeButtons && (
                 <>
-                  <p className="text-xl">{t.howMany}</p>
+                  <p className="text-xl mb-2">{t.howMany}</p>
 
-                  {/* גודל מקורי של כפתורי המספרים */}
+                  {/* כפתורים בגודל המקורי — w-20 h-20 */}
                   <div className="flex flex-wrap gap-4 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
@@ -747,7 +689,7 @@ function LandingPageContent() {
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-4 justify-center pt-2 border-t border-[#3f2a1e]/10">
+                    <div className="flex flex-wrap gap-4 justify-center pt-2">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
@@ -760,7 +702,7 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-2 space-y-3 max-w-md mx-auto">
+                  <div className="pt-2 max-w-md mx-auto space-y-3">
                     <button
                       onClick={handleNotComing}
                       className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all"
@@ -798,10 +740,7 @@ function LandingPageContent() {
               placeholder={t.personalPlaceholder}
             />
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowPersonalNote(false)}
-                className="flex-1 py-3 border rounded-2xl"
-              >
+              <button onClick={() => setShowPersonalNote(false)} className="flex-1 py-3 border rounded-2xl">
                 {t.cancel}
               </button>
               <button
@@ -820,7 +759,7 @@ function LandingPageContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]">טוען...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">טוען...</div>}>
       <LandingPageContent />
     </Suspense>
   );
