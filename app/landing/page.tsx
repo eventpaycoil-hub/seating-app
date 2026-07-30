@@ -571,7 +571,7 @@ function LandingPageContent() {
         <p className="text-[11px] sm:text-xs tracking-[0.25em] uppercase opacity-70 mb-2 font-light">
           {lang === 'he' ? 'הזמנה לאירוע' : 'Event Invitation'}
         </p>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
           {event?.owners ? (
             <>
               <span className="opacity-80">{titlePrefix}</span>
@@ -638,11 +638,11 @@ function LandingPageContent() {
         <>
           {/* תמונה עם מסגרת בטוחה */}
           <div className="flex justify-center pt-6 sm:pt-10 pb-2 px-4">
-            <div className="w-full max-w-[420px] sm:max-w-[520px] md:max-w-[640px]">
+            <div className="w-full max-w-[520px] sm:max-w-[640px] md:max-w-[760px]">
               {/* מסגרת חיצונית — לא נשברת עם גדלים שונים */}
               <div className="p-[3px] sm:p-1 rounded-[1.25rem] sm:rounded-[1.75rem] bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/20">
                 <div className="p-1.5 sm:p-2.5 rounded-[1.1rem] sm:rounded-[1.5rem] bg-[#f7f0e6]">
-                  <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] max-h-[70vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
+                  <div className="relative w-full aspect-[3/4] sm:aspect-[3/4] max-h-[78vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -668,11 +668,11 @@ function LandingPageContent() {
           {/* פרטי אירוע + כפתורים */}
           <div className="max-w-xl mx-auto px-5 pt-8 pb-16 text-center">
             <div className="mb-8 text-[#3f2a1e]">
-              <div className="text-3xl sm:text-4xl font-semibold tracking-wide mb-2">
+              <div className="text-4xl sm:text-5xl font-semibold tracking-wide mb-2">
                 {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
               {event?.hallName && (
-                <div className="text-xl sm:text-2xl font-medium opacity-90">{event.hallName}</div>
+                <div className="text-2xl sm:text-3xl font-medium opacity-90">{event.hallName}</div>
               )}
               {event?.city && (
                 <div className="text-lg sm:text-xl opacity-75 mt-0.5">{event.city}</div>
@@ -682,7 +682,7 @@ function LandingPageContent() {
               </div>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-[#3f2a1e] leading-snug">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e] leading-snug">
               {t.gladToSee}
             </h2>
 
@@ -691,13 +691,13 @@ function LandingPageContent() {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 sm:max-w-[220px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-5 sm:py-6 rounded-2xl shadow-lg shadow-emerald-900/20 transition-all"
+                    className="flex-1 sm:max-w-[220px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-2xl sm:text-3xl font-bold py-5 sm:ppy-6 sm:py-7 rounded-2xly-6 rounded-2xl shadow-lg shadow-emerald-900/20 transition-all"
                   >
                     {t.coming}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 sm:max-w-[220px] bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl sm:text-2xl font-bold py-5 sm:py-6 rounded-2xl border-2 border-rose-200 shadow-sm transition-all"
+                    className="flex-1 sm:max-w-[220px] bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl stext-2xl sm:text-3xlm:text-2xl font-bold py-5 sm:py-6py-6 sm:py-7 rounded-2xl rounded-2xl border-2 border-rose-200 shadow-sm transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -736,7 +736,7 @@ function LandingPageContent() {
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
+                        className="w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
                       >
                         {num}
                       </button>
