@@ -566,32 +566,28 @@ function LandingPageContent() {
         </div>
       )}
 
-      {/* כותרת */}
-      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-7 sm:py-9 text-center px-4 shadow-lg">
+      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-6 sm:py-8 text-center px-4 shadow-lg">
         <p className="text-[11px] sm:text-xs tracking-[0.25em] uppercase opacity-70 mb-2 font-light">
           {lang === 'he' ? 'הזמנה לאירוע' : 'Event Invitation'}
         </p>
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-light tracking-wide leading-snug max-w-3xl mx-auto">
           {event?.owners ? (
             <>
-              <span className="opacity-80">{titlePrefix}</span>
-              <br className="sm:hidden" />
-              <span className="font-semibold"> {event.owners}</span>
+              <span className="opacity-80">{titlePrefix}</span>{' '}
+              <span className="font-semibold">{event.owners}</span>
             </>
           ) : (
             displayTitle
           )}
         </h1>
-        
       </header>
 
       {rsvpStatus !== 'none' ? (
         <div className="max-w-lg mx-auto px-5 py-12 sm:py-16 text-center">
           {rsvpStatus === 'confirmed' && (
-            <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-8 sm:p-12 shadow-xl backdrop-blur">
+            <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
               <div className="text-6xl sm:text-7xl mb-5">🎉</div>
               <h3 className="text-3xl sm:text-4xl font-bold text-emerald-800 mb-2">{t.thanks}</h3>
-              
               <p className="text-xl sm:text-2xl text-emerald-700 mb-3">
                 {t.confirmedFor}
                 {rsvpCount} {t.guests}
@@ -636,13 +632,12 @@ function LandingPageContent() {
         </div>
       ) : (
         <>
-          {/* תמונה עם מסגרת בטוחה */}
-          <div className="flex justify-center pt-6 sm:pt-10 pb-2 px-4">
-            <div className="w-full max-w-[460px] sm:max-w-[560px] md:max-w-[640px]">
-              {/* מסגרת חיצונית — לא נשברת עם גדלים שונים */}
+          {/* תמונה — גודל בינוני */}
+          <div className="flex justify-center pt-5 sm:pt-8 pb-1 px-4">
+            <div className="w-full max-w-[420px] sm:max-w-[500px] md:max-w-[560px]">
               <div className="p-[3px] sm:p-1 rounded-[1.25rem] sm:rounded-[1.75rem] bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/20">
-                <div className="p-1.5 sm:p-2.5 rounded-[1.1rem] sm:rounded-[1.5rem] bg-[#f7f0e6]">
-                  <div className="relative w-full aspect-[3/4] sm:aspect-[3/4] max-h-[68vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
+                <div className="p-1.5 sm:p-2 rounded-[1.1rem] sm:rounded-[1.5rem] bg-[#f7f0e6]">
+                  <div className="relative w-full aspect-[3/4] max-h-[58vh] sm:max-h-[62vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -665,39 +660,38 @@ function LandingPageContent() {
             </div>
           </div>
 
-          {/* פרטי אירוע + כפתורים */}
-          <div className="max-w-xl mx-auto px-5 pt-8 pb-16 text-center">
-            <div className="mb-8 text-[#3f2a1e]">
-              <div className="text-4xl sm:text-5xl font-semibold tracking-wide mb-2">
+          <div className="max-w-xl mx-auto px-4 pt-6 pb-16 text-center">
+            <div className="mb-6 text-[#3f2a1e]">
+              <div className="text-3xl sm:text-4xl font-semibold tracking-wide mb-1">
                 {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
               {event?.hallName && (
-                <div className="text-2xl sm:text-3xl font-medium opacity-90">{event.hallName}</div>
+                <div className="text-xl sm:text-2xl font-medium opacity-90">{event.hallName}</div>
               )}
               {event?.city && (
-                <div className="text-lg sm:text-xl opacity-75 mt-0.5">{event.city}</div>
+                <div className="text-lg opacity-75 mt-0.5">{event.city}</div>
               )}
-              <div className="text-base sm:text-lg opacity-70 mt-1">
+              <div className="text-base opacity-70 mt-1">
                 {t.atHour} {event?.time || '19:30'}
               </div>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e] leading-snug">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-[#3f2a1e] leading-snug">
               {t.gladToSee}
             </h2>
 
             <div className="space-y-5">
               {isTwoButtons && (
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                <div className="flex flex-col gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 sm:max-w-[220px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-2xl sm:text-3xl font-bold py-5 sm:ppy-6 sm:py-8 rounded-2xly-6 rounded-2xl shadow-lg shadow-emerald-900/20 transition-all"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-2xl sm:text-3xl font-bold py-7 rounded-2xl shadow-lg transition-all"
                   >
                     {t.coming}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 sm:max-w-[220px] bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl stext-2xl sm:text-3xlm:text-2xl font-bold py-5 sm:py-6py-6 sm:py-8 rounded-2xl rounded-2xl border-2 border-rose-200 shadow-sm transition-all"
+                    className="w-full bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-2xl sm:text-3xl font-bold py-7 rounded-2xl border-2 border-rose-200 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -705,22 +699,22 @@ function LandingPageContent() {
               )}
 
               {isThreeButtons && (
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <div className="flex flex-col gap-3 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-lg sm:text-xl font-bold py-5 rounded-2xl shadow-lg transition-all"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-6 rounded-2xl shadow-lg transition-all"
                   >
                     {t.coming1}
                   </button>
                   <button
                     onClick={() => handleRsvp(2)}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-lg sm:text-xl font-bold py-5 rounded-2xl shadow-lg transition-all"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-6 rounded-2xl shadow-lg transition-all"
                   >
                     {t.coming2}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="flex-1 bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-lg sm:text-xl font-bold py-5 rounded-2xl border-2 border-rose-200 transition-all"
+                    className="w-full bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl sm:text-2xl font-bold py-6 rounded-2xl border-2 border-rose-200 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -731,12 +725,13 @@ function LandingPageContent() {
                 <>
                   <p className="text-lg sm:text-xl text-[#3f2a1e]/80 font-medium">{t.howMany}</p>
 
-                  <div className="flex flex-wrap gap-3 sm:gap-4 justify-center">
+                  {/* כפתורי מספרים גדולים + מרווח גדול */}
+                  <div className="flex flex-wrap gap-4 sm:gap-5 justify-center px-1">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 sm:h-[4.5rem] bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
+                        className="w-[4.75rem] h-[4.75rem] sm:w-[5.5rem] sm:h-[5.5rem] bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-3xl sm:text-4xl font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
                       >
                         {num}
                       </button>
@@ -745,18 +740,18 @@ function LandingPageContent() {
 
                   <button
                     onClick={() => setShowMore(!showMore)}
-                    className="inline-flex items-center justify-center bg-amber-500/90 hover:bg-amber-600 text-white px-8 py-3 rounded-full text-base sm:text-lg font-medium shadow-md transition-all active:scale-[0.98]"
+                    className="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-md transition-all active:scale-[0.98]"
                   >
                     {t.moreThan5}
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-3 justify-center pt-2">
+                    <div className="flex flex-wrap gap-4 justify-center pt-1">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           onClick={() => handleRsvp(num)}
-                          className="w-12 h-12 sm:w-14 sm:h-14 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-xl font-bold rounded-2xl shadow transition-all"
+                          className="w-[4.25rem] h-[4.25rem] sm:w-20 sm:h-20 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold rounded-2xl shadow transition-all"
                         >
                           {num}
                         </button>
@@ -764,7 +759,7 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-2 space-y-3 max-w-md mx-auto">
+                  <div className="pt-3 space-y-3 max-w-md mx-auto">
                     <button
                       onClick={handleNotComing}
                       className="w-full bg-white hover:bg-rose-50 text-rose-600 py-5 rounded-2xl text-lg sm:text-xl font-semibold border border-rose-200 transition-all active:scale-[0.99]"
@@ -773,13 +768,13 @@ function LandingPageContent() {
                     </button>
                     <button
                       onClick={handleUnknown}
-                      className="w-full bg-white/70 hover:bg-white text-slate-600 py-4 rounded-2xl text-base sm:text-lg font-medium border border-slate-200 transition-all active:scale-[0.99]"
+                      className="w-full bg-white/80 hover:bg-white text-slate-600 py-5 rounded-2xl text-base sm:text-lg font-medium border border-slate-200 transition-all active:scale-[0.99]"
                     >
                       {t.unknown}
                     </button>
                     <button
                       onClick={() => setShowPersonalNote(true)}
-                      className="w-full text-[#3f2a1e] hover:bg-[#3f2a1e]/5 py-3 rounded-2xl text-base font-medium border border-dashed border-[#3f2a1e]/30 transition-all"
+                      className="w-full text-[#3f2a1e] hover:bg-[#3f2a1e]/5 py-4 rounded-2xl text-base font-medium border border-dashed border-[#3f2a1e]/30 transition-all"
                     >
                       {t.personalNote}
                     </button>
