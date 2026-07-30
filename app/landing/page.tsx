@@ -581,11 +581,11 @@ function LandingPageContent() {
       ) : (
         <>
           {/* תמונה רחבה + מסגרת */}
-          <div className="flex justify-center pt-6 pb-2 px-3 sm:px-6">
+                    <div className="flex justify-center pt-4 pb-1 px-3 sm:px-6">
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
-                  <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-[#e8dfd0]">
+                  <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] max-h-[62vh] rounded-2xl overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -593,13 +593,13 @@ function LandingPageContent() {
                         loop
                         muted
                         playsInline
-                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        className="absolute inset-0 w-full h-full object-contain object-center"
                       />
                     ) : (
                       <img
                         src={heroMedia?.url || '/chatan-kala.jpg'}
                         alt="Invitation"
-                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        className="absolute inset-0 w-full h-full object-contain object-center"
                       />
                     )}
                   </div>
@@ -609,23 +609,23 @@ function LandingPageContent() {
           </div>
 
           {/* תוכן צמוד — בלי חור באמצע */}
-          <div className="max-w-2xl mx-auto px-5 pt-5 pb-12 text-center">
-            <div className="mb-6 text-[#3f2a1e]">
-              <div className="text-4xl font-semibold mb-2 tracking-wide">
+                    <div className="max-w-2xl mx-auto px-5 pt-4 pb-8 text-center">
+            <div className="mb-4 text-[#3f2a1e]">
+              <div className="text-4xl font-semibold mb-1 tracking-wide">
                 {formatDate(event?.fullDate || event?.eventDate || event?.date)}
               </div>
-              <div className="text-2xl mb-1">{event?.hallName}</div>
-              {event?.city && <div className="text-xl mb-1">{event.city}</div>}
+              <div className="text-2xl mb-0.5">{event?.hallName}</div>
+              {event?.city && <div className="text-xl mb-0.5">{event.city}</div>}
               <div className="text-xl">
                 {t.atHour} {event?.time || '19:30'}
               </div>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">{t.gladToSee}</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-5 text-[#3f2a1e]">{t.gladToSee}</h2>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               {isTwoButtons && (
-                <div className="flex flex-col sm:flex-row gap-5 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
                     className="flex-1 max-w-xs mx-auto bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
@@ -666,7 +666,7 @@ function LandingPageContent() {
 
               {!isTwoButtons && !isThreeButtons && (
                 <>
-                                    <p className="text-xl mb-3">{t.howMany}</p>
+                  <p className="text-xl">{t.howMany}</p>
 
                   <div className="flex flex-wrap gap-5 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
@@ -688,7 +688,7 @@ function LandingPageContent() {
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-5 justify-center pt-2">
+                    <div className="flex flex-wrap gap-5 justify-center pt-1">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
@@ -701,7 +701,7 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-3 max-w-md mx-auto space-y-3">
+                  <div className="pt-1 max-w-md mx-auto space-y-3">
                     <button
                       onClick={handleNotComing}
                       className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-5 rounded-2xl text-xl font-medium transition-all"
