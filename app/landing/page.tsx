@@ -252,6 +252,8 @@ function LandingPageContent() {
             hasTransport: data.has_transport || data.hasTransport || 'לא',
             guestNotes: data.guest_notes || data.guestNotes || 'כן',
             coverUrl: data.cover_url || data.coverUrl || '',
+                        coverUrl: data.cover_url || data.coverUrl || '',
+            coverUrl2: data.cover_url2 || data.coverUrl2 || '',
           };
           setEvent((prev: any) => ({ ...(prev || {}), ...mapped }));
           if (mapped.englishEvent === 'כן' || mapped.englishEvent === true) {

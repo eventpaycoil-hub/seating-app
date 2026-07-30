@@ -66,7 +66,7 @@ function GalleryInner() {
       try {
         const { data } = await supabase
           .from('events')
-          .select('cover_url, owners, title')
+          .select('cover_url, cover_url2, owners, title')
           .eq('id', Number(eventId))
           .maybeSingle();
 
@@ -122,25 +122,23 @@ function GalleryInner() {
     localStorage.setItem(`landing_cover_slot_${eventId}`, String(slot));
   };
 
-  const setAsCover = async (url: string, slot: 1 | 2) => {
+    const setAsCover = async (url: string, slot: 1 | 2) => {
     const next1 = slot === 1 ? url : cover1;
     const next2 = slot === 2 ? url : cover2;
     setCover1(next1);
     setCover2(next2);
     persistEventCovers(next1, next2, activeLanding);
 
-    if (slot === 1) {
-      try {
-        await supabase.from('events').upsert(
-          { id: Number(eventId), cover_url: url },
-          { onConflict: 'id' }
-        );
-      } catch (e) {
-        console.warn('save cover_url failed', e);
-      }
+    try {
+      const payload: any = { id: Number(eventId) };
+      if (slot === 1) payload.cover_url = url;
+      if (slot === 2) payload.cover_url2 = url;
+
+      await supabase.from('events').upsert(payload, { onConflict: 'id' });
+    } catch (e) {
+      console.warn('save cover failed', e);
     }
   };
-
   const chooseLanding = (slot: 1 | 2) => {
     setActiveLanding(slot);
     persistEventCovers(cover1, cover2, slot);
