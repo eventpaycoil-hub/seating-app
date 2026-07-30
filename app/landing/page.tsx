@@ -544,7 +544,7 @@ function LandingPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f0e6]" dir={dir}>
+    <div className="min-h-screen bg-[#f7f0e6] flex flex-col" dir={dir}>
       {isEnglishEvent && (
         <div className="bg-[#2a1c14] text-white py-2.5 px-4 flex justify-center gap-2 text-sm sticky top-0 z-40">
           <button
@@ -566,7 +566,7 @@ function LandingPageContent() {
         </div>
       )}
 
-      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-6 sm:py-8 text-center px-4 shadow-lg">
+      <header className="bg-gradient-to-b from-[#3f2a1e] to-[#2f1f16] text-white py-6 sm:py-8 text-center px-4 shadow-lg shrink-0">
         <p className="text-[11px] sm:text-xs tracking-[0.25em] uppercase opacity-70 mb-2 font-light">
           {lang === 'he' ? 'הזמנה לאירוע' : 'Event Invitation'}
         </p>
@@ -583,61 +583,63 @@ function LandingPageContent() {
       </header>
 
       {rsvpStatus !== 'none' ? (
-        <div className="max-w-lg mx-auto px-5 py-12 sm:py-16 text-center">
-          {rsvpStatus === 'confirmed' && (
-            <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
-              <div className="text-6xl sm:text-7xl mb-5">🎉</div>
-              <h3 className="text-3xl sm:text-4xl font-bold text-emerald-800 mb-2">{t.thanks}</h3>
-              <p className="text-xl sm:text-2xl text-emerald-700 mb-3">
-                {t.confirmedFor}
-                {rsvpCount} {t.guests}
-              </p>
-              <p className="text-lg text-emerald-600 font-medium">{t.seeYou}</p>
-              {event?.hasSeparation === 'כן' && (
-                <p className="text-sm text-emerald-600 mt-4 opacity-80">{t.redirectSeparation}</p>
-              )}
-            </div>
-          )}
+        <div className="flex-1 flex items-center justify-center px-5 py-12">
+          <div className="max-w-lg w-full text-center">
+            {rsvpStatus === 'confirmed' && (
+              <div className="bg-white/90 border border-emerald-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
+                <div className="text-7xl mb-6">🎉</div>
+                <h3 className="text-4xl font-bold text-emerald-800 mb-3">{t.thanks}</h3>
+                <p className="text-2xl text-emerald-700 mb-4">
+                  {t.confirmedFor}
+                  {rsvpCount} {t.guests}
+                </p>
+                <p className="text-xl text-emerald-600 font-medium">{t.seeYou}</p>
+                {event?.hasSeparation === 'כן' && (
+                  <p className="text-sm text-emerald-600 mt-4 opacity-80">{t.redirectSeparation}</p>
+                )}
+              </div>
+            )}
 
-          {rsvpStatus === 'notComing' && (
-            <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
-              <div className="text-5xl sm:text-6xl mb-5">😔</div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-rose-800 mb-3">{t.sorryNotComing}</h3>
-              <p className="text-lg text-rose-700">{t.thanksUpdate}</p>
-            </div>
-          )}
+            {rsvpStatus === 'notComing' && (
+              <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
+                <div className="text-6xl mb-6">😔</div>
+                <h3 className="text-3xl font-bold text-rose-800 mb-3">{t.sorryNotComing}</h3>
+                <p className="text-xl text-rose-700">{t.thanksUpdate}</p>
+              </div>
+            )}
 
-          {rsvpStatus === 'pending' && (
-            <div className="bg-white/90 border border-sky-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
-              <div className="text-5xl sm:text-6xl mb-5">📞</div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-sky-800 mb-3">{t.thanksShort}</h3>
-              <p className="text-lg text-sky-700">{t.willContact}</p>
-            </div>
-          )}
+            {rsvpStatus === 'pending' && (
+              <div className="bg-white/90 border border-sky-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
+                <div className="text-6xl mb-6">📞</div>
+                <h3 className="text-3xl font-bold text-sky-800 mb-3">{t.thanksShort}</h3>
+                <p className="text-xl text-sky-700">{t.willContact}</p>
+              </div>
+            )}
 
-          {rsvpStatus === 'notFound' && (
-            <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
-              <h3 className="text-2xl font-bold text-rose-700 mb-3">{t.guestNotFound}</h3>
-              <p className="text-slate-600">{t.invalidCode}</p>
-              <p className="text-xs text-slate-400 mt-3 font-mono">ref: {code}</p>
-            </div>
-          )}
+            {rsvpStatus === 'notFound' && (
+              <div className="bg-white/90 border border-rose-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
+                <h3 className="text-2xl font-bold text-rose-700 mb-4">{t.guestNotFound}</h3>
+                <p className="text-slate-600">{t.invalidCode}</p>
+                <p className="text-xs text-slate-400 mt-3 font-mono">ref: {code}</p>
+              </div>
+            )}
 
-          {rsvpStatus === 'general' && (
-            <div className="bg-white/90 border border-amber-200 rounded-[2rem] p-8 sm:p-12 shadow-xl">
-              <h3 className="text-2xl font-bold text-amber-800 mb-3">{t.generalLink}</h3>
-              <p className="whitespace-pre-line text-slate-700">{t.generalLinkText}</p>
-            </div>
-          )}
+            {rsvpStatus === 'general' && (
+              <div className="bg-white/90 border border-amber-200 rounded-[2rem] p-10 sm:p-12 shadow-xl">
+                <h3 className="text-2xl font-bold text-amber-800 mb-4">{t.generalLink}</h3>
+                <p className="whitespace-pre-line text-slate-700">{t.generalLinkText}</p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <>
-          {/* תמונה — גודל בינוני */}
-          <div className="flex justify-center pt-5 sm:pt-8 pb-1 px-4">
-            <div className="w-full max-w-[420px] sm:max-w-[500px] md:max-w-[560px]">
-              <div className="p-[3px] sm:p-1 rounded-[1.25rem] sm:rounded-[1.75rem] bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/20">
-                <div className="p-1.5 sm:p-2 rounded-[1.1rem] sm:rounded-[1.5rem] bg-[#f7f0e6]">
-                  <div className="relative w-full aspect-[3/4] max-h-[58vh] sm:max-h-[62vh] rounded-[0.9rem] sm:rounded-[1.25rem] overflow-hidden bg-[#e8dfd0]">
+          {/* תמונה רחבה יותר */}
+          <div className="flex justify-center pt-5 sm:pt-8 px-3 sm:px-6 shrink-0">
+            <div className="w-full max-w-[1100px]">
+              <div className="p-[3px] sm:p-1 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl shadow-[#3f2a1e]/15">
+                <div className="p-1.5 sm:p-2.5 rounded-[0.9rem] sm:rounded-[1.35rem] bg-[#f7f0e6]">
+                  <div className="relative w-full aspect-[3/2] rounded-xl sm:rounded-2xl overflow-hidden bg-[#e8dfd0]">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -660,38 +662,37 @@ function LandingPageContent() {
             </div>
           </div>
 
-          <div className="max-w-xl mx-auto px-4 pt-6 pb-16 text-center">
-            <div className="mb-6 text-[#3f2a1e]">
-              <div className="text-3xl sm:text-4xl font-semibold tracking-wide mb-1">
-                {formatDate(event?.fullDate || event?.eventDate || event?.date)}
+          {/* אזור תחתון — תופס את שאר המסך */}
+          <div className="flex-1 flex flex-col justify-between max-w-2xl mx-auto w-full px-5 pt-6 pb-8 text-center">
+            <div>
+              <div className="mb-6 text-[#3f2a1e]">
+                <div className="text-4xl font-semibold mb-2 tracking-wide">
+                  {formatDate(event?.fullDate || event?.eventDate || event?.date)}
+                </div>
+                {event?.hallName && <div className="text-2xl mb-1">{event.hallName}</div>}
+                {event?.city && <div className="text-xl mb-1">{event.city}</div>}
+                <div className="text-xl">
+                  {t.atHour} {event?.time || '19:30'}
+                </div>
               </div>
-              {event?.hallName && (
-                <div className="text-xl sm:text-2xl font-medium opacity-90">{event.hallName}</div>
-              )}
-              {event?.city && (
-                <div className="text-lg opacity-75 mt-0.5">{event.city}</div>
-              )}
-              <div className="text-base opacity-70 mt-1">
-                {t.atHour} {event?.time || '19:30'}
-              </div>
+
+              <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">
+                {t.gladToSee}
+              </h2>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-[#3f2a1e] leading-snug">
-              {t.gladToSee}
-            </h2>
-
-            <div className="space-y-5">
+            <div className="space-y-6 pb-2">
               {isTwoButtons && (
-                <div className="flex flex-col gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-5 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-2xl sm:text-3xl font-bold py-7 rounded-2xl shadow-lg transition-all"
+                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="w-full bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-2xl sm:text-3xl font-bold py-7 rounded-2xl border-2 border-rose-200 transition-all"
+                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-red-500 hover:bg-red-600 text-white text-2xl font-bold py-8 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -699,22 +700,22 @@ function LandingPageContent() {
               )}
 
               {isThreeButtons && (
-                <div className="flex flex-col gap-3 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button
                     onClick={() => handleRsvp(1)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-6 rounded-2xl shadow-lg transition-all"
+                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming1}
                   </button>
                   <button
                     onClick={() => handleRsvp(2)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xl sm:text-2xl font-bold py-6 rounded-2xl shadow-lg transition-all"
+                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.coming2}
                   </button>
                   <button
                     onClick={handleNotComing}
-                    className="w-full bg-white hover:bg-rose-50 active:scale-[0.98] text-rose-600 text-xl sm:text-2xl font-bold py-6 rounded-2xl border-2 border-rose-200 transition-all"
+                    className="flex-1 max-w-xs mx-auto sm:mx-0 bg-red-500 hover:bg-red-600 text-white text-xl font-bold py-7 rounded-3xl shadow-lg active:scale-95 transition-all"
                   >
                     {t.notComing}
                   </button>
@@ -723,15 +724,15 @@ function LandingPageContent() {
 
               {!isTwoButtons && !isThreeButtons && (
                 <>
-                  <p className="text-lg sm:text-xl text-[#3f2a1e]/80 font-medium">{t.howMany}</p>
+                  <p className="text-xl">{t.howMany}</p>
 
-                  {/* כפתורי מספרים גדולים + מרווח גדול */}
-                  <div className="flex flex-wrap gap-4 sm:gap-5 justify-center px-1">
+                  {/* גודל מקורי של כפתורי המספרים */}
+                  <div className="flex flex-wrap gap-4 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-[4.75rem] h-[4.75rem] sm:w-[5.5rem] sm:h-[5.5rem] bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-3xl sm:text-4xl font-bold rounded-2xl shadow-md shadow-[#3f2a1e]/25 transition-all"
+                        className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
                       >
                         {num}
                       </button>
@@ -740,18 +741,18 @@ function LandingPageContent() {
 
                   <button
                     onClick={() => setShowMore(!showMore)}
-                    className="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white px-10 py-4 rounded-full text-lg font-semibold shadow-md transition-all active:scale-[0.98]"
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-3 rounded-2xl text-lg font-medium"
                   >
                     {t.moreThan5}
                   </button>
 
                   {showMore && (
-                    <div className="flex flex-wrap gap-4 justify-center pt-1">
+                    <div className="flex flex-wrap gap-4 justify-center pt-2 border-t border-[#3f2a1e]/10">
                       {[6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           onClick={() => handleRsvp(num)}
-                          className="w-[4.25rem] h-[4.25rem] sm:w-20 sm:h-20 bg-[#3f2a1e] hover:bg-[#5a3d2c] active:scale-95 text-white text-2xl sm:text-3xl font-bold rounded-2xl shadow transition-all"
+                          className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
                         >
                           {num}
                         </button>
@@ -759,22 +760,22 @@ function LandingPageContent() {
                     </div>
                   )}
 
-                  <div className="pt-3 space-y-3 max-w-md mx-auto">
+                  <div className="pt-2 space-y-3 max-w-md mx-auto">
                     <button
                       onClick={handleNotComing}
-                      className="w-full bg-white hover:bg-rose-50 text-rose-600 py-5 rounded-2xl text-lg sm:text-xl font-semibold border border-rose-200 transition-all active:scale-[0.99]"
+                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-4 rounded-2xl text-lg font-medium transition-all"
                     >
                       {t.notComing}
                     </button>
                     <button
                       onClick={handleUnknown}
-                      className="w-full bg-white/80 hover:bg-white text-slate-600 py-5 rounded-2xl text-base sm:text-lg font-medium border border-slate-200 transition-all active:scale-[0.99]"
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-2xl text-lg font-medium transition-all"
                     >
                       {t.unknown}
                     </button>
                     <button
                       onClick={() => setShowPersonalNote(true)}
-                      className="w-full text-[#3f2a1e] hover:bg-[#3f2a1e]/5 py-4 rounded-2xl text-base font-medium border border-dashed border-[#3f2a1e]/30 transition-all"
+                      className="w-full px-8 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-2xl text-lg font-medium transition-all"
                     >
                       {t.personalNote}
                     </button>
@@ -787,25 +788,25 @@ function LandingPageContent() {
       )}
 
       {showPersonalNote && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[1.75rem] p-6 sm:p-8 w-full max-w-md shadow-2xl" dir={dir}>
-            <h3 className="text-xl sm:text-2xl font-bold mb-4 text-[#3f2a1e]">{t.personalMessage}</h3>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md" dir={dir}>
+            <h3 className="text-2xl font-bold mb-4">{t.personalMessage}</h3>
             <textarea
               value={personalNote}
               onChange={(e) => setPersonalNote(e.target.value)}
-              className="w-full h-36 sm:h-40 p-4 border border-slate-200 rounded-2xl mb-5 focus:outline-none focus:ring-2 focus:ring-[#3f2a1e]/30"
+              className="w-full h-40 p-4 border rounded-2xl mb-6"
               placeholder={t.personalPlaceholder}
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPersonalNote(false)}
-                className="flex-1 py-3 border border-slate-200 rounded-2xl font-medium text-slate-600"
+                className="flex-1 py-3 border rounded-2xl"
               >
                 {t.cancel}
               </button>
               <button
                 onClick={handlePersonalNoteSubmit}
-                className="flex-1 py-3 bg-[#3f2a1e] text-white rounded-2xl font-bold"
+                className="flex-1 py-3 bg-[#3f2a1e] text-white rounded-2xl"
               >
                 {t.send}
               </button>
@@ -819,13 +820,7 @@ function LandingPageContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]" dir="rtl">
-          טוען...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f7f0e6]">טוען...</div>}>
       <LandingPageContent />
     </Suspense>
   );
