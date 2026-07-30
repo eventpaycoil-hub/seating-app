@@ -169,10 +169,12 @@ export default function GuestsPage() {
         
         'email',
         'whatsapp',
-        'landing',
-        'new-event',
-        'admin-settings',
-      ]),
+              'landing',
+      'new-event',
+      'admin-settings',
+      'external-links',
+      'customer-tracking',
+    ]),
     []
   );
   useEffect(() => {
@@ -535,6 +537,8 @@ export default function GuestsPage() {
               { id: 'checkin', href: `/event/${eventId}/checkin`, label: 'סריקת כניסה', icon: '📷' },
               { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: 'מספרים כפולים', icon: '🔁' },
               { id: 'add-tables', href: '/addtable', label: 'הוספת שולחנות', icon: '➕' },
+              { id: 'external-links', href: '/external-links', label: 'קישורים חיצוניים', icon: '🔗' },
+              { id: 'customer-tracking', href: '/customer-tracking', label: 'מעקב לקוחות', icon: '📋' },
               { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: '💰' },
               { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: '👀' },
               { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },

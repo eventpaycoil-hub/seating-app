@@ -22,7 +22,6 @@ function matchesQueue(g: any, queue: string | null) {
   return false;
 }
 
-/** מפרק טקסט מגדר לספירת גברים/נשים */
 function parseGenderCounts(sep: string): { men: number; women: number } {
   const s = (sep || '').toString().trim();
   if (!s) return { men: 0, women: 0 };
@@ -85,6 +84,17 @@ export default function EditGuestPage() {
           localStorage.setItem(guestsKey, JSON.stringify(updated));
         }
       }
+
+      if (
+        (foundGuest.quantity === undefined || foundGuest.quantity === '') &&
+        foundGuest.customerExpectation
+      ) {
+        foundGuest = {
+          ...foundGuest,
+          quantity: foundGuest.customerExpectation,
+        };
+      }
+
       setGuest(foundGuest);
 
       const sep = (foundGuest.separation || '').toString().trim();
@@ -98,7 +108,7 @@ export default function EditGuestPage() {
         setGenderMode('simple');
       }
     } else {
-      setGuest({ confirmed: 'לא ידוע', count: 0 });
+      setGuest({ confirmed: 'לא ידוע', count: 0, quantity: '' });
     }
 
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -117,6 +127,7 @@ export default function EditGuestPage() {
       } catch {}
     }
 
+    // קבוצות רק מהאירוע — בלי דוגמאות קבועות
     const allGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     const fromGuests = allGuests
       .map((g: any) => (g.group || '').toString().trim())
@@ -138,8 +149,14 @@ export default function EditGuestPage() {
       }
     } catch {}
 
-    const defaults = ['משפחה', 'חברים', 'עבודה', 'שכנים', 'חברי ילדות', 'לקוחות'];
-    const unique = Array.from(new Set([...defaults, ...fromStorage, ...fromGuests])).filter(Boolean);
+    // אם למוזמן הנוכחי יש קבוצה שלא ברשימה — נוסיף אותה כדי שלא "תיעלם"
+    const currentGroup = (foundGuest?.group || '').toString().trim();
+    const unique = Array.from(
+      new Set([...fromStorage, ...fromGuests, ...(currentGroup ? [currentGroup] : [])])
+    )
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'he'));
+
     setAvailableGroups(unique);
   }, [eventId, guestId]);
 
@@ -161,11 +178,16 @@ export default function EditGuestPage() {
   };
 
   const saveGuestField = (updatedGuest: any) => {
-    setGuest(updatedGuest);
+    const normalized = {
+      ...updatedGuest,
+      quantity: updatedGuest.quantity ?? '',
+      customerExpectation: updatedGuest.quantity ?? updatedGuest.customerExpectation ?? '',
+    };
+    setGuest(normalized);
     const guestsKey = `guests_event_${eventId}`;
     let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     savedGuests = savedGuests.map((g: any) =>
-      g.id.toString() === guestId ? updatedGuest : g
+      g.id.toString() === guestId ? normalized : g
     );
     saveGuests(eventId, savedGuests);
   };
@@ -184,33 +206,33 @@ export default function EditGuestPage() {
     saveGuestField({ ...guest, count: 0, confirmed: 'לא ידוע' });
   };
 
-    const setCountAndConfirm = (num: number) => {
-  const now = new Date().toISOString();
-  const updatedGuest = {
-    ...guest,
-    confirmed: String(num),
-    confirmedCount: num,
-    count: num,
-    confirmedSource: 'manual',
-    confirmedAt: now,
+  const setCountAndConfirm = (num: number) => {
+    const now = new Date().toISOString();
+    const updatedGuest = {
+      ...guest,
+      confirmed: String(num),
+      confirmedCount: num,
+      count: num,
+      confirmedSource: 'manual',
+      confirmedAt: now,
+    };
+    saveGuestField(updatedGuest);
+    goNextOrList();
   };
-  saveGuestField(updatedGuest);
-  goNextOrList();
-};
 
-const markAsNotComing = () => {
-  const now = new Date().toISOString();
-  const updatedGuest = {
-    ...guest,
-    count: 0,
-    confirmed: 'לא מגיע',
-    confirmedCount: 0,
-    confirmedSource: 'manual',
-    confirmedAt: now,
+  const markAsNotComing = () => {
+    const now = new Date().toISOString();
+    const updatedGuest = {
+      ...guest,
+      count: 0,
+      confirmed: 'לא מגיע',
+      confirmedCount: 0,
+      confirmedSource: 'manual',
+      confirmedAt: now,
+    };
+    saveGuestField(updatedGuest);
+    goNextOrList();
   };
-  saveGuestField(updatedGuest);
-  goNextOrList();
-};
 
   const handleTransportChange = (value: string) => {
     saveGuestField({ ...guest, transportation: value });
@@ -292,56 +314,128 @@ const markAsNotComing = () => {
 
   const currentTransport = guest.transportation || guest.transport || '';
   const currentGender = guest.separation || '';
+  const quantityValue = guest.quantity ?? guest.customerExpectation ?? '';
 
   if (isClientMode) {
     return (
       <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
         <div className="max-w-xl mx-auto">
-          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm mb-6 inline-block">
+          <Link
+            href={`/event/${eventId}/guests`}
+            className="text-blue-600 hover:underline text-sm mb-6 inline-block"
+          >
             ← חזרה לרשימה
           </Link>
           <div className="bg-white rounded-3xl p-8 shadow space-y-5">
             <h1 className="text-2xl font-bold mb-2">עריכת מוזמן</h1>
             <div>
               <label className="block text-sm text-gray-500 mb-1">שם</label>
-              <input value={guest.name || ''} onChange={(e) => setGuest({ ...guest, name: e.target.value })} className="w-full p-3 border rounded-2xl" />
+              <input
+                value={guest.name || ''}
+                onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
             </div>
             <div>
               <label className="block text-sm text-gray-500 mb-1">טלפון</label>
-              <input value={guest.phone || ''} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} className="w-full p-3 border rounded-2xl" />
+              <input
+                value={guest.phone || ''}
+                onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">כמות (הערכה)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={quantityValue}
+                onChange={(e) =>
+                  setGuest({
+                    ...guest,
+                    quantity: e.target.value,
+                    customerExpectation: e.target.value,
+                  })
+                }
+                className="w-full p-3 border rounded-2xl"
+                placeholder="למשל: 2"
+              />
             </div>
             <div>
               <label className="block text-sm text-gray-500 mb-1">קבוצה</label>
-              <select value={guest.group || ''} onChange={(e) => setGuest({ ...guest, group: e.target.value })} className="w-full p-3 border rounded-2xl">
+              <select
+                value={guest.group || ''}
+                onChange={(e) => setGuest({ ...guest, group: e.target.value })}
+                className="w-full p-3 border rounded-2xl"
+              >
                 <option value="">בחר קבוצה...</option>
                 {availableGroups.map((g) => (
-                  <option key={String(g)} value={String(g)}>{String(g)}</option>
+                  <option key={String(g)} value={String(g)}>
+                    {String(g)}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-500 mb-1">צפי לקוח</label>
-              <input value={guest.customerExpectation || ''} onChange={(e) => setGuest({ ...guest, customerExpectation: e.target.value })} className="w-full p-3 border rounded-2xl" />
-            </div>
-            <div>
               <label className="block text-sm text-gray-500 mb-2">אישור הגעה</label>
               <div className="flex gap-3 mb-3">
-                <button type="button" onClick={resetToUnknown} className={`flex-1 py-3 rounded-2xl font-bold border-2 ${guest.confirmed === 'לא ידוע' ? 'bg-amber-500 text-white border-amber-600' : 'bg-white border-gray-300'}`}>לא ידוע</button>
-                <button type="button" onClick={markAsNotComing} className={`flex-1 py-3 rounded-2xl font-bold border-2 ${guest.confirmed === 'לא מגיע' ? 'bg-red-500 text-white border-red-600' : 'bg-white border-gray-300'}`}>לא מגיע</button>
+                <button
+                  type="button"
+                  onClick={resetToUnknown}
+                  className={`flex-1 py-3 rounded-2xl font-bold border-2 ${
+                    guest.confirmed === 'לא ידוע'
+                      ? 'bg-amber-500 text-white border-amber-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  לא ידוע
+                </button>
+                <button
+                  type="button"
+                  onClick={markAsNotComing}
+                  className={`flex-1 py-3 rounded-2xl font-bold border-2 ${
+                    guest.confirmed === 'לא מגיע'
+                      ? 'bg-red-500 text-white border-red-600'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  לא מגיע
+                </button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 16 }, (_, i) => i + 1).map((num) => (
-                  <button key={num} type="button" onClick={() => setCountAndConfirm(num)} className={`w-12 h-12 rounded-full font-bold border-2 ${String(guest.count) === String(num) || guest.confirmed === String(num) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-gray-300'}`}>{num}</button>
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setCountAndConfirm(num)}
+                    className={`w-12 h-12 rounded-full font-bold border-2 ${
+                      String(guest.count) === String(num) || guest.confirmed === String(num)
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    {num}
+                  </button>
                 ))}
               </div>
             </div>
             {hasTransport && guest.needsTransport && (
               <div>
                 <label className="block text-sm text-gray-500 mb-1">הסעה</label>
-                <select value={currentTransport} onChange={(e) => handleTransportChange(e.target.value)} className="w-full p-3 border rounded-2xl">
+                <select
+                  value={currentTransport}
+                  onChange={(e) => handleTransportChange(e.target.value)}
+                  className="w-full p-3 border rounded-2xl"
+                >
                   <option value="">בחר הסעה...</option>
                   {transportOptions.map((opt) => (
-                    <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>{opt.name}{opt.time ? ` (${opt.time})` : ''}</option>
+                    <option
+                      key={opt.id}
+                      value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}
+                    >
+                      {opt.name}
+                      {opt.time ? ` (${opt.time})` : ''}
+                    </option>
                   ))}
                   <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
                 </select>
@@ -349,9 +443,20 @@ const markAsNotComing = () => {
             )}
             <div>
               <label className="block text-sm text-gray-500 mb-1">הערות</label>
-              <textarea value={guest.notes || ''} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} className="w-full h-24 p-3 border rounded-2xl" placeholder="הערות..." />
+              <textarea
+                value={guest.notes || ''}
+                onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
+                className="w-full h-24 p-3 border rounded-2xl"
+                placeholder="הערות..."
+              />
             </div>
-            <button type="button" onClick={saveAndGoBack} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-xl font-bold">עדכן!</button>
+            <button
+              type="button"
+              onClick={saveAndGoBack}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-xl font-bold"
+            >
+              עדכן!
+            </button>
           </div>
         </div>
       </div>
@@ -374,35 +479,62 @@ const markAsNotComing = () => {
 
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="w-full lg:w-[320px] flex-shrink-0 space-y-2">
-  <div
-    onClick={callPhone}
-    className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-5 py-4 flex flex-col items-center shadow-lg"
-  >
-    <div className="text-xl font-bold mb-1 text-center leading-tight">{guest.name || '—'}</div>
-    <div className="text-xs opacity-80">טלפון · לחץ לחיוג</div>
-    <div className="text-4xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
-  </div>
+            <div
+              onClick={callPhone}
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-5 py-4 flex flex-col items-center shadow-lg"
+            >
+              <div className="text-xl font-bold mb-1 text-center leading-tight">
+                {guest.name || '—'}
+              </div>
+              <div className="text-xs opacity-80">טלפון · לחץ לחיוג</div>
+              <div className="text-4xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
+            </div>
 
-  {/* תיבת עריכת שם קטנה */}
-  <input
-    type="text"
-    value={guest.name || ''}
-    onChange={(e) => setGuest({ ...guest, name: e.target.value })}
-    onBlur={() => saveGuestField({ ...guest, name: guest.name || '' })}
-    placeholder="שם המוזמן"
-    className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base text-center focus:outline-none focus:border-blue-500"
-  />
+            <input
+              type="text"
+              value={guest.name || ''}
+              onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+              onBlur={() => saveGuestField({ ...guest, name: guest.name || '' })}
+              placeholder="שם המוזמן"
+              className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base text-center focus:outline-none focus:border-blue-500"
+            />
 
-  <input
-    type="tel"
-    dir="ltr"
-    value={guest.phone || ''}
-    onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
-    onBlur={() => saveGuestField({ ...guest, phone: guest.phone || '' })}
-    placeholder="050-0000000"
-    className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
-  />
-</div>
+            <input
+              type="tel"
+              dir="ltr"
+              value={guest.phone || ''}
+              onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+              onBlur={() => saveGuestField({ ...guest, phone: guest.phone || '' })}
+              placeholder="050-0000000"
+              className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
+            />
+
+            <div className="bg-white rounded-xl border border-gray-300 px-3 py-2">
+              <label className="block text-xs text-gray-500 mb-1 text-center">כמות (הערכה)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={quantityValue}
+                onChange={(e) =>
+                  setGuest({
+                    ...guest,
+                    quantity: e.target.value,
+                    customerExpectation: e.target.value,
+                  })
+                }
+                onBlur={() =>
+                  saveGuestField({
+                    ...guest,
+                    quantity: guest.quantity || '',
+                    customerExpectation: guest.quantity || '',
+                  })
+                }
+                className="w-full py-1.5 px-2 text-center text-base font-semibold focus:outline-none"
+                placeholder="—"
+              />
+            </div>
+          </div>
+
           <div className="flex-1 bg-white rounded-2xl px-6 py-4 shadow text-right text-[15px] leading-7">
             <div className="font-bold text-lg text-slate-900">{event.owners || '—'}</div>
             <div>{formatFullDate()}</div>
@@ -494,7 +626,9 @@ const markAsNotComing = () => {
               >
                 <option value="">בחר קבוצה...</option>
                 {availableGroups.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
                 ))}
               </select>
             </div>
@@ -509,8 +643,12 @@ const markAsNotComing = () => {
                 >
                   <option value="">בחר הסעה...</option>
                   {transportOptions.map((opt) => (
-                    <option key={opt.id} value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}>
-                      {opt.name}{opt.time ? ` (${opt.time})` : ''}
+                    <option
+                      key={opt.id}
+                      value={`${opt.name}${opt.time ? ' - ' + opt.time : ''}`}
+                    >
+                      {opt.name}
+                      {opt.time ? ` (${opt.time})` : ''}
                     </option>
                   ))}
                   <option value="לא תודה אגיע עצמאית">לא תודה אגיע עצמאית</option>
@@ -529,7 +667,8 @@ const markAsNotComing = () => {
                         type="button"
                         onClick={() => handleGenderSimple(opt)}
                         className={`px-4 py-2 rounded-xl font-bold border-2 ${
-                          currentGender === opt || (opt === 'אישה' && currentGender === 'נשים')
+                          currentGender === opt ||
+                          (opt === 'אישה' && currentGender === 'נשים')
                             ? 'bg-purple-600 text-white border-purple-600'
                             : 'bg-white border-gray-300'
                         }`}
@@ -537,7 +676,11 @@ const markAsNotComing = () => {
                         {opt === 'אישה' ? 'אישה / נשים' : opt}
                       </button>
                     ))}
-                    <button type="button" onClick={handleGenderCustom} className="px-3 py-2 border border-dashed border-gray-300 rounded-xl text-sm text-gray-600">
+                    <button
+                      type="button"
+                      onClick={handleGenderCustom}
+                      className="px-3 py-2 border border-dashed border-gray-300 rounded-xl text-sm text-gray-600"
+                    >
                       אחר
                     </button>
                   </div>
@@ -546,14 +689,48 @@ const markAsNotComing = () => {
                   <div className="flex flex-wrap gap-2 items-center text-sm">
                     <span>גברים:</span>
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                      <button key={`m${num}`} type="button" onClick={() => setMenCount(num)} className={`w-9 h-9 rounded-full font-bold border-2 ${menCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'}`}>{num}</button>
+                      <button
+                        key={`m${num}`}
+                        type="button"
+                        onClick={() => setMenCount(num)}
+                        className={`w-9 h-9 rounded-full font-bold border-2 ${
+                          menCount === num
+                            ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]'
+                            : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        {num}
+                      </button>
                     ))}
                     <span className="mr-2">נשים:</span>
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                      <button key={`w${num}`} type="button" onClick={() => setWomenCount(num)} className={`w-9 h-9 rounded-full font-bold border-2 ${womenCount === num ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]' : 'bg-white border-gray-300'}`}>{num}</button>
+                      <button
+                        key={`w${num}`}
+                        type="button"
+                        onClick={() => setWomenCount(num)}
+                        className={`w-9 h-9 rounded-full font-bold border-2 ${
+                          womenCount === num
+                            ? 'bg-[#3f2a1e] text-white border-[#3f2a1e]'
+                            : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        {num}
+                      </button>
                     ))}
-                    <button type="button" onClick={() => setGenderMode('simple')} className="px-3 py-1.5 border rounded-xl">ביטול</button>
-                    <button type="button" onClick={saveCustomGender} className="px-3 py-1.5 bg-purple-600 text-white rounded-xl font-bold">שמור</button>
+                    <button
+                      type="button"
+                      onClick={() => setGenderMode('simple')}
+                      className="px-3 py-1.5 border rounded-xl"
+                    >
+                      ביטול
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveCustomGender}
+                      className="px-3 py-1.5 bg-purple-600 text-white rounded-xl font-bold"
+                    >
+                      שמור
+                    </button>
                   </div>
                 )}
               </div>
