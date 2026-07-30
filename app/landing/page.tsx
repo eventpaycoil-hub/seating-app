@@ -719,8 +719,7 @@ function LandingPageContent() {
                       <button
                         key={num}
                         onClick={() => handleRsvp(num)}
-                        className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95 transition-all shadow-lg"
-                      >
+className="w-24 h-24 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-4xl font-bold rounded-full active:scale-95 transition-all shadow-lg"                      >
                         {num}
                       </button>
                     ))}
@@ -739,7 +738,7 @@ function LandingPageContent() {
                         <button
                           key={num}
                           onClick={() => handleRsvp(num)}
-                          className="w-16 h-16 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-2xl font-bold rounded-full active:scale-95"
+                          className="w-20 h-20 bg-[#3f2a1e] hover:bg-[#5c4033] text-white text-3xl font-bold rounded-full active:scale-95"
                         >
                           {num}
                         </button>
