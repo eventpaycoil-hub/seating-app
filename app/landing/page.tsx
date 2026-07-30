@@ -159,7 +159,7 @@ function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const code = searchParams.get('code') || searchParams.get('ref');
-  const imgParam = searchParams.get('img');
+  const imgParam = searchParams.get('img'); // '1' | '2' | null
   const [event, setEvent] = useState<any>(null);
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +232,7 @@ function LandingPageContent() {
         if (!error && data && !cancelled) {
           const mapped = {
             id: data.id,
-            rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
+                        rsvpMode: data.rsvp_mode || data.rsvpMode || 'רגיל',
             welcomeLine: data.welcome_line || data.welcomeLine || '',
             useExternalLanding:
               data.use_external_landing || data.useExternalLanding || 'לא',
@@ -246,11 +246,13 @@ function LandingPageContent() {
             time: data.time || '19:30',
             eventDate: data.event_date || data.eventDate || '',
             fullDate: data.full_date || data.fullDate || data.event_date || '',
+            eventType: data.event_type || data.eventType || '',
             englishEvent: data.english_event || data.englishEvent || 'לא',
             hasSeparation: data.has_separation || data.hasSeparation || 'לא',
             hasTransport: data.has_transport || data.hasTransport || 'לא',
             guestNotes: data.guest_notes || data.guestNotes || 'כן',
             coverUrl: data.cover_url || data.coverUrl || '',
+                        coverUrl: data.cover_url || data.coverUrl || '',
             coverUrl2: data.cover_url2 || data.coverUrl2 || '',
           };
           setEvent((prev: any) => ({ ...(prev || {}), ...mapped }));
@@ -358,7 +360,7 @@ function LandingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover, externalRedirect, imgParam]);
+  }, [eventId, event?.coverUrl, event?.coverUrl2, event?.landingCover, externalRedirect]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -567,6 +569,11 @@ function LandingPageContent() {
         <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
           {event?.owners ? `${titlePrefix} ${event.owners}` : displayTitle}
         </h1>
+        {guestName && rsvpStatus === 'none' && (
+          <p className="mt-2 text-lg opacity-90">
+            {lang === 'he' ? `שלום ${guestName}` : `Hi ${guestName}`}
+          </p>
+        )}
       </div>
 
       {rsvpStatus !== 'none' ? (
@@ -575,6 +582,11 @@ function LandingPageContent() {
             <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-12 shadow-xl">
               <div className="text-7xl mb-6">🎉</div>
               <h3 className="text-4xl font-bold text-green-800 mb-3">{t.thanks}</h3>
+              {guestName && (
+                <p className="text-xl text-green-700 mb-2">
+                  {lang === 'he' ? `תודה ${guestName}!` : `Thank you ${guestName}!`}
+                </p>
+              )}
               <p className="text-2xl text-green-700 mb-4">
                 {t.confirmedFor}
                 {rsvpCount} {t.guests}
