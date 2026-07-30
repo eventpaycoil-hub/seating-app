@@ -102,11 +102,19 @@ function findGuestIndex(saved: any[], searchCode: string) {
   });
 }
 
-function getPreferredCover(eventId: string, event: any) {
+function getPreferredCover(eventId: string, event: any, imgParam?: string | null) {
   try {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const current =
       events.find((e: any) => String(e.id) === String(eventId)) || event || {};
+
+    if (imgParam === '1' && (current?.coverUrl || event?.coverUrl)) {
+      return current?.coverUrl || event?.coverUrl || '';
+    }
+    if (imgParam === '2' && (current?.coverUrl2 || event?.coverUrl2)) {
+      return current?.coverUrl2 || event?.coverUrl2 || '';
+    }
+
     const slot =
       Number(localStorage.getItem(`landing_cover_slot_${eventId}`)) === 2 ||
       current?.landingCover === 2
@@ -151,7 +159,7 @@ function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const code = searchParams.get('code') || searchParams.get('ref');
-
+  const imgParam = searchParams.get('img'); // '1' | '2' | null
   const [event, setEvent] = useState<any>(null);
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,7 +310,7 @@ function LandingPageContent() {
     let cancelled = false;
 
     (async () => {
-      const preferred = getPreferredCover(String(eventId), event);
+      const preferred = getPreferredCover(String(eventId), event, imgParam);
       if (!cancelled && preferred) {
         setHeroMedia({ type: 'image', url: preferred });
         return;

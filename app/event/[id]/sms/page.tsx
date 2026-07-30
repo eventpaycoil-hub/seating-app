@@ -107,6 +107,7 @@ export default function SMSPage() {
   const [customEmojis, setCustomEmojis] = useState<string[]>([]);
   const [newEmoji, setNewEmoji] = useState('');
   const [useGuestName, setUseGuestName] = useState(false);
+    const [landingImage, setLandingImage] = useState<1 | 2>(1);
 
   const emojis = useMemo(
     () => [...DEFAULT_EMOJIS, ...customEmojis],
@@ -225,7 +226,7 @@ export default function SMSPage() {
       ) {
         rsvplink = String(currentEvent.externalLandingUrl).trim();
       } else {
-        rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}`;
+                rsvplink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${guestCode}&img=${landingImage}`;
       }
 
       message = message.replace(/\*guestId\*/g, String(guestCode));
@@ -399,7 +400,7 @@ export default function SMSPage() {
     if (![1, 2, 6].includes(selectedTemplate.id)) return;
     if (isEditing) return;
     setEditedMessage(buildDynamicMessage(selectedTemplate));
-  }, [useGuestName, activeGuest, selectedTemplate?.id]);
+    }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage]);
 
   const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
@@ -645,7 +646,43 @@ export default function SMSPage() {
                     </label>
                   </div>
                 )}
-
+                {[1, 6].includes(selectedTemplate.id) && (
+                  <div className="mb-4 p-4 rounded-2xl bg-amber-50 border flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-gray-700 font-medium">
+                      תמונה בדף הנחיתה לקישור הזה
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLandingImage(1);
+                          setIsEditing(false);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold border ${
+                          landingImage === 1
+                            ? 'bg-emerald-600 text-white border-emerald-700'
+                            : 'bg-white text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        תמונה 1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLandingImage(2);
+                          setIsEditing(false);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold border ${
+                          landingImage === 2
+                            ? 'bg-emerald-600 text-white border-emerald-700'
+                            : 'bg-white text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        תמונה 2
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {showEmojiPicker && (
                   <div className="mb-6 bg-white border rounded-2xl p-4 shadow-inner">
                     <div className="grid grid-cols-10 gap-2 max-h-40 overflow-y-auto">
