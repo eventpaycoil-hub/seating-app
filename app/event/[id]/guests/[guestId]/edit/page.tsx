@@ -658,14 +658,23 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
                 </button>
               ))}
             </div>
-            <div>
-              <label className="block text-xs md:text-sm text-gray-500 mb-1">הערות</label>
-              <textarea
-                value={guest.notes || ''}
-                onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
-                className="w-full h-12 md:h-16 p-2 border rounded-xl text-sm resize-none"
-                placeholder="הערות..."
-              />
+                        <div className="flex gap-2 items-stretch">
+              <div className="flex-1">
+                <label className="block text-xs md:text-sm text-gray-500 mb-1">הערות</label>
+                <textarea
+                  value={guest.notes || ''}
+                  onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
+                  className="w-full h-12 md:h-16 p-2 border rounded-xl text-sm resize-none"
+                  placeholder="הערות..."
+                />
+              </div>
+              <button
+                type="button"
+                onClick={saveAndGoBack}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 md:px-8 rounded-2xl text-base md:text-xl font-bold whitespace-nowrap"
+              >
+                עדכן!
+              </button>
             </div>
           </div>
 
