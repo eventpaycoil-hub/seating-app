@@ -217,7 +217,7 @@ export default function EditEventPage() {
 
         localStorage.setItem('myEvents', JSON.stringify(events));
 
-    // שמירה ל-Supabase — כדי שדף הנחיתה בחי יראה rsvpMode
+        // שמירה ל-Supabase — כדי שדף הנחיתה בחי יראה את ההגדרות
     try {
       await supabase
         .from('events')
@@ -227,6 +227,15 @@ export default function EditEventPage() {
           use_external_landing: formData.useExternalLanding || 'לא',
           external_landing_url: formData.externalLandingUrl || '',
           event_type: formData.eventType || null,
+          has_transport: formData.hasTransport || 'לא',
+          has_separation: formData.hasSeparation || 'לא',
+          owners: formData.owners || null,
+          hall_name: formData.hallName || null,
+          city: formData.city || null,
+          time: formData.time || null,
+          event_date: formData.eventDate || formData.fullDate || null,
+          english_event: formData.englishEvent || 'לא',
+          guest_notes: formData.guestNotes || 'כן',
         })
         .eq('id', Number(eventId));
     } catch (err) {
@@ -307,7 +316,6 @@ export default function EditEventPage() {
             ← חזרה לרשימת מוזמנים
           </Link>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-10">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-3">
