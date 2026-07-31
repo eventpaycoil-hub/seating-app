@@ -127,7 +127,6 @@ export default function EditGuestPage() {
       } catch {}
     }
 
-    // קבוצות רק מהאירוע — בלי דוגמאות קבועות
     const allGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     const fromGuests = allGuests
       .map((g: any) => (g.group || '').toString().trim())
@@ -149,7 +148,6 @@ export default function EditGuestPage() {
       }
     } catch {}
 
-    // אם למוזמן הנוכחי יש קבוצה שלא ברשימה — נוסיף אותה כדי שלא "תיעלם"
     const currentGroup = (foundGuest?.group || '').toString().trim();
     const unique = Array.from(
       new Set([...fromStorage, ...fromGuests, ...(currentGroup ? [currentGroup] : [])])
@@ -161,42 +159,43 @@ export default function EditGuestPage() {
   }, [eventId, guestId]);
 
   const goNextOrList = () => {
-  if (!queue) {
-    router.push(`/event/${eventId}/guests`);
-    return;
-  }
-  const guestsKey = `guests_event_${eventId}`;
-  const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-  const idx = all.findIndex((g: any) => g.id.toString() === guestId.toString());
-  for (let i = idx + 1; i < all.length; i++) {
-    if (matchesQueue(all[i], queue)) {
-      router.push(`/event/${eventId}/guests/${all[i].id}/edit?queue=${queue}`);
+    if (!queue) {
+      router.push(`/event/${eventId}/guests`);
       return;
     }
-  }
-  router.push(`/event/${eventId}/guests`);
-};
-
-const resetToUnknown = () => {
-  const updatedGuest = {
-    ...guest,
-    confirmed: 'לא ידוע',
-    confirmedCount: 0,
-    count: 0,
+    const guestsKey = `guests_event_${eventId}`;
+    const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    const idx = all.findIndex((g: any) => g.id.toString() === guestId.toString());
+    for (let i = idx + 1; i < all.length; i++) {
+      if (matchesQueue(all[i], queue)) {
+        router.push(`/event/${eventId}/guests/${all[i].id}/edit?queue=${queue}`);
+        return;
+      }
+    }
+    router.push(`/event/${eventId}/guests`);
   };
 
-  const guestsKey = `guests_event_${eventId}`;
-  const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-  const updated = all.map((g: any) =>
-    g.id.toString() === guestId.toString() ? { ...g, ...updatedGuest } : g
-  );
-  localStorage.setItem(guestsKey, JSON.stringify(updated));
-  setGuest(updatedGuest);
+  const resetToUnknown = () => {
+    const updatedGuest = {
+      ...guest,
+      confirmed: 'לא ידוע',
+      confirmedCount: 0,
+      count: 0,
+    };
 
-  if (queue) {
-    goNextOrList();
-  }
-};
+    const guestsKey = `guests_event_${eventId}`;
+    const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+    const updated = all.map((g: any) =>
+      g.id.toString() === guestId.toString() ? { ...g, ...updatedGuest } : g
+    );
+    localStorage.setItem(guestsKey, JSON.stringify(updated));
+    setGuest(updatedGuest);
+
+    if (queue) {
+      goNextOrList();
+    }
+  };
+
   const saveGuestField = (updatedGuest: any) => {
     const normalized = {
       ...updatedGuest,
@@ -212,12 +211,12 @@ const resetToUnknown = () => {
     saveGuests(eventId, savedGuests);
   };
 
-     const isAdmin =
+  const isAdmin =
     typeof window !== 'undefined' &&
     (localStorage.getItem('userRole') || '').toLowerCase() === 'admin' &&
     localStorage.getItem('clientMode') !== 'true';
 
-      const addToNotes = (text: string) => {
+  const addToNotes = (text: string) => {
     if (text === 'אפס הערה') {
       const role = (localStorage.getItem('userRole') || '').toLowerCase();
       const clientMode = localStorage.getItem('clientMode') === 'true';
@@ -235,8 +234,6 @@ const resetToUnknown = () => {
     saveGuestField(updated);
   };
 
-  
-
   const setCountAndConfirm = (num: number) => {
     const now = new Date().toISOString();
     const updatedGuest = {
@@ -250,30 +247,7 @@ const resetToUnknown = () => {
     saveGuestField(updatedGuest);
     goNextOrList();
   };
-const matchesQueue = (g: any, q: string) => {
-  const status = String(g?.confirmed ?? '').trim();
-  const isUnknown =
-    !status ||
-    status === '' ||
-    status === 'לא ידוע' ||
-    status === 'ממתין';
 
-  if (!isUnknown) return false;
-
-  const note = String(g?.notes ?? '').trim();
-
-  if (q === 'unknownEmpty') {
-    // כתום = לא ידוע + בלי הערה
-    return note === '';
-  }
-
-  if (q === 'unknown') {
-    // אפור = לא ידוע + עם הערה
-    return note !== '';
-  }
-
-  return false;
-};
   const markAsNotComing = () => {
     const now = new Date().toISOString();
     const updatedGuest = {
@@ -369,8 +343,7 @@ const matchesQueue = (g: any, q: string) => {
   const currentTransport = guest.transportation || guest.transport || '';
   const currentGender = guest.separation || '';
   const quantityValue = guest.quantity ?? guest.customerExpectation ?? '';
-
-  if (isClientMode) {
+    if (isClientMode) {
     return (
       <div className="min-h-screen bg-[#f5f0e6] p-6" dir="rtl">
         <div className="max-w-xl mx-auto">
@@ -519,7 +492,7 @@ const matchesQueue = (g: any, q: string) => {
 
   return (
     <div className="min-h-[100dvh] bg-[#f5f0e6] px-2 py-1 md:px-4 md:py-3 overflow-x-hidden" dir="rtl">
-  <div className="max-w-[1500px] mx-auto space-y-1 md:space-y-3">
+      <div className="max-w-[1500px] mx-auto space-y-1 md:space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm">
             ← חזרה לרשימה
@@ -532,15 +505,18 @@ const matchesQueue = (g: any, q: string) => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-1.5 md:gap-3">
-  <div className="w-full lg:w-[320px] flex-shrink-0 space-y-1 md:space-y-2">
+          <div className="w-full lg:w-[320px] flex-shrink-0 space-y-1 md:space-y-2">
             <div
               onClick={callPhone}
-className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-3 py-2 md:px-5 md:py-4 flex flex-col items-center shadow-lg"            >
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-3 py-2 md:px-5 md:py-4 flex flex-col items-center shadow-lg"
+            >
               <div className="text-base md:text-xl font-bold mb-0.5 text-center leading-tight">
-  {guest.name || '—'}
-</div>
-<div className="text-[10px] md:text-xs opacity-80">טלפון · לחץ לחיוג</div>
-<div className="text-2xl md:text-4xl font-bold tracking-widest mt-0.5">{guest.phone || '—'}</div>
+                {guest.name || '—'}
+              </div>
+              <div className="text-[10px] md:text-xs opacity-80">טלפון · לחץ לחיוג</div>
+              <div className="text-2xl md:text-4xl font-bold tracking-widest mt-0.5">
+                {guest.phone || '—'}
+              </div>
             </div>
 
             <input
@@ -562,7 +538,7 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
               className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base font-mono text-center focus:outline-none focus:border-blue-500"
             />
 
-                        <div className="bg-white rounded-xl border border-gray-300 px-3 py-2">
+            <div className="bg-white rounded-xl border border-gray-300 px-3 py-2">
               <label className="block text-xs text-gray-500 mb-1 text-center">כמות (הערכה)</label>
               <input
                 type="text"
@@ -588,7 +564,12 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
             </div>
           </div>
 
-          <div className="flex-1 bg-white rounded-2xl px-6 py-4 shadow text-right text-[15px] leading-7">
+          {/* פרטי אירוע — מוסתר בטאבלט במצב חיוג */}
+          <div
+            className={`flex-1 bg-white rounded-2xl px-6 py-4 shadow text-right text-[15px] leading-7 ${
+              queue ? 'hidden lg:block' : ''
+            }`}
+          >
             <div className="font-bold text-lg text-slate-900">{event.owners || '—'}</div>
             <div>{formatFullDate()}</div>
             <div>&quot;{event.hallName || event.venue || '—'}&quot;</div>
@@ -600,23 +581,24 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl px-3 py-2.5 shadow">
+        {/* הערות מהירות — מוסתר בטאבלט במצב חיוג */}
+        <div className={`bg-white rounded-2xl px-3 py-2.5 shadow ${queue ? 'hidden md:block' : ''}`}>
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5">
-                         {quickActions.map((text, i) => (
-                <button
-                  key={`${text}-${i}`}
-                  type="button"
-                  onClick={() => addToNotes(text)}
-                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs py-2 px-1 rounded-xl active:scale-[0.98]"
-                >
-                  {text}
-                </button>
-              ))}
+            {quickActions.map((text, i) => (
+              <button
+                key={`${text}-${i}`}
+                type="button"
+                onClick={() => addToNotes(text)}
+                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs py-2 px-1 rounded-xl active:scale-[0.98]"
+              >
+                {text}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <div className="bg-white rounded-2xl p-3 md:p-4 shadow space-y-2 md:space-y-3">
+          <div className="bg-white rounded-2xl p-3 md:p-4 shadow space-y-2 md:space-y-3">
             <div className="text-xs md:text-sm text-gray-500">כמות אנשים</div>
             <div className="flex gap-2 md:gap-3">
               <button
@@ -658,7 +640,7 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
                 </button>
               ))}
             </div>
-                        <div className="flex gap-2 items-stretch">
+            <div className="flex gap-2 items-stretch">
               <div className="flex-1">
                 <label className="block text-xs md:text-sm text-gray-500 mb-1">הערות</label>
                 <textarea
@@ -671,14 +653,15 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
               <button
                 type="button"
                 onClick={saveAndGoBack}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 md:px-8 rounded-2xl text-base md:text-xl font-bold whitespace-nowrap"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-8 rounded-2xl text-sm md:text-xl font-bold whitespace-nowrap"
               >
-                עדכן!
+                {queue ? 'עדכן והמשך' : 'עדכן!'}
               </button>
             </div>
           </div>
 
-          <div className="space-y-3">
+          {/* קבוצה / הסעה / מגדר — מוסתר בטאבלט במצב חיוג */}
+          <div className={`space-y-3 ${queue ? 'hidden lg:block' : ''}`}>
             <div className="bg-white rounded-2xl px-4 py-3 shadow flex items-center gap-3">
               <label className="text-sm text-gray-500 whitespace-nowrap">קבוצה</label>
               <select
@@ -799,7 +782,6 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
