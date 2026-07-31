@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadGuests, saveGuests, getGuests } from '../../../../lib/guests';
 import * as XLSX from 'xlsx';
+import { supabase } from '../../../../lib/supabase.js';
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
 const EDITOR_ALLOWED = [
   'home',
@@ -203,11 +204,45 @@ export default function GuestsPage() {
         setHasTransport(currentEvent.hasTransport === 'כן');
       }
 
-      const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
+            const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
       if (savedTransport) {
         try {
           setTransportOptions(JSON.parse(savedTransport));
         } catch {}
+      }
+
+      try {
+        const { data } = await supabase
+          .from('events')
+          .select('owners, has_transport, has_separation, transport_options')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (data) {
+          if (data.owners) {
+            setEventTitle(data.owners || `אירוע #${eventId}`);
+          }
+          if (data.has_transport === 'כן' || data.has_transport === true) {
+            setHasTransport(true);
+          }
+          if (data.has_separation === 'כן' || data.has_separation === true) {
+            setHasSeparation(true);
+          }
+          if (data.transport_options) {
+            const list = Array.isArray(data.transport_options)
+              ? data.transport_options
+              : JSON.parse(data.transport_options || '[]');
+            if (Array.isArray(list) && list.length > 0) {
+              setTransportOptions(list);
+              localStorage.setItem(
+                `transport_options_${eventId}`,
+                JSON.stringify(list)
+              );
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('guests page event load failed', e);
       }
     }
 
