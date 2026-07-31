@@ -157,6 +157,20 @@ export default function EditEventPage() {
       e.id.toString() === eventId ? { ...e, ...updatedData } : e
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
+        try {
+      await supabase
+        .from('events')
+        .update({
+          is_active: true,
+          has_transport: formData.hasTransport || 'לא',
+          has_separation: formData.hasSeparation || 'לא',
+          owners: formData.owners || null,
+          rsvp_mode: formData.rsvpMode || 'רגיל',
+        })
+        .eq('id', Number(eventId));
+    } catch (err) {
+      console.warn('Supabase activate failed', err);
+    }
 
     const phone = formData.clientPhone || formData.phone || '';
 
@@ -229,6 +243,7 @@ export default function EditEventPage() {
           event_type: formData.eventType || null,
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
+                    is_active: formData.isActive === true || formData.isActive === 'כן',
           owners: formData.owners || null,
           hall_name: formData.hallName || null,
           city: formData.city || null,
