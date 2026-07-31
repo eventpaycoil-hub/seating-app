@@ -518,8 +518,8 @@ const matchesQueue = (g: any, q: string) => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#f5f0e6] px-3 py-2 overflow-x-hidden" dir="rtl">
-      <div className="max-w-[1500px] mx-auto space-y-2">
+    <div className="min-h-[100dvh] bg-[#f5f0e6] px-2 py-1 md:px-4 md:py-3 overflow-x-hidden" dir="rtl">
+  <div className="max-w-[1500px] mx-auto space-y-1 md:space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm">
             ← חזרה לרשימה
@@ -531,17 +531,16 @@ const matchesQueue = (g: any, q: string) => {
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-2">
-          <div className="w-full lg:w-[320px] flex-shrink-0 space-y-1.5">
+        <div className="flex flex-col lg:flex-row gap-1.5 md:gap-3">
+  <div className="w-full lg:w-[320px] flex-shrink-0 space-y-1 md:space-y-2">
             <div
               onClick={callPhone}
-              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-4 py-3 flex flex-col items-center shadow-lg"
-            >
-              <div className="text-lg font-bold mb-0.5 text-center leading-tight">
-                {guest.name || '—'}
-              </div>
-              <div className="text-[11px] opacity-80">טלפון · לחץ לחיוג</div>
-              <div className="text-3xl font-bold tracking-widest mt-0.5">{guest.phone || '—'}</div>
+className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-3 py-2 md:px-5 md:py-4 flex flex-col items-center shadow-lg"            >
+              <div className="text-base md:text-xl font-bold mb-0.5 text-center leading-tight">
+  {guest.name || '—'}
+</div>
+<div className="text-[10px] md:text-xs opacity-80">טלפון · לחץ לחיוג</div>
+<div className="text-2xl md:text-4xl font-bold tracking-widest mt-0.5">{guest.phone || '—'}</div>
             </div>
 
             <input
