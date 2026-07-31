@@ -59,14 +59,13 @@ export default function EditEventPage() {
     clientPhone: '',
   });
 
-  const [showDeleteZone, setShowDeleteZone] = useState(false);
+    const [showDeleteZone, setShowDeleteZone] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-    useEffect(() => {
+  useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) {
-      // תאימות לאחור: אם eventType היה "2 כפתורים" וכו'
       let eventType = currentEvent.eventType || 'חתונה';
       let rsvpMode = currentEvent.rsvpMode || 'רגיל';
       if (eventType === '2 כפתורים') {
@@ -94,6 +93,8 @@ export default function EditEventPage() {
         hasSeparation: currentEvent.hasSeparation || 'לא',
         presenceOnly: currentEvent.presenceOnly || 'לא',
         clientPhone: currentEvent.clientPhone || '',
+        username: currentEvent.username || '',
+        password: currentEvent.password || '',
       }));
     }
 
@@ -102,7 +103,7 @@ export default function EditEventPage() {
         const { data, error } = await supabase
           .from('events')
           .select(
-            'has_transport, has_separation, is_active, rsvp_mode, welcome_line, use_external_landing, external_landing_url, event_type'
+            'has_transport, has_separation, is_active, rsvp_mode, welcome_line, use_external_landing, external_landing_url, event_type, username, password'
           )
           .eq('id', Number(eventId))
           .maybeSingle();
@@ -119,6 +120,8 @@ export default function EditEventPage() {
           useExternalLanding: data.use_external_landing || prev.useExternalLanding || 'לא',
           externalLandingUrl: data.external_landing_url || prev.externalLandingUrl || '',
           eventType: data.event_type || prev.eventType || 'חתונה',
+          username: data.username || prev.username || '',
+          password: data.password || prev.password || '',
         }));
       } catch (e) {
         console.warn('load event from supabase failed', e);
@@ -161,15 +164,27 @@ export default function EditEventPage() {
         e.id.toString() === eventId ? { ...e, ...updatedData } : e
       );
       localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
+      try {
+        supabase
+          .from('events')
+          .update({ is_active: false })
+          .eq('id', Number(eventId))
+          .then(({ error }) => {
+            if (error) console.warn('Supabase deactivate failed', error);
+          });
+      } catch (err) {
+        console.warn('Supabase deactivate failed', err);
+      }
       alert('האירוע הושבת.');
       return;
     }
 
     const username =
+      formData.username ||
       'ep' +
-      Math.random().toString(36).slice(2, 6) +
-      Math.floor(1000 + Math.random() * 9000);
-    const password = generatePassword();
+        Math.random().toString(36).slice(2, 6) +
+        Math.floor(1000 + Math.random() * 9000);
+    const password = formData.password || generatePassword();
 
     const updatedData = {
       ...formData,
@@ -185,15 +200,17 @@ export default function EditEventPage() {
       e.id.toString() === eventId ? { ...e, ...updatedData } : e
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
-            try {
+
+    try {
       supabase
         .from('events')
         .update({
           is_active: true,
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
-          owners: formData.owners || null,
           rsvp_mode: formData.rsvpMode || 'רגיל',
+          username,
+          password,
         })
         .eq('id', Number(eventId))
         .then(({ error }) => {
@@ -204,7 +221,6 @@ export default function EditEventPage() {
     }
 
     const phone = formData.clientPhone || formData.phone || '';
-
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const loginUrl = `${origin}/`;
 
@@ -260,13 +276,12 @@ export default function EditEventPage() {
       events.push(updatedEvent);
     }
 
-        localStorage.setItem('myEvents', JSON.stringify(events));
+    localStorage.setItem('myEvents', JSON.stringify(events));
 
-        // שמירה ל-Supabase — כדי שדף הנחיתה בחי יראה את ההגדרות
     try {
       await supabase
         .from('events')
-                .update({
+        .update({
           rsvp_mode: formData.rsvpMode || 'רגיל',
           welcome_line: formData.welcomeLine || '',
           use_external_landing: formData.useExternalLanding || 'לא',
@@ -275,9 +290,10 @@ export default function EditEventPage() {
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
           is_active: formData.isActive === true || formData.isActive === 'כן',
+          username: formData.username || null,
+          password: formData.password || null,
         })
         .eq('id', Number(eventId));
-        
     } catch (err) {
       console.warn('Supabase event update failed', err);
     }
@@ -378,7 +394,7 @@ export default function EditEventPage() {
             </div>
           </div>
 
-          <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
+                    <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-bold text-xl">סטטוס אירוע</div>
@@ -398,49 +414,31 @@ export default function EditEventPage() {
                 {formData.isActive ? '⚠️ השבת את האירוע' : '🚀 הפעל את האירוע'}
               </button>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">שם בעלי השמחה:</label>
-            <input
-              type="text"
-              name="owners"
-              value={formData.owners}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg"
-            />
+            {(formData.username || formData.password) && (
+              <div className="mt-4 p-4 rounded-2xl bg-white border border-amber-200 text-sm space-y-1">
+                <div className="font-bold text-slate-700 mb-1">פרטי כניסה ללקוח</div>
+                <div>
+                  שם משתמש:{' '}
+                  <span className="font-mono font-semibold">{formData.username || '—'}</span>
+                </div>
+                <div>
+                  סיסמה: <span className="font-mono font-semibold">{formData.password || '—'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="mt-2 text-blue-600 underline"
+                  onClick={() => {
+                    const text = `שם משתמש: ${formData.username || ''}\nסיסמה: ${formData.password || ''}`;
+                    navigator.clipboard.writeText(text);
+                    alert('הועתק');
+                  }}
+                >
+                  העתק פרטי כניסה
+                </button>
+              </div>
+            )}
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              טלפון הלקוח (לשליחת פרטי כניסה):
-            </label>
-            <input
-              type="tel"
-              name="clientPhone"
-              value={formData.clientPhone || ''}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg"
-              placeholder="050-5270152"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">סוג האירוע:</label>
-            <select
-              name="eventType"
-              value={formData.eventType}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg"
-            >
-              {eventTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm font-medium mb-2">
               מצב אישור הגעה (דף נחיתה):
