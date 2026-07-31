@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
 import { loadGuests, updateGuestInSupabase } from '../../../../lib/guests';
+import { saveSeating } from '../../../../lib/seating';
 
 export default function SeatingArrivalFastPage() {
   const params = useParams();
@@ -22,6 +23,10 @@ export default function SeatingArrivalFastPage() {
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
   const [isListening, setIsListening] = useState(false);
+
+  // בחירת שולחן
+  const [selectedTableId, setSelectedTableId] = useState<string | number>('');
+  const [availableTables, setAvailableTables] = useState<any[]>([]);
 
   const tableMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -47,54 +52,54 @@ export default function SeatingArrivalFastPage() {
   }, [tableMapVersion]);
 
   useEffect(() => {
-  const handleStorageChange = (e: StorageEvent) => {
-    if (e.key === 'seatingTables') setTableMapVersion((prev) => prev + 1);
-  };
-  window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
-}, []);
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'seatingTables') setTableMapVersion((prev) => prev + 1);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-// סגירת מקלדת אוטומטית אחרי חיפוש (טאבלט)
-useEffect(() => {
-  if (searchTerm.trim().length < 2) return;
-  if (forceEmptyList) return;
+  // סגירת מקלדת אוטומטית אחרי חיפוש (טאבלט)
+  useEffect(() => {
+    if (searchTerm.trim().length < 2) return;
+    if (forceEmptyList) return;
 
-  const t = setTimeout(() => {
-    searchInputRef.current?.blur();
-  }, 450);
+    const t = setTimeout(() => {
+      searchInputRef.current?.blur();
+    }, 450);
 
-  return () => clearTimeout(t);
-}, [searchTerm, forceEmptyList]);
+    return () => clearTimeout(t);
+  }, [searchTerm, forceEmptyList]);
 
-useEffect(() => {
-  if (!eventId) return;
+  useEffect(() => {
+    if (!eventId) return;
 
-  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-  const currentEvent = events.find((e: any) => e.id.toString() === eventId);
-  if (currentEvent) {
-    setEventTitle(currentEvent.owners || currentEvent.title || '');
-  }
-
-  let cancelled = false;
-
-  (async () => {
-    try {
-      const list = await loadGuests(String(eventId));
-      if (!cancelled && Array.isArray(list)) {
-        setAllGuests(list);
-      }
-    } catch (e) {
-      console.log('loadGuests error', e);
-      if (!cancelled) {
-        const local = JSON.parse(
-          localStorage.getItem(`guests_event_${eventId}`) || '[]'
-        );
-        setAllGuests(local);
-      }
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const currentEvent = events.find((e: any) => e.id.toString() === eventId);
+    if (currentEvent) {
+      setEventTitle(currentEvent.owners || currentEvent.title || '');
     }
-  })();
 
-      return () => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const list = await loadGuests(String(eventId));
+        if (!cancelled && Array.isArray(list)) {
+          setAllGuests(list);
+        }
+      } catch (e) {
+        console.log('loadGuests error', e);
+        if (!cancelled) {
+          const local = JSON.parse(
+            localStorage.getItem(`guests_event_${eventId}`) || '[]'
+          );
+          setAllGuests(local);
+        }
+      }
+    })();
+
+    return () => {
       cancelled = true;
     };
   }, [eventId]);
@@ -177,7 +182,7 @@ useEffect(() => {
     recognition.start();
   };
 
-    const markArrival = async (id: number, count: number) => {
+  const markArrival = async (id: number, count: number) => {
     const updated = allGuests.map((guest) =>
       guest.id === id ? { ...guest, arrivedCount: count } : guest
     );
@@ -194,13 +199,7 @@ useEffect(() => {
       `arrived_event_${eventId}`,
       JSON.stringify(arrivedOnly)
     );
-
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
-    try {
-  await updateGuestInSupabase(newGuest, String(eventId));
-} catch (e) {
-  console.warn('add live guest sync failed', e);
-}
 
     const guest = updated.find((g) => g.id === id);
     if (guest) {
@@ -215,6 +214,7 @@ useEffect(() => {
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
+
   const clearSearch = () => {
     setSearchTerm('');
     setForceEmptyList(false);
@@ -225,6 +225,133 @@ useEffect(() => {
     setForceEmptyList(false);
     setTableMapVersion((prev) => prev + 1);
   };
+
+  // פתיחת מודל + טעינת שולחנות
+  const openAddModal = () => {
+    try {
+      const raw =
+        localStorage.getItem(`seatingTables_${eventId}`) ||
+        localStorage.getItem('seatingTables') ||
+        '[]';
+      const tables = JSON.parse(raw).filter(
+        (t: any) => !t.isSpecial && Number(t.seats) > 0
+      );
+      setAvailableTables(tables);
+    } catch {
+      setAvailableTables([]);
+    }
+    setSelectedTableId('');
+    setNewName('');
+    setNewQty(1);
+    setShowAddModal(true);
+  };
+
+  const addLiveGuest = async (assignToTable = false) => {
+    const name = newName.trim();
+    if (!name) {
+      alert('נא להזין שם');
+      return;
+    }
+
+    const qty = Math.min(5, Math.max(1, Number(newQty) || 1));
+
+    const newGuest = {
+      id: Date.now(),
+      name,
+      phone: '',
+      quantity: String(qty),
+      confirmed: String(qty),
+      confirmedCount: qty,
+      arrivedCount: qty,
+      notes: assignToTable ? 'נוסף בלייב + הושבה' : 'נוסף בלייב – ללא הושבה',
+      group: 'כללי',
+      transportation: '',
+      customerExpectation: '',
+    };
+
+    // 1. מוסיפים לזיכרון המקומי מיד
+    const updated = [...allGuests, newGuest];
+    setAllGuests(updated);
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    // 2. סנכרון לענן
+    try {
+      await updateGuestInSupabase(newGuest, String(eventId));
+    } catch (e) {
+      console.warn('add live guest sync failed', e);
+    }
+
+    // 3. הושבה לשולחן (אם נבחר)
+    if (assignToTable && selectedTableId) {
+      try {
+        const keyEvent = `seatingTables_${eventId}`;
+        const raw =
+          localStorage.getItem(keyEvent) ||
+          localStorage.getItem('seatingTables') ||
+          '[]';
+        const tables: any[] = JSON.parse(raw);
+
+        const tableIndex = tables.findIndex(
+          (t) => String(t.id) === String(selectedTableId)
+        );
+
+        if (tableIndex < 0) {
+          alert('השולחן שנבחר לא נמצא');
+        } else {
+          const table = { ...tables[tableIndex] };
+          const assignedGuests = [...(table.assignedGuests || [])];
+          const guestSeats = { ...(table.guestSeats || {}) };
+
+          let currentOccupied = 0;
+          for (const n of assignedGuests) {
+            const q = Number(guestSeats[n]);
+            currentOccupied += Number.isFinite(q) && q > 0 ? q : 1;
+          }
+
+          const currentSeats = Number(table.seats) || 0;
+          const free = currentSeats - currentOccupied;
+
+          // רק אם אין מספיק מקום – מגדילים בדיוק בכמה שחסר
+          if (free < qty) {
+            table.seats = currentSeats + (qty - Math.max(0, free));
+          }
+
+          if (!assignedGuests.includes(name)) {
+            assignedGuests.push(name);
+          }
+          guestSeats[name] = qty;
+
+          table.assignedGuests = assignedGuests;
+          table.guestSeats = guestSeats;
+          tables[tableIndex] = table;
+
+          localStorage.setItem(keyEvent, JSON.stringify(tables));
+          localStorage.setItem('seatingTables', JSON.stringify(tables));
+
+          try {
+            await saveSeating(eventId, tables);
+          } catch (e) {
+            console.warn('saveSeating failed', e);
+          }
+
+          setTableMapVersion((v) => v + 1);
+        }
+      } catch (err) {
+        console.error('שגיאה בהושבה לשולחן', err);
+        alert('האורח נוסף, אבל ההושבה לשולחן נכשלה');
+      }
+    }
+
+    // 4. מציגים מיד את האורח החדש
+    setShowAddModal(false);
+    setSelectedTableId('');
+    setNewName('');
+    setNewQty(1);
+    setForceEmptyList(false);
+    setSearchTerm(name);
+    setTimeout(() => searchInputRef.current?.focus(), 80);
+  };
+
   const printPage = () => {
     let seatingData: any[] = [];
     try {
@@ -382,7 +509,7 @@ useEffect(() => {
             <Printer size={20} /> PDF
           </button>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={openAddModal}
             className="bg-blue-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium"
           >
             <UserPlus size={20} /> הוסף מוזמן
@@ -508,7 +635,8 @@ useEffect(() => {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">הוסף מוזמן (ללא הושבה)</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center">הוסף מוזמן</h2>
+
             <label className="block text-sm font-medium mb-2">שם</label>
             <input
               type="text"
@@ -518,11 +646,12 @@ useEffect(() => {
               placeholder="שם מלא"
               autoFocus
             />
+
             <label className="block text-sm font-medium mb-2">כמות (1–5)</label>
             <select
               value={newQty}
               onChange={(e) => setNewQty(Number(e.target.value))}
-              className="w-full border rounded-2xl px-4 py-3 mb-8 text-lg"
+              className="w-full border rounded-2xl px-4 py-3 mb-5 text-lg"
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -530,18 +659,60 @@ useEffect(() => {
                 </option>
               ))}
             </select>
+
+            <label className="block text-sm font-medium mb-2">שייך לשולחן (אופציונלי)</label>
+            <select
+              value={selectedTableId}
+              onChange={(e) => setSelectedTableId(e.target.value)}
+              className="w-full border rounded-2xl px-4 py-3 mb-8 text-lg"
+            >
+              <option value="">— ללא הושבה —</option>
+              {availableTables
+                .sort((a, b) => Number(a.tableNumber) - Number(b.tableNumber))
+                .map((t) => {
+                  const occupied = (t.assignedGuests || []).reduce(
+                    (sum: number, name: string) => sum + (t.guestSeats?.[name] ?? 1),
+                    0
+                  );
+                  const free = t.seats - occupied;
+                  return (
+                    <option key={t.id} value={t.id}>
+                      שולחן {t.tableNumber}
+                      {t.tableName ? ` (${t.tableName})` : ''} — {occupied}/{t.seats}
+                      {free <= 0 ? ' (מלא)' : ` (פנויים ${free})`}
+                    </option>
+                  );
+                })}
+            </select>
+
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSelectedTableId('');
+                }}
                 className="flex-1 py-3 border rounded-2xl font-medium"
               >
                 ביטול
               </button>
+
               <button
-                onClick={addLiveGuest}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold"
+                onClick={() => addLiveGuest(false)}
+                className="flex-1 py-3 bg-slate-600 text-white rounded-2xl font-bold"
               >
                 ללא הושבה
+              </button>
+
+              <button
+                onClick={() => addLiveGuest(true)}
+                disabled={!selectedTableId}
+                className={`flex-1 py-3 rounded-2xl font-bold text-white ${
+                  selectedTableId
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-blue-300 cursor-not-allowed'
+                }`}
+              >
+                הושב לשולחן
               </button>
             </div>
           </div>

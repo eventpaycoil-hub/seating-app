@@ -149,33 +149,36 @@ export default function WhatsAppTemplatesPage() {
     return { general_text_1, general_text_2, rsvp_link };
   };
 
-  const sendTemplate = async () => {
-    setSending(true);
-    setResult(null);
-    setError(null);
+  const sendTemplate = async (phoneOverride?: string) => {
+  setSending(true);
+  setResult(null);
+  setError(null);
 
-    try {
-      let targets: { phone: string; name: string; guestId: string }[] = [];
+  try {
+    let targets: { phone: string; name: string; guestId: string }[] = [];
 
-      if (selectedGuestsList.length > 0) {
-        targets = selectedGuestsList
-          .filter((g: any) => g.phone && String(g.phone).trim())
-          .map((g: any) => ({
-            phone: String(g.phone).trim(),
-            name: g.name || '',
-            guestId: String(g.id),
-          }));
+    if (selectedGuestsList.length > 0 && !phoneOverride) {
+      targets = selectedGuestsList
+        .filter((g: any) => g.phone && String(g.phone).trim())
+        .map((g: any) => ({
+          phone: String(g.phone).trim(),
+          name: g.name || '',
+          guestId: String(g.id),
+        }));
+    }
+
+    if (targets.length === 0) {
+      const phoneToUse = (phoneOverride || phone).trim();
+      if (!phoneToUse) {
+        alert('הזן מספר טלפון או בחר מוזמנים ברשימה');
+        setSending(false);
+        return;
       }
+      const gid = searchParams.get('guestId') || '';
+      targets = [{ phone: phoneToUse, name: '', guestId: gid }];
+    }
 
-      if (targets.length === 0) {
-        if (!phone.trim()) {
-          alert('הזן מספר טלפון או בחר מוזמנים ברשימה');
-          setSending(false);
-          return;
-        }
-        const gid = searchParams.get('guestId') || '';
-        targets = [{ phone: phone.trim(), name: '', guestId: gid }];
-      }
+    // ... שאר הפונקציה נשארת אותו דבר בדיוק ...
 
       const campaignName = `וואטסאפ - ${currentEvent?.owners || eventId} - ${Date.now()}`;
 
@@ -384,17 +387,37 @@ export default function WhatsAppTemplatesPage() {
             )}
 
             <button
-              type="button"
-              onClick={sendTemplate}
-              disabled={sending}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
-            >
-              {buttonLabel}
-            </button>
+  type="button"
+  onClick={() => sendTemplate()}
+  disabled={sending}
+  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
+>
+  {buttonLabel}
+</button>
 
-            <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-              בקשה אחת מהדפדפן → היי מבצעים את השליחה. קישור אישי לכל מוזמן.
-            </p>
+{/* כפתורי דוגמא */}
+<div className="space-y-3 mt-4">
+  <button
+    type="button"
+    onClick={() => sendTemplate('0505270152')}
+    disabled={sending}
+    className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
+  >
+    {sending ? '⏳ שולח...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
+  </button>
+  <button
+    type="button"
+    onClick={() => sendTemplate('0507666937')}
+    disabled={sending}
+    className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
+  >
+    {sending ? '⏳ שולח...' : '📱 שלח דוגמא לנופר (050-7666937)'}
+  </button>
+</div>
+
+<p className="text-xs text-gray-400 mt-4 leading-relaxed">
+  בקשה אחת מהדפדפן → היי מבצעים את השליחה. קישור אישי לכל מוזמן.
+</p>
           </div>
         </div>
       </div>

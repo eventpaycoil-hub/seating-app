@@ -161,22 +161,42 @@ export default function EditGuestPage() {
   }, [eventId, guestId]);
 
   const goNextOrList = () => {
-    if (!queue) {
-      router.push(`/event/${eventId}/guests`);
+  if (!queue) {
+    router.push(`/event/${eventId}/guests`);
+    return;
+  }
+  const guestsKey = `guests_event_${eventId}`;
+  const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+  const idx = all.findIndex((g: any) => g.id.toString() === guestId.toString());
+  for (let i = idx + 1; i < all.length; i++) {
+    if (matchesQueue(all[i], queue)) {
+      router.push(`/event/${eventId}/guests/${all[i].id}/edit?queue=${queue}`);
       return;
     }
-    const guestsKey = `guests_event_${eventId}`;
-    const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
-    const idx = all.findIndex((g: any) => g.id.toString() === guestId.toString());
-    for (let i = idx + 1; i < all.length; i++) {
-      if (matchesQueue(all[i], queue)) {
-        router.push(`/event/${eventId}/guests/${all[i].id}/edit?queue=${queue}`);
-        return;
-      }
-    }
-    router.push(`/event/${eventId}/guests`);
+  }
+  router.push(`/event/${eventId}/guests`);
+};
+
+const resetToUnknown = () => {
+  const updatedGuest = {
+    ...guest,
+    confirmed: 'לא ידוע',
+    confirmedCount: 0,
+    count: 0,
   };
 
+  const guestsKey = `guests_event_${eventId}`;
+  const all = JSON.parse(localStorage.getItem(guestsKey) || '[]');
+  const updated = all.map((g: any) =>
+    g.id.toString() === guestId.toString() ? { ...g, ...updatedGuest } : g
+  );
+  localStorage.setItem(guestsKey, JSON.stringify(updated));
+  setGuest(updatedGuest);
+
+  if (queue) {
+    goNextOrList();
+  }
+};
   const saveGuestField = (updatedGuest: any) => {
     const normalized = {
       ...updatedGuest,
@@ -215,9 +235,7 @@ export default function EditGuestPage() {
     saveGuestField(updated);
   };
 
-  const resetToUnknown = () => {
-    saveGuestField({ ...guest, count: 0, confirmed: 'לא ידוע' });
-  };
+  
 
   const setCountAndConfirm = (num: number) => {
     const now = new Date().toISOString();
@@ -232,7 +250,30 @@ export default function EditGuestPage() {
     saveGuestField(updatedGuest);
     goNextOrList();
   };
+const matchesQueue = (g: any, q: string) => {
+  const status = String(g?.confirmed ?? '').trim();
+  const isUnknown =
+    !status ||
+    status === '' ||
+    status === 'לא ידוע' ||
+    status === 'ממתין';
 
+  if (!isUnknown) return false;
+
+  const note = String(g?.notes ?? '').trim();
+
+  if (q === 'unknownEmpty') {
+    // כתום = לא ידוע + בלי הערה
+    return note === '';
+  }
+
+  if (q === 'unknown') {
+    // אפור = לא ידוע + עם הערה
+    return note !== '';
+  }
+
+  return false;
+};
   const markAsNotComing = () => {
     const now = new Date().toISOString();
     const updatedGuest = {
@@ -477,30 +518,30 @@ export default function EditGuestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f0e6] px-4 py-3" dir="rtl">
-      <div className="max-w-[1500px] mx-auto space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="min-h-[100dvh] bg-[#f5f0e6] px-3 py-2 overflow-x-hidden" dir="rtl">
+      <div className="max-w-[1500px] mx-auto space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline text-sm">
             ← חזרה לרשימה
           </Link>
           {queue && (
-            <span className="text-xs bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-medium">
+            <span className="text-xs bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full font-medium">
               מצב חיוג · {queue === 'unknownEmpty' ? 'לא ידוע (כתום)' : 'לא ידוע (אפור)'}
             </span>
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="w-full lg:w-[320px] flex-shrink-0 space-y-2">
+        <div className="flex flex-col lg:flex-row gap-2">
+          <div className="w-full lg:w-[320px] flex-shrink-0 space-y-1.5">
             <div
               onClick={callPhone}
-              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-5 py-4 flex flex-col items-center shadow-lg"
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl px-4 py-3 flex flex-col items-center shadow-lg"
             >
-              <div className="text-xl font-bold mb-1 text-center leading-tight">
+              <div className="text-lg font-bold mb-0.5 text-center leading-tight">
                 {guest.name || '—'}
               </div>
-              <div className="text-xs opacity-80">טלפון · לחץ לחיוג</div>
-              <div className="text-4xl font-bold tracking-widest mt-1">{guest.phone || '—'}</div>
+              <div className="text-[11px] opacity-80">טלפון · לחץ לחיוג</div>
+              <div className="text-3xl font-bold tracking-widest mt-0.5">{guest.phone || '—'}</div>
             </div>
 
             <input
@@ -509,7 +550,7 @@ export default function EditGuestPage() {
               onChange={(e) => setGuest({ ...guest, name: e.target.value })}
               onBlur={() => saveGuestField({ ...guest, name: guest.name || '' })}
               placeholder="שם המוזמן"
-              className="w-full py-2.5 px-3 border border-gray-300 rounded-xl text-base text-center focus:outline-none focus:border-blue-500"
+              className="w-full py-2 px-3 border border-gray-300 rounded-xl text-base text-center focus:outline-none focus:border-blue-500"
             />
 
             <input

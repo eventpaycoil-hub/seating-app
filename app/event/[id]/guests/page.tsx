@@ -799,7 +799,7 @@ export default function GuestsPage() {
                 <span className="text-sm font-bold text-slate-600 whitespace-nowrap">קבוצות:</span>
                 <div className="flex-1 overflow-x-auto pb-1">
                   <div className="flex gap-2 min-w-max">
-                    {allGroupNames.map((name) => (
+                    {[...new Set(allGroupNames)].map((name) => (
                       <button
                         key={name}
                         onClick={() => scrollToGroup(name)}
