@@ -12,6 +12,10 @@ type HeyyTemplate = {
   status?: string;
   category?: string;
   language?: string;
+  body?: string;
+  content?: string;
+  text?: string;
+  components?: any[];
 };
 
 export default function WhatsAppTemplatesPage() {
@@ -96,6 +100,8 @@ export default function WhatsAppTemplatesPage() {
       else if (Array.isArray(data?.data?.messageTemplates)) list = data.data.messageTemplates;
       else if (Array.isArray(data?.messageTemplates)) list = data.messageTemplates;
 
+      console.log('heyy template sample', list[0]);
+
       const hasStatus = list.some((t) => !!t.status);
       if (hasStatus) {
         const approved = list.filter(
@@ -149,36 +155,59 @@ export default function WhatsAppTemplatesPage() {
     return { general_text_1, general_text_2, rsvp_link };
   };
 
+      const getTemplateBody = (t: any) => {
+    if (!t) return '';
+
+    const components = t.whatsappComponents || t.components || [];
+    if (Array.isArray(components) && components.length > 0) {
+      const parts: string[] = [];
+      components.forEach((c: any) => {
+        const text = c?.text || c?.body || c?.content || '';
+        if (text) parts.push(text);
+      });
+      if (parts.length) return parts.join('\n\n');
+    }
+
+    const d = t.whatsappDetails || {};
+    return [
+      d.metaName ? `Meta: ${d.metaName}` : '',
+      d.category ? `קטגוריה: ${d.category}` : '',
+      d.language ? `שפה: ${d.language}` : '',
+      d.status ? `סטטוס: ${d.status}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
+
   const sendTemplate = async (phoneOverride?: string) => {
-  setSending(true);
-  setResult(null);
-  setError(null);
+    setSending(true);
+    setResult(null);
+    setError(null);
 
-  try {
-    let targets: { phone: string; name: string; guestId: string }[] = [];
+    try {
+      let targets: { phone: string; name: string; guestId: string }[] = [];
 
-    if (selectedGuestsList.length > 0 && !phoneOverride) {
-      targets = selectedGuestsList
-        .filter((g: any) => g.phone && String(g.phone).trim())
-        .map((g: any) => ({
-          phone: String(g.phone).trim(),
-          name: g.name || '',
-          guestId: String(g.id),
-        }));
-    }
-
-    if (targets.length === 0) {
-      const phoneToUse = (phoneOverride || phone).trim();
-      if (!phoneToUse) {
-        alert('הזן מספר טלפון או בחר מוזמנים ברשימה');
-        setSending(false);
-        return;
+      if (selectedGuestsList.length > 0 && !phoneOverride) {
+        targets = selectedGuestsList
+          .filter((g: any) => g.phone && String(g.phone).trim())
+          .map((g: any) => ({
+            phone: String(g.phone).trim(),
+            name: g.name || '',
+            guestId: String(g.id),
+          }));
       }
-      const gid = searchParams.get('guestId') || '';
-      targets = [{ phone: phoneToUse, name: '', guestId: gid }];
-    }
 
-    // ... שאר הפונקציה נשארת אותו דבר בדיוק ...
+      if (targets.length === 0) {
+        const phoneToUse = (phoneOverride || phone).trim();
+        if (!phoneToUse) {
+          alert('הזן מספר טלפון או בחר מוזמנים ברשימה');
+          setSending(false);
+          return;
+        }
+        const gid = searchParams.get('guestId') || '';
+        targets = [{ phone: phoneToUse, name: '', guestId: gid }];
+      }
 
       const campaignName = `וואטסאפ - ${currentEvent?.owners || eventId} - ${Date.now()}`;
 
@@ -192,7 +221,6 @@ export default function WhatsAppTemplatesPage() {
         targets[0]?.guestId || searchParams.get('guestId')
       );
 
-      // בקשה אחת בלבד מהדפדפן → היי שולחים
       const res = await fetch('/api/heyy/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -363,19 +391,38 @@ export default function WhatsAppTemplatesPage() {
             </div>
 
             {selected ? (
-              <div className="mb-4 p-4 rounded-2xl bg-gray-50">
-                <div className="text-sm text-gray-500 mb-1">תבנית נבחרת (לתצוגה)</div>
-                <div className="font-bold text-lg">{selected.name}</div>
+              <div className="mb-4 p-4 rounded-2xl bg-gray-50 space-y-3">
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">תבנית נבחרת</div>
+                  <div className="font-bold text-lg">{selected.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {selected.category || ''}
+                    {selected.language ? ` · ${selected.language}` : ''}
+                  </div>
+                </div>
+
+                {getTemplateBody(selected) ? (
+                  <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed text-slate-800">
+                    <div className="text-xs text-emerald-700 font-medium mb-2">
+                      תצוגה מקדימה:
+                    </div>
+                    {getTemplateBody(selected)}
+                  </div>
+                ) : (
+                  <div className="text-xs text-amber-600">
+                    לא התקבל תוכן מ-Heyy — בדוק Console אחרי רענון תבניות
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-gray-400 mb-4">
-                אין חובה לבחור מהרשימה — נשלח דרך האוטומציה
-              </p>
+              <p className="text-gray-400 mb-4">בחר תבנית מהרשימה משמאל</p>
             )}
 
             {selectedGuestsList.length === 0 && (
               <>
-                <label className="block text-sm font-medium mb-2">מספר טלפון (בדיקה בודדת)</label>
+                <label className="block text-sm font-medium mb-2">
+                  מספר טלפון (בדיקה בודדת)
+                </label>
                 <input
                   type="tel"
                   value={phone}
@@ -387,37 +434,36 @@ export default function WhatsAppTemplatesPage() {
             )}
 
             <button
-  type="button"
-  onClick={() => sendTemplate()}
-  disabled={sending}
-  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
->
-  {buttonLabel}
-</button>
+              type="button"
+              onClick={() => sendTemplate()}
+              disabled={sending}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-4 rounded-2xl font-bold text-lg"
+            >
+              {buttonLabel}
+            </button>
 
-{/* כפתורי דוגמא */}
-<div className="space-y-3 mt-4">
-  <button
-    type="button"
-    onClick={() => sendTemplate('0505270152')}
-    disabled={sending}
-    className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
-  >
-    {sending ? '⏳ שולח...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
-  </button>
-  <button
-    type="button"
-    onClick={() => sendTemplate('0507666937')}
-    disabled={sending}
-    className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
-  >
-    {sending ? '⏳ שולח...' : '📱 שלח דוגמא לנופר (050-7666937)'}
-  </button>
-</div>
+            <div className="space-y-3 mt-4">
+              <button
+                type="button"
+                onClick={() => sendTemplate('0505270152')}
+                disabled={sending}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
+              >
+                {sending ? '⏳ שולח...' : '📱 שלח דוגמא לשמעון (050-5270152)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => sendTemplate('0507666937')}
+                disabled={sending}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-3 rounded-2xl font-medium"
+              >
+                {sending ? '⏳ שולח...' : '📱 שלח דוגמא לנופר (050-7666937)'}
+              </button>
+            </div>
 
-<p className="text-xs text-gray-400 mt-4 leading-relaxed">
-  בקשה אחת מהדפדפן → היי מבצעים את השליחה. קישור אישי לכל מוזמן.
-</p>
+            <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+              בקשה אחת מהדפדפן → היי מבצעים את השליחה. קישור אישי לכל מוזמן.
+            </p>
           </div>
         </div>
       </div>
