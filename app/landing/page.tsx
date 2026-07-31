@@ -354,7 +354,7 @@ function LandingPageContent() {
     }
   };
 
-  const handleRsvp = async (count: number) => {
+    const handleRsvp = async (count: number) => {
     if (!eventId) {
       alert(t.invalidLinkAlert);
       return;
@@ -385,9 +385,24 @@ function LandingPageContent() {
     setGuestName(updated[guestIndex].name || '');
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (event?.hasSeparation === 'כן') {
+
+    const guest = updated[guestIndex];
+    const needSeparation = event?.hasSeparation === 'כן';
+    const eventHasTransport =
+      event?.hasTransport === 'כן' || event?.hasTransport === true;
+    const guestNeedsTransport =
+      guest?.needsTransport === true ||
+      guest?.needsTransport === 'כן' ||
+      guest?.needsTransport === 'yes' ||
+      guest?.needsTransport === '1';
+
+    if (needSeparation) {
       setTimeout(() => {
-        window.location.href = `/separation?eventId=${eventId}&guestId=${updated[guestIndex].id}`;
+        window.location.href = `/separation?eventId=${eventId}&guestId=${guest.id}`;
+      }, 1800);
+    } else if (eventHasTransport && guestNeedsTransport) {
+      setTimeout(() => {
+        window.location.href = `/transport?eventId=${eventId}&guestId=${guest.id}`;
       }, 1800);
     }
   };
@@ -545,9 +560,13 @@ function LandingPageContent() {
                 {rsvpCount} {t.guests}
               </p>
               <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
-              {event?.hasSeparation === 'כן' && (
-                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
-              )}
+              {event?.hasSeparation === 'כן' ? (
+  <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+) : (event?.hasTransport === 'כן' || event?.hasTransport === true) ? (
+  <p className="text-sm text-green-600 mt-4">
+    {lang === 'en' ? 'Redirecting to transport selection...' : 'מעביר אותך לבחירת הסעה...'}
+  </p>
+) : null}
             </div>
           )}
           {rsvpStatus === 'notComing' && (
