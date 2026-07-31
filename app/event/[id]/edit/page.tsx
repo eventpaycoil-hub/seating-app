@@ -62,7 +62,7 @@ export default function EditEventPage() {
   const [showDeleteZone, setShowDeleteZone] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  useEffect(() => {
+    useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
     if (currentEvent) {
@@ -96,6 +96,34 @@ export default function EditEventPage() {
         clientPhone: currentEvent.clientPhone || '',
       }));
     }
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select(
+            'has_transport, has_separation, is_active, rsvp_mode, welcome_line, use_external_landing, external_landing_url, event_type'
+          )
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (error || !data) return;
+
+        setFormData((prev: any) => ({
+          ...prev,
+          hasTransport: data.has_transport || prev.hasTransport || 'לא',
+          hasSeparation: data.has_separation || prev.hasSeparation || 'לא',
+          isActive: data.is_active === true,
+          rsvpMode: data.rsvp_mode || prev.rsvpMode || 'רגיל',
+          welcomeLine: data.welcome_line ?? prev.welcomeLine ?? '',
+          useExternalLanding: data.use_external_landing || prev.useExternalLanding || 'לא',
+          externalLandingUrl: data.external_landing_url || prev.externalLandingUrl || '',
+          eventType: data.event_type || prev.eventType || 'חתונה',
+        }));
+      } catch (e) {
+        console.warn('load event from supabase failed', e);
+      }
+    })();
   }, [eventId]);
 
   const handleChange = (e: any) => {
