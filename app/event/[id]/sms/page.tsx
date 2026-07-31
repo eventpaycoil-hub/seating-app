@@ -453,10 +453,28 @@ export default function SMSPage() {
     setNewEmoji('');
   };
 
-  const sendRealSMS = async (phone: string) => {
+    const sendRealSMS = async (phone: string) => {
     if (isClientMode) return;
     if (!selectedTemplate) return alert(isEnglishEvent ? 'Select a template first' : 'בחר תבנית קודם');
-    if (!editedMessage.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
+
+    const digits = String(phone).replace(/\D/g, '');
+    const guestForPhone =
+      guests.find((g) => String(g.phone || '').replace(/\D/g, '').endsWith(digits.slice(-7))) ||
+      selectedGuestsList[0] ||
+      null;
+
+    const message = guestForPhone
+      ? buildDynamicMessage(selectedTemplate, guestForPhone)
+      : editedMessage;
+
+    if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
+
+    if (!guestForPhone) {
+      const ok = confirm(
+        'לא נמצא מוזמן לטלפון הזה — הלינק עלול להיות כללי. לשלוח בכל זאת?'
+      );
+      if (!ok) return;
+    }
 
     setIsSending(true);
     setSendingTo(phone);
@@ -465,7 +483,7 @@ export default function SMSPage() {
       const res = await fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, message: editedMessage }),
+        body: JSON.stringify({ phone, message }),
       });
       const data = await res.json();
 
@@ -497,9 +515,9 @@ export default function SMSPage() {
     setBulkResult(null);
 
     const items = withPhone.map((g) => ({
-      phone: String(g.phone).trim(),
-      message: isEditing ? editedMessage : buildDynamicMessage(selectedTemplate, g),
-    }));
+  phone: String(g.phone).trim(),
+  message: buildDynamicMessage(selectedTemplate, g),
+}));
 
     try {
       const res = await fetch('/api/send-sms', {
