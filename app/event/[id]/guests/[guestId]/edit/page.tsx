@@ -800,15 +800,6 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
           </div>
         </div>
 
-        <div className="flex justify-center pt-1 pb-2">
-          <button
-            type="button"
-            onClick={saveAndGoBack}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-16 py-3.5 rounded-2xl text-xl font-bold shadow"
-          >
-            {queue ? 'עדכן והמשך למוזמן הבא' : 'עדכן והמשך'}
-          </button>
-        </div>
       </div>
     </div>
   );
