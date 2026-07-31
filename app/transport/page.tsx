@@ -111,7 +111,7 @@ function TransportContent() {
     });
   };
 
-  const handleChoose = (option: any) => {
+    const handleChoose = async (option: any) => {
     const transportText =
       option.id === 7
         ? 'לא תודה אגיע עצמאית'
@@ -121,9 +121,20 @@ function TransportContent() {
       const key = `guests_event_${eventId}`;
       let guests = JSON.parse(localStorage.getItem(key) || '[]');
       const idx = findGuestIndex(guests, guestRef);
+
       if (idx !== -1) {
         guests[idx] = { ...guests[idx], transportation: transportText };
         localStorage.setItem(key, JSON.stringify(guests));
+
+        try {
+          const g = guests[idx];
+          await supabase
+            .from('guests')
+            .update({ transportation: transportText })
+            .eq('id', g.id);
+        } catch (e) {
+          console.warn('save transport to supabase failed', e);
+        }
       }
     }
 
