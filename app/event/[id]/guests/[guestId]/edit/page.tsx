@@ -616,13 +616,13 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 shadow space-y-3">
-            <div className="text-sm text-gray-500">כמות אנשים</div>
-            <div className="flex gap-3">
+                    <div className="bg-white rounded-2xl p-3 md:p-4 shadow space-y-2 md:space-y-3">
+            <div className="text-xs md:text-sm text-gray-500">כמות אנשים</div>
+            <div className="flex gap-2 md:gap-3">
               <button
                 type="button"
                 onClick={resetToUnknown}
-                className={`flex-1 py-3 rounded-2xl font-bold text-lg border-2 transition-all ${
+                className={`flex-1 py-2 md:py-3 rounded-2xl font-bold text-sm md:text-lg border-2 transition-all ${
                   guest.confirmed === 'לא ידוע'
                     ? 'bg-amber-500 text-white border-amber-600 shadow-lg'
                     : 'bg-white border-gray-300 hover:border-amber-400 hover:bg-amber-50'
@@ -633,7 +633,7 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
               <button
                 type="button"
                 onClick={markAsNotComing}
-                className={`flex-1 py-3 rounded-2xl font-bold text-lg border-2 transition-all ${
+                className={`flex-1 py-2 md:py-3 rounded-2xl font-bold text-sm md:text-lg border-2 transition-all ${
                   guest.confirmed === 'לא מגיע'
                     ? 'bg-red-500 text-white border-red-600 shadow-lg'
                     : 'bg-white border-gray-300 hover:border-red-400 hover:bg-red-50'
@@ -642,13 +642,13 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
                 לא מגיע
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 md:gap-2">
               {Array.from({ length: 16 }, (_, i) => i + 1).map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setCountAndConfirm(num)}
-                  className={`w-12 h-12 rounded-full text-lg font-bold border-2 transition ${
+                  className={`w-9 h-9 md:w-12 md:h-12 rounded-full text-sm md:text-lg font-bold border-2 transition ${
                     guest.count === num || guest.confirmed === String(num)
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-white border-gray-300'
@@ -659,11 +659,11 @@ className="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white rounded-2xl p
               ))}
             </div>
             <div>
-              <label className="block text-sm text-gray-500 mb-1">הערות</label>
+              <label className="block text-xs md:text-sm text-gray-500 mb-1">הערות</label>
               <textarea
                 value={guest.notes || ''}
                 onChange={(e) => setGuest({ ...guest, notes: e.target.value })}
-                className="w-full h-16 p-2 border rounded-xl text-sm resize-none"
+                className="w-full h-12 md:h-16 p-2 border rounded-xl text-sm resize-none"
                 placeholder="הערות..."
               />
             </div>
