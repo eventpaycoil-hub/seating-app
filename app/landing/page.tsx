@@ -386,48 +386,40 @@ function LandingPageContent() {
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const guest = updated[guestIndex];
+        const guest = updated[guestIndex];
 
-    // קריאת hasTransport גם מ-state וגם מ-localStorage (גיבוי)
-    let eventHasTransport =
-      event?.hasTransport === 'כן' ||
-      event?.hasTransport === true ||
-      event?.hasTransport === 'yes';
-
-    let eventHasSeparation = event?.hasSeparation === 'כן';
+    let eventHasTransport = false;
+    let eventHasSeparation = false;
 
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const ev = events.find((e: any) => String(e.id) === String(eventId));
-      if (ev) {
-        if (ev.hasTransport === 'כן' || ev.hasTransport === true) eventHasTransport = true;
-        if (ev.hasSeparation === 'כן') eventHasSeparation = true;
-      }
+      if (ev?.hasTransport === 'כן' || ev?.hasTransport === true) eventHasTransport = true;
+      if (ev?.hasSeparation === 'כן') eventHasSeparation = true;
     } catch {}
 
-    const guestNeedsTransport =
-      guest?.needsTransport === true ||
-      guest?.needsTransport === 'כן' ||
-      guest?.needsTransport === 'yes' ||
-      guest?.needsTransport === '1' ||
-      guest?.needs_transport === true ||
-      guest?.needs_transport === 'כן';
+    if (event?.hasTransport === 'כן' || event?.hasTransport === true || event?.hasTransport === 'yes') {
+      eventHasTransport = true;
+    }
+    if (event?.hasSeparation === 'כן') eventHasSeparation = true;
 
     console.log('RSVP redirect check', {
       eventHasSeparation,
       eventHasTransport,
-      guestNeedsTransport,
       guestId: guest?.id,
     });
 
     if (eventHasSeparation) {
       setTimeout(() => {
         window.location.href = `/separation?eventId=${eventId}&guestId=${guest.id}`;
-      }, 1500);
-    } else if (eventHasTransport && guestNeedsTransport) {
+      }, 1200);
+      return;
+    }
+
+    if (eventHasTransport) {
       setTimeout(() => {
         window.location.href = `/transport?eventId=${eventId}&guestId=${guest.id}`;
-      }, 1500);
+      }, 1200);
     }
   };
 
