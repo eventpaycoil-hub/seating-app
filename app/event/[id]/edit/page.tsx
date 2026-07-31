@@ -238,7 +238,7 @@ export default function EditEventPage() {
     try {
       await supabase
         .from('events')
-        .update({
+                .update({
           rsvp_mode: formData.rsvpMode || 'רגיל',
           welcome_line: formData.welcomeLine || '',
           use_external_landing: formData.useExternalLanding || 'לא',
@@ -246,16 +246,10 @@ export default function EditEventPage() {
           event_type: formData.eventType || null,
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
-                    is_active: formData.isActive === true || formData.isActive === 'כן',
-          owners: formData.owners || null,
-          hall_name: formData.hallName || null,
-          city: formData.city || null,
-          time: formData.time || null,
-          event_date: formData.eventDate || formData.fullDate || null,
-          english_event: formData.englishEvent || 'לא',
-          guest_notes: formData.guestNotes || 'כן',
+          is_active: formData.isActive === true || formData.isActive === 'כן',
         })
         .eq('id', Number(eventId));
+        
     } catch (err) {
       console.warn('Supabase event update failed', err);
     }
