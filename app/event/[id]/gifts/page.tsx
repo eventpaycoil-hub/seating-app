@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadGuests } from '../../../../lib/guests';
 import * as XLSX from 'xlsx';
+
 type GiftRow = {
   cash: number;
   credit: number;
@@ -40,6 +41,11 @@ export default function GiftsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
+  // הוספת מוזמן
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -54,7 +60,23 @@ export default function GiftsPage() {
           setEventTitle(current.owners || current.title || `אירוע #${eventId}`);
         }
 
-        const list = await loadGuests(eventId);
+        let list: any[] = [];
+        try {
+          list = await loadGuests(eventId);
+        } catch {
+          list = [];
+        }
+
+        // גיבוי מ-localStorage
+        if (!Array.isArray(list) || list.length === 0) {
+          try {
+            const local = JSON.parse(
+              localStorage.getItem(`guests_event_${eventId}`) || '[]'
+            );
+            if (Array.isArray(local) && local.length > 0) list = local;
+          } catch {}
+        }
+
         if (!cancelled) {
           setGuests(Array.isArray(list) ? list : []);
           setGifts(loadGifts(eventId));
@@ -91,6 +113,34 @@ export default function GiftsPage() {
     });
   };
 
+  const addGuest = () => {
+    const name = newName.trim();
+    if (!name) {
+      alert('נא להזין שם');
+      return;
+    }
+
+    const newGuest = {
+      id: Date.now(),
+      name,
+      phone: newPhone.trim(),
+      quantity: '1',
+      confirmed: '1',
+      confirmedCount: 1,
+      group: 'כללי',
+      notes: 'נוסף מדף מתנות',
+    };
+
+    const updated = [...guests, newGuest];
+    setGuests(updated);
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    setNewName('');
+    setNewPhone('');
+    setShowAdd(false);
+    setSearch(name);
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (guests || []).filter((g) => {
@@ -116,6 +166,19 @@ export default function GiftsPage() {
       return a[0].localeCompare(b[0], 'he');
     });
   }, [filtered]);
+
+  const totals = useMemo(() => {
+    let cash = 0;
+    let credit = 0;
+    filtered.forEach((g) => {
+      const row = gifts[guestKey(g)];
+      if (!row) return;
+      cash += Number(row.cash) || 0;
+      credit += Number(row.credit) || 0;
+    });
+    return { cash, credit, sum: cash + credit };
+  }, [filtered, gifts]);
+
   const exportExcel = () => {
     const rows: any[] = [];
 
@@ -150,17 +213,6 @@ export default function GiftsPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'מתנות');
     XLSX.writeFile(wb, `מתנות-${eventTitle || eventId}.xlsx`);
   };
-  const totals = useMemo(() => {
-    let cash = 0;
-    let credit = 0;
-    filtered.forEach((g) => {
-      const row = gifts[guestKey(g)];
-      if (!row) return;
-      cash += Number(row.cash) || 0;
-      credit += Number(row.credit) || 0;
-    });
-    return { cash, credit, sum: cash + credit };
-  }, [filtered, gifts]);
 
   if (loading) {
     return (
@@ -179,15 +231,24 @@ export default function GiftsPage() {
             <h1 className="text-3xl font-bold text-slate-900">מתנות שקיבלנו</h1>
             <p className="text-slate-500 mt-1">{eventTitle}</p>
           </div>
-          <Link
-            href={`/event/${eventId}/guests`}
-            className="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium"
-          >
-            ← חזרה למוזמנים
-          </Link>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"
+            >
+              + הוסף מוזמן
+            </button>
+            <Link
+              href={`/event/${eventId}/guests`}
+              className="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium"
+            >
+              ← חזרה למוזמנים
+            </Link>
+          </div>
         </div>
 
-        {/* חיפוש + סיכום עליון */}
+        {/* חיפוש + סיכום */}
         <div className="flex flex-col md:flex-row gap-3 items-stretch">
           <input
             type="text"
@@ -197,33 +258,34 @@ export default function GiftsPage() {
             className="flex-1 p-3 border-2 border-slate-200 rounded-2xl focus:border-emerald-400 focus:outline-none bg-white"
           />
           <div className="flex gap-2 flex-wrap items-center">
-  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
-    <div className="text-xs text-emerald-700">סה״כ</div>
-    <div className="text-lg font-bold text-emerald-800">
-      ₪{totals.sum.toLocaleString('he-IL')}
-    </div>
-  </div>
-  <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
-    <div className="text-xs text-amber-700">מזומן</div>
-    <div className="text-lg font-bold text-amber-800">
-      ₪{totals.cash.toLocaleString('he-IL')}
-    </div>
-  </div>
-  <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
-    <div className="text-xs text-blue-700">אשראי</div>
-    <div className="text-lg font-bold text-blue-800">
-      ₪{totals.credit.toLocaleString('he-IL')}
-    </div>
-  </div>
-  <button
-    type="button"
-    onClick={exportExcel}
-    className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-3 rounded-2xl font-medium whitespace-nowrap"
-  >
-    📥 ייצוא לאקסל
-  </button>
-</div>
-</div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
+              <div className="text-xs text-emerald-700">סה״כ</div>
+              <div className="text-lg font-bold text-emerald-800">
+                ₪{totals.sum.toLocaleString('he-IL')}
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
+              <div className="text-xs text-amber-700">מזומן</div>
+              <div className="text-lg font-bold text-amber-800">
+                ₪{totals.cash.toLocaleString('he-IL')}
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-2 text-center min-w-[110px]">
+              <div className="text-xs text-blue-700">אשראי</div>
+              <div className="text-lg font-bold text-blue-800">
+                ₪{totals.credit.toLocaleString('he-IL')}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={exportExcel}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-3 rounded-2xl font-medium whitespace-nowrap"
+            >
+              📥 ייצוא לאקסל
+            </button>
+          </div>
+        </div>
+
         {/* טבלה */}
         <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
@@ -279,7 +341,10 @@ export default function GiftsPage() {
                               <td className="px-4 py-2.5 border-b border-slate-100 font-medium text-slate-800">
                                 {g.name}
                               </td>
-                              <td className="px-4 py-2.5 border-b border-slate-100 text-slate-600 font-mono" dir="ltr">
+                              <td
+                                className="px-4 py-2.5 border-b border-slate-100 text-slate-600 font-mono"
+                                dir="ltr"
+                              >
                                 {g.phone || '—'}
                               </td>
                               <td className="px-4 py-2.5 border-b border-slate-100 text-center font-bold text-emerald-700">
@@ -339,6 +404,56 @@ export default function GiftsPage() {
           הסכומים נשמרים אוטומטית במכשיר · מזומן + אשראי = סכום
         </p>
       </div>
+
+      {/* מודל הוספת מוזמן */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-6 text-center">הוסף מוזמן</h2>
+
+            <label className="block text-sm font-medium mb-2">שם</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full border rounded-2xl px-4 py-3 mb-4 text-lg"
+              placeholder="שם מלא"
+              autoFocus
+            />
+
+            <label className="block text-sm font-medium mb-2">טלפון (אופציונלי)</label>
+            <input
+              type="tel"
+              dir="ltr"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              className="w-full border rounded-2xl px-4 py-3 mb-8 text-lg"
+              placeholder="050-..."
+            />
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdd(false);
+                  setNewName('');
+                  setNewPhone('');
+                }}
+                className="flex-1 py-3 border rounded-2xl font-medium"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={addGuest}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold"
+              >
+                הוסף
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
