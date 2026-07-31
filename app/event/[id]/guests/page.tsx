@@ -122,10 +122,10 @@ function downloadGuestsExcel(guestsList: any[], filename: string) {
   const worksheet = XLSX.utils.json_to_sheet(data);
 
   worksheet['!cols'] = [
-    { wch: 25 }, // שם
-    { wch: 15 }, // טלפון
-    { wch: 18 }, // קבוצה
-    { wch: 10 }, // כמות
+    { wch: 25 },
+    { wch: 15 },
+    { wch: 18 },
+    { wch: 10 },
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -143,12 +143,13 @@ export default function GuestsPage() {
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
-    const [activeFilter, setActiveFilter] = useState<
+  const [activeFilter, setActiveFilter] = useState<
     'all' | 'yes' | 'no' | 'unknown' | 'unknownEmpty' | 'noNote'
   >('all');
   const [transportOptions, setTransportOptions] = useState<any[]>([]);
   const [hasSeparation, setHasSeparation] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
+  const [transportFilter, setTransportFilter] = useState<string | null>(null);
   const [visibleActions, setVisibleActions] = useState<string[]>([]);
   const [isClientMode, setIsClientMode] = useState(false);
   const [isEditorMode, setIsEditorMode] = useState(false);
@@ -167,17 +168,17 @@ export default function GuestsPage() {
         'pricing-view',
         'events-list',
         'edit-event',
-        
         'email',
         'whatsapp',
-              'landing',
-      'new-event',
-      'admin-settings',
-      'external-links',
-      'customer-tracking',
-    ]),
+        'landing',
+        'new-event',
+        'admin-settings',
+        'external-links',
+        'customer-tracking',
+      ]),
     []
   );
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -204,7 +205,7 @@ export default function GuestsPage() {
         setHasTransport(currentEvent.hasTransport === 'כן');
       }
 
-            const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
+      const savedTransport = localStorage.getItem(`transport_options_${eventId}`);
       if (savedTransport) {
         try {
           setTransportOptions(JSON.parse(savedTransport));
@@ -367,6 +368,12 @@ export default function GuestsPage() {
     const matchesSearch =
       (g.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (g.phone || '').includes(searchTerm);
+
+    if (transportFilter) {
+      const t = (g.transportation || g.transport || '').toString();
+      if (!t.includes(transportFilter)) return false;
+    }
+
     if (activeFilter === 'yes')
       return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
     if (activeFilter === 'no') return matchesSearch && g.confirmed === 'לא מגיע';
@@ -388,7 +395,7 @@ export default function GuestsPage() {
   const waitingCount = Math.max(0, totalGuests - willComeCount - wontComeCount);
   const pct = (n: number) => (totalGuests === 0 ? 0 : Math.round((n / totalGuests) * 100));
 
-    const grouped = useMemo(() => {
+  const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     filteredGuests.forEach((g) => {
       const key = (g.group && String(g.group).trim()) || 'כללי';
@@ -402,7 +409,7 @@ export default function GuestsPage() {
     });
   }, [filteredGuests]);
 
-     const allGroupNames = useMemo(() => {
+  const allGroupNames = useMemo(() => {
     const set = new Set<string>();
     let hasGeneral = false;
     guests.forEach((g: any) => {
@@ -414,7 +421,8 @@ export default function GuestsPage() {
     if (hasGeneral) list.push('כללי');
     return list;
   }, [guests]);
-     const scrollToGroup = (groupName: string) => {
+
+  const scrollToGroup = (groupName: string) => {
     setJumpGroup(groupName);
     if (!groupName) return;
     setTimeout(() => {
@@ -473,6 +481,7 @@ export default function GuestsPage() {
 
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
+
   const setNeedsTransportForSelected = (value: boolean) => {
     if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     const updated = guests.map((g: any) =>
@@ -483,7 +492,7 @@ export default function GuestsPage() {
     setSelectedGuests([]);
     alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
   };
-  // === הורדות אקסל ===
+
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
     const safeTitle = (eventTitle || 'אירוע').replace(/[\\/:*?"<>|]/g, '-');
@@ -509,8 +518,7 @@ export default function GuestsPage() {
         : '';
     return `/event/${eventId}/guests/${guestId}/edit${q}`;
   };
-
-  return (
+    return (
     <div className="min-h-screen bg-zinc-50" dir="rtl">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -532,7 +540,6 @@ export default function GuestsPage() {
             )}
           </div>
 
-          {/* סרגל מצב */}
           <div
             className={`mb-4 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-3 border ${
               isFullAdmin
@@ -597,13 +604,13 @@ export default function GuestsPage() {
               { id: 'new-event', href: '/create-event', label: 'פתח אירוע חדש', icon: '➕' },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
             ]
-                  .filter((item) => {
-      if (isFullAdmin) return true;
-      if (isEditorMode)
-        return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
-      if (ADMIN_ONLY.has(item.id)) return false;
-      return visibleActions.includes(item.id);
-    })
+              .filter((item) => {
+                if (isFullAdmin) return true;
+                if (isEditorMode)
+                  return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
+                if (ADMIN_ONLY.has(item.id)) return false;
+                return visibleActions.includes(item.id);
+              })
               .map((item) => (
                 <Link
                   key={item.id}
@@ -618,7 +625,7 @@ export default function GuestsPage() {
         </div>
       </div>
 
-            <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="text-3xl font-bold text-slate-800">רשימת מוזמנים</div>
@@ -680,23 +687,47 @@ export default function GuestsPage() {
 
         {hasTransport && (
           <div className="flex flex-wrap gap-3 mb-6">
+            {transportFilter && (
+              <button
+                type="button"
+                onClick={() => setTransportFilter(null)}
+                className="bg-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-medium text-sm"
+              >
+                ✕ הצג הכל
+              </button>
+            )}
             {transportOptions
               .filter((opt) => opt.name && opt.name.trim() !== '' && !opt.name.includes('עצמאית'))
               .map((opt) => {
                 const count = getTransportCount(opt.name);
                 if (count === 0) return null;
+                const active = transportFilter === opt.name;
                 return (
-                  <div
+                  <button
                     key={opt.id}
-                    className="bg-indigo-50 border border-indigo-200 text-indigo-800 px-5 py-3 rounded-2xl font-medium text-sm flex items-center gap-2"
+                    type="button"
+                    onClick={() => setTransportFilter(active ? null : opt.name)}
+                    className={`px-5 py-3 rounded-2xl font-medium text-sm flex items-center gap-2 border transition ${
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-700'
+                        : 'bg-indigo-50 border-indigo-200 text-indigo-800 hover:bg-indigo-100'
+                    }`}
                   >
                     <span className="text-lg">🚌</span>
                     <span>{opt.name}</span>
-                    {opt.time && <span className="text-indigo-500">({opt.time})</span>}
-                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                    {opt.time && (
+                      <span className={active ? 'text-indigo-100' : 'text-indigo-500'}>
+                        ({opt.time})
+                      </span>
+                    )}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        active ? 'bg-white text-indigo-700' : 'bg-indigo-600 text-white'
+                      }`}
+                    >
                       {count}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
           </div>
