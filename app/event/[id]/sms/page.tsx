@@ -228,7 +228,7 @@ export default function SMSPage() {
 
     if (template.id === 1 || template.id === 6) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = guest?.inviteCode || guest?.id || 'TEST123';
+      const guestCode = guest?.inviteCode || guest.inviteCode || guest.code || guest.id || ''
 
       let rsvplink = '';
       if (
