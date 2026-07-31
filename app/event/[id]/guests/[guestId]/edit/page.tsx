@@ -582,20 +582,20 @@ export default function EditGuestPage() {
         </div>
 
         {/* הערות מהירות — מוסתר בטאבלט במצב חיוג */}
-        <div className={`bg-white rounded-2xl px-3 py-2.5 shadow ${queue ? 'hidden md:block' : ''}`}>
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1.5">
-            {quickActions.map((text, i) => (
-              <button
-                key={`${text}-${i}`}
-                type="button"
-                onClick={() => addToNotes(text)}
-                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs py-2 px-1 rounded-xl active:scale-[0.98]"
-              >
-                {text}
-              </button>
-            ))}
-          </div>
-        </div>
+       <div className="bg-white rounded-xl px-2 py-1.5 md:px-3 md:py-2.5 shadow">
+  <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-1 md:gap-1.5">
+    {quickActions.map((text, i) => (
+      <button
+        key={`${text}-${i}`}
+        type="button"
+        onClick={() => addToNotes(text)}
+        className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] md:text-xs py-1 md:py-2 px-0.5 rounded-lg md:rounded-xl active:scale-[0.98] leading-tight"
+      >
+        {text}
+      </button>
+    ))}
+  </div>
+</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-3 md:p-4 shadow space-y-2 md:space-y-3">
