@@ -4,7 +4,7 @@ export const fetchCache = 'force-no-store';
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-
+import { supabase } from '../../lib/supabase.js';
 function TransportContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '1';
@@ -29,7 +29,7 @@ function TransportContent() {
     { id: 6, name: '', time: '' },
   ]);
 
-  useEffect(() => {
+    useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const current = events.find((e: any) => e.id.toString() === eventId.toString());
     if (current) setEventData(current);
@@ -41,19 +41,59 @@ function TransportContent() {
       } catch {}
     }
 
-    // אין ref/guestId = מצב מנהל
     if (!guestRef) setIsAdmin(true);
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('owners, transport_options, has_transport')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+
+        if (error) {
+          console.warn('transport load failed', error);
+          return;
+        }
+        if (data?.owners) {
+          setEventData((prev: any) => ({ ...(prev || {}), owners: data.owners }));
+        }
+        if (data?.transport_options) {
+          const list = Array.isArray(data.transport_options)
+            ? data.transport_options
+            : JSON.parse(data.transport_options || '[]');
+          if (Array.isArray(list) && list.length > 0) {
+            setOptions(list);
+            localStorage.setItem(`transport_options_${eventId}`, JSON.stringify(list));
+          }
+        }
+      } catch (e) {
+        console.warn('transport supabase', e);
+      }
+    })();
   }, [eventId, guestRef]);
 
   const updateOption = (id: number, field: 'name' | 'time', value: string) => {
     setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, [field]: value } : o)));
   };
 
-  const saveOptions = () => {
+    const saveOptions = async () => {
     localStorage.setItem(`transport_options_${eventId}`, JSON.stringify(options));
-    alert('✅ ההסעות נשמרו בהצלחה');
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ transport_options: options })
+        .eq('id', Number(eventId));
+      if (error) {
+        console.warn(error);
+        alert('נשמר במכשיר, אבל נכשל ב-Supabase: ' + error.message);
+        return;
+      }
+      alert('✅ ההסעות נשמרו בהצלחה');
+    } catch (e: any) {
+      alert('נשמר במכשיר בלבד: ' + (e?.message || ''));
+    }
   };
-
   const findGuestIndex = (guests: any[], ref: string) => {
     if (!ref || !Array.isArray(guests)) return -1;
     const sc = String(ref).trim();
