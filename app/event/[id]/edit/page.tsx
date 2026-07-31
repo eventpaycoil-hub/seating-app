@@ -118,7 +118,7 @@ export default function EditEventPage() {
     formData.eventType === 'ברית' ||
     formData.eventType === 'בריתה';
 
-  const toggleActivate = () => {
+  const toggleActivate = async () => {
     const turningOn = !formData.isActive;
 
     if (!turningOn) {
@@ -157,8 +157,8 @@ export default function EditEventPage() {
       e.id.toString() === eventId ? { ...e, ...updatedData } : e
     );
     localStorage.setItem('myEvents', JSON.stringify(updatedEvents));
-        try {
-      await supabase
+            try {
+      supabase
         .from('events')
         .update({
           is_active: true,
@@ -167,7 +167,10 @@ export default function EditEventPage() {
           owners: formData.owners || null,
           rsvp_mode: formData.rsvpMode || 'רגיל',
         })
-        .eq('id', Number(eventId));
+        .eq('id', Number(eventId))
+        .then(({ error }) => {
+          if (error) console.warn('Supabase activate failed', error);
+        });
     } catch (err) {
       console.warn('Supabase activate failed', err);
     }
