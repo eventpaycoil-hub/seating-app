@@ -386,39 +386,55 @@ function LandingPageContent() {
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const guest = updated[guestIndex];
+         const guest = updated[guestIndex];
 
-    let eventHasTransport = false;
-    let eventHasSeparation = false;
+    // 1) מ-state
+    let eventHasTransport =
+      event?.hasTransport === 'כן' ||
+      event?.hasTransport === true ||
+      event?.hasTransport === 'yes' ||
+      event?.has_transport === 'כן' ||
+      event?.has_transport === true;
 
+    let eventHasSeparation =
+      event?.hasSeparation === 'כן' || event?.has_separation === 'כן';
+
+    // 2) מ-localStorage (מחשב מנהל)
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const ev = events.find((e: any) => String(e.id) === String(eventId));
-      if (ev?.hasTransport === 'כן' || ev?.hasTransport === true) eventHasTransport = true;
-      if (ev?.hasSeparation === 'כן') eventHasSeparation = true;
+      if (ev) {
+        if (ev.hasTransport === 'כן' || ev.hasTransport === true || ev.has_transport === 'כן') {
+          eventHasTransport = true;
+        }
+        if (ev.hasSeparation === 'כן' || ev.has_separation === 'כן') {
+          eventHasSeparation = true;
+        }
+      }
     } catch {}
-
-    if (event?.hasTransport === 'כן' || event?.hasTransport === true || event?.hasTransport === 'yes') {
-      eventHasTransport = true;
-    }
-    if (event?.hasSeparation === 'כן') eventHasSeparation = true;
 
     console.log('RSVP redirect check', {
       eventHasSeparation,
       eventHasTransport,
+      hasTransportRaw: event?.hasTransport,
+      has_transportRaw: event?.has_transport,
       guestId: guest?.id,
     });
 
     if (eventHasSeparation) {
       setTimeout(() => {
-        window.location.href = `/separation?eventId=${eventId}&guestId=${guest.id}`;
+        window.location.replace(
+          `/separation?eventId=${eventId}&guestId=${guest.id}`
+        );
       }, 1200);
       return;
     }
 
     if (eventHasTransport) {
       setTimeout(() => {
-        window.location.href = `/transport?eventId=${eventId}&guestId=${guest.id}`;
+        window.location.replace(
+          `/transport?eventId=${eventId}&guestId=${guest.id}`
+        );
       }, 1200);
     }
   };
