@@ -590,6 +590,7 @@ export default function GuestsPage() {
               { id: 'add-tables', href: `/addtable?eventId=${eventId}`, label: 'הוספת שולחנות', icon: '➕' },
               { id: 'external-links', href: '/external-links', label: 'קישורים חיצוניים', icon: '🔗' },
               { id: 'customer-tracking', href: '/customer-tracking', label: 'מעקב לקוחות', icon: '📋' },
+              { id: 'invite-builder', href: `/event/${eventId}/invite-builder`, label: 'הזמנה דיגיטלית', icon: '💌' },
               { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: '💰' },
               { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: '👀' },
               { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },
