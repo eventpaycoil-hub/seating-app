@@ -1,9 +1,9 @@
 // @ts-nocheck
 'use client';
-
+import { supabase } from '../../../lib/supabase.js';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '../../lib/supabase.js';
+
 const TEMPLATES = [
   { id: 'classic-cream', name: 'קלאסי שמנת', bg: '#f7f3eb', text: '#1c1917', muted: '#57534e', line: '#d6d3d1', deco: 'none', frame: 'simple' },
   { id: 'double-frame', name: 'מסגרת כפולה', bg: '#faf8f4', text: '#1c1917', muted: '#57534e', line: '#a8a29e', deco: 'none', frame: 'double' },
