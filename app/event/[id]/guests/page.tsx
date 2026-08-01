@@ -587,7 +587,7 @@ export default function GuestsPage() {
               { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: 'הושבה מהירה', icon: '⚡' },
               { id: 'checkin', href: `/event/${eventId}/checkin`, label: 'סריקת כניסה', icon: '📷' },
               { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: 'מספרים כפולים', icon: '🔁' },
-              { id: 'add-tables', href: '/addtable', label: 'הוספת שולחנות', icon: '➕' },
+              { id: 'add-tables', href: `/addtable?eventId=${eventId}`, label: 'הוספת שולחנות', icon: '➕' },
               { id: 'external-links', href: '/external-links', label: 'קישורים חיצוניים', icon: '🔗' },
               { id: 'customer-tracking', href: '/customer-tracking', label: 'מעקב לקוחות', icon: '📋' },
               { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: '💰' },

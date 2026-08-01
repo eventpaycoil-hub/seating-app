@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Send, Trash2 } from 'lucide-react';
@@ -22,7 +22,17 @@ const SHAPES = [
 
 function AddTableContent() {
   const searchParams = useSearchParams();
-  const eventId = searchParams.get('eventId') || '1';
+    const eventId =
+    searchParams.get('eventId') ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('lastEventId') || '1'
+      : '1');
+
+  useEffect(() => {
+    if (eventId && eventId !== '1') {
+      localStorage.setItem('lastEventId', String(eventId));
+    }
+  }, [eventId]);
 
   const [rows, setRows] = useState<TableRow[]>([
     { id: 1, shape: 'round', seats: 12, fromTable: '1', toTable: '5' },
