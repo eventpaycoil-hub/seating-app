@@ -354,14 +354,16 @@ export default function EditEventPage() {
     'ניהול אירוע מלא',
   ];
 
-  const publicLink =
-    typeof window !== 'undefined' ? `${window.location.origin}/landing?eventId=${eventId}` : '';
+    const publicLink =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/landing?eventId=${eventId}`
+      : `https://www.eventpay1.co.il/landing?eventId=${eventId}`;
 
-  const copyPublicLink = () => {
-    if (publicLink) {
-      navigator.clipboard.writeText(publicLink);
-      alert('✅ הלינק הועתק! שלח אותו לבעל השמחה');
-    }
+  const publicLinkNoTransport = `${publicLink}${publicLink.includes('?') ? '&' : '?'}noTransport=1`;
+
+  const copyText = (text: string, msg: string) => {
+    navigator.clipboard.writeText(text);
+    alert(msg);
   };
 
   return (
@@ -376,27 +378,48 @@ export default function EditEventPage() {
           </Link>
         </div>
         <form onSubmit={handleSubmit} className="space-y-10">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="font-bold text-xl text-blue-800">לינק להפצה לאנשים שלא ברשימה</div>
-                <div className="text-sm text-blue-600 mt-1">
-                  לינק קבוע שבעל השמחה יכול לשלוח לאורחים נוספים
-                </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl space-y-5">
+            <div>
+              <div className="font-bold text-xl text-blue-800">לינקים להפצה לאנשים שלא ברשימה</div>
+              <div className="text-sm text-blue-600 mt-1">
+                בעל השמחה שולח לאורחים שלא רשומים במערכת
               </div>
-              <button
-                type="button"
-                onClick={copyPublicLink}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-bold"
-              >
-                📋 העתק לינק
-              </button>
             </div>
-            <div className="bg-white border rounded-2xl px-4 py-3 text-sm text-gray-700 break-all">
-              {publicLink || `https://www.eventpay1.co.il/landing?eventId=${eventId}`}
+
+            {/* עם הסעות */}
+            <div className="bg-white border rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="font-bold text-emerald-700">🚌 עם הסעות (אם מסומן באירוע)</div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyText(publicLink, '✅ לינק עם הסעות הועתק')
+                  }
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
+                >
+                  📋 העתק
+                </button>
+              </div>
+              <div className="text-sm text-gray-700 break-all">{publicLink}</div>
+            </div>
+
+            {/* בלי הסעות */}
+            <div className="bg-white border rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="font-bold text-slate-700">🚫 בלי הסעות</div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyText(publicLinkNoTransport, '✅ לינק בלי הסעות הועתק')
+                  }
+                  className="bg-slate-600 hover:bg-slate-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
+                >
+                  📋 העתק
+                </button>
+              </div>
+              <div className="text-sm text-gray-700 break-all">{publicLinkNoTransport}</div>
             </div>
           </div>
-
                     <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>

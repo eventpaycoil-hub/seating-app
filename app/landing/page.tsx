@@ -159,6 +159,7 @@ function LandingPageContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const code = searchParams.get('code') || searchParams.get('ref');
+    const noTransport = searchParams.get('noTransport') === '1';
   const imgParam = searchParams.get('img');
   const [event, setEvent] = useState<any>(null);
   const [guests, setGuests] = useState<any[]>([]);
@@ -447,7 +448,7 @@ function LandingPageContent() {
         }, 1200);
         return;
       }
-      if (eventHasTransport) {
+      if (eventHasTransport && !noTransport) {
         setTimeout(() => {
           window.location.replace(
             `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(ref))}`
