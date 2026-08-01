@@ -1150,20 +1150,26 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
                 <div
                   className="absolute inset-0 flex items-center justify-center"
                   style={{
-                    borderRadius: isRound ? '9999px' : 10,
+                                        borderRadius: isRound ? '9999px' : 10,
                     background: table.isSpecial
-                      ? table.type === 'dj' ? '#1f2937' : '#334155'
+                      ? table.type === 'dj'
+                        ? '#1f2937'
+                        : '#334155'
                       : table.isReserve
                       ? '#ef4444'
+                      : selectedId === table.id
+                      ? '#facc15'
                       : '#f5e6c8',
-                    border: selectedId === table.id
-                      ? '3px solid #f59e0b'
-                      : table.isReserve
-                      ? '3px solid #991b1b'
-                      : '2.5px solid #78350f',
-                    boxShadow: selectedId === table.id
-                      ? '0 0 0 3px rgba(245,158,11,0.4), 0 4px 12px rgba(0,0,0,0.3)'
-                      : '0 3px 10px rgba(0,0,0,0.25)',
+                    border:
+                      selectedId === table.id
+                        ? '4px solid #ca8a04'
+                        : table.isReserve
+                        ? '3px solid #991b1b'
+                        : '2.5px solid #78350f',
+                    boxShadow:
+                      selectedId === table.id
+                        ? '0 0 0 5px rgba(250,204,21,0.7), 0 0 20px rgba(234,179,8,0.8), 0 4px 12px rgba(0,0,0,0.3)'
+                        : '0 3px 10px rgba(0,0,0,0.25)',
                   }}
                 >
                   {!table.isSpecial && (
