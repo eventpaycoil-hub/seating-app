@@ -173,6 +173,8 @@ function LandingPageContent() {
   const [personalNote, setPersonalNote] = useState('');
   const [lang, setLang] = useState<'he' | 'en'>('he');
   const [guestName, setGuestName] = useState('');
+    const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
   const [externalRedirect, setExternalRedirect] = useState(false);
 
   const isEnglishEvent =
