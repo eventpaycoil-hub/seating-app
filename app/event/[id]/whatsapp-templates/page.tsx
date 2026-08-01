@@ -130,7 +130,7 @@ export default function WhatsAppTemplatesPage() {
     return (t.name || '').toLowerCase().includes(search.trim().toLowerCase());
   });
 
-  const buildAttributesForGuest = (guestId?: string | null) => {
+    const buildAttributesForGuest = (guestId?: string | null) => {
     const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
     const eventType = currentEvent?.eventType || 'אירוע';
     const date =
@@ -146,10 +146,19 @@ export default function WhatsAppTemplatesPage() {
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://seating-app-dusky.vercel.app';
+        : 'https://www.eventpay1.co.il';
 
-    const rsvp_link = guestId
-      ? `${origin}/landing?eventId=${eventId}&guestId=${guestId}`
+    // מוצאים inviteCode כמו ב-SMS — לא רק id
+    let refCode = '';
+    if (guestId) {
+      const g = (allGuests || []).find(
+        (x: any) => String(x.id) === String(guestId)
+      );
+      refCode = String(g?.inviteCode || g?.code || g?.id || guestId);
+    }
+
+    const rsvp_link = refCode
+      ? `${origin}/landing?eventId=${eventId}&ref=${encodeURIComponent(refCode)}&img=1`
       : `${origin}/landing?eventId=${eventId}`;
 
     return { general_text_1, general_text_2, rsvp_link };
