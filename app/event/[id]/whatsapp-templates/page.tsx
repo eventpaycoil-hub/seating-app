@@ -133,11 +133,16 @@ export default function WhatsAppTemplatesPage() {
     const buildAttributesForGuest = (guestId?: string | null) => {
     const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
     const eventType = currentEvent?.eventType || 'אירוע';
-    const date =
+        let date =
       currentEvent?.eventDate ||
       currentEvent?.fullDate ||
       currentEvent?.date ||
       '';
+
+    if (date && /^\d{4}-\d{2}-\d{2}/.test(String(date))) {
+      const [y, m, d] = String(date).slice(0, 10).split('-');
+      date = `${d}/${m}/${y}`;
+    }
     const time = currentEvent?.time || '';
 
     const general_text_1 = `${eventType} של ${owners}`;
