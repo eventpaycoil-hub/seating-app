@@ -354,22 +354,114 @@ function LandingPageContent() {
     }
   };
 
-    const handleRsvp = async (count: number) => {
+       const handleRsvp = async (count: number) => {
     if (!eventId) {
       alert(t.invalidLinkAlert);
       return;
     }
+
+    // קישור ציבורי — בלי ref
     if (!code) {
-      setRsvpStatus('general');
+      const name = walkInName.trim();
+      const phone = walkInPhone.trim();
+      if (!name || !phone) {
+        alert(lang === 'en' ? 'Please enter name and phone' : 'נא להזין שם וטלפון');
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const phoneNorm = phone.replace(/\D/g, '');
+      let guestIndex = guests.findIndex((g: any) => {
+        const gp = String(g.phone || '').replace(/\D/g, '');
+        return gp && phoneNorm && gp === phoneNorm;
+      });
+
+      let guest: any;
+      const updated = [...guests];
+
+      if (guestIndex === -1) {
+        guest = {
+          id: Date.now() + Math.random(),
+          name,
+          phone,
+          quantity: String(count),
+          confirmed: String(count),
+          confirmedCount: count,
+          count,
+          notes: 'נוסף מקישור כללי',
+          group: '',
+          inviteCode: String(Date.now()).slice(-10),
+          confirmedSource: 'public-link',
+          confirmedAt: now,
+        };
+        updated.push(guest);
+        guestIndex = updated.length - 1;
+      } else {
+        guest = {
+          ...updated[guestIndex],
+          name: name || updated[guestIndex].name,
+          phone: phone || updated[guestIndex].phone,
+          confirmed: String(count),
+          confirmedCount: count,
+          count,
+          confirmedSource: 'public-link',
+          confirmedAt: now,
+        };
+        updated[guestIndex] = guest;
+      }
+
+      await persistGuestUpdate(updated, guest);
+      setRsvpCount(count);
+      setGuestName(guest.name || name);
+      setRsvpStatus('confirmed');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      let eventHasTransport =
+        event?.hasTransport === 'כן' ||
+        event?.hasTransport === true ||
+        event?.has_transport === 'כן';
+      let eventHasSeparation =
+        event?.hasSeparation === 'כן' || event?.has_separation === 'כן';
+
+      try {
+        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+        const ev = events.find((e: any) => String(e.id) === String(eventId));
+        if (ev) {
+          if (ev.hasTransport === 'כן' || ev.hasTransport === true || ev.has_transport === 'כן') {
+            eventHasTransport = true;
+          }
+          if (ev.hasSeparation === 'כן' || ev.has_separation === 'כן') {
+            eventHasSeparation = true;
+          }
+        }
+      } catch {}
+
+      const ref = guest.inviteCode || guest.id;
+      if (eventHasSeparation) {
+        setTimeout(() => {
+          window.location.replace(
+            `/separation?eventId=${eventId}&guestId=${guest.id}&ref=${encodeURIComponent(String(ref))}`
+          );
+        }, 1200);
+        return;
+      }
+      if (eventHasTransport) {
+        setTimeout(() => {
+          window.location.replace(
+            `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(ref))}`
+          );
+        }, 1200);
+      }
       return;
     }
+
     const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     const now = new Date().toISOString();
     const updated = [...guests];
     updated[guestIndex] = {
@@ -381,14 +473,13 @@ function LandingPageContent() {
       confirmedAt: now,
     };
     await persistGuestUpdate(updated, updated[guestIndex]);
-        setRsvpCount(count);
+    setRsvpCount(count);
     setGuestName(updated[guestIndex].name || '');
     setRsvpStatus('confirmed');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-         const guest = updated[guestIndex];
+    const guest = updated[guestIndex];
 
-    // 1) מ-state
     let eventHasTransport =
       event?.hasTransport === 'כן' ||
       event?.hasTransport === true ||
@@ -399,7 +490,6 @@ function LandingPageContent() {
     let eventHasSeparation =
       event?.hasSeparation === 'כן' || event?.has_separation === 'כן';
 
-    // 2) מ-localStorage (מחשב מנהל)
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const ev = events.find((e: any) => String(e.id) === String(eventId));
@@ -413,14 +503,6 @@ function LandingPageContent() {
       }
     } catch {}
 
-    console.log('RSVP redirect check', {
-      eventHasSeparation,
-      eventHasTransport,
-      hasTransportRaw: event?.hasTransport,
-      has_transportRaw: event?.has_transport,
-      guestId: guest?.id,
-    });
-
     if (eventHasSeparation) {
       setTimeout(() => {
         window.location.replace(
@@ -433,18 +515,67 @@ function LandingPageContent() {
     if (eventHasTransport) {
       setTimeout(() => {
         window.location.replace(
-          `/transport?eventId=${eventId}&guestId=${guest.id}`
+          `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(guest.inviteCode || guest.id))}`
         );
       }, 1200);
     }
   };
 
   const handleNotComing = async () => {
-    if (!eventId || !code) {
-      setRsvpStatus('general');
+    if (!eventId) {
+      alert(t.invalidLinkAlert);
+      return;
+    }
+
+    if (!code) {
+      const name = walkInName.trim();
+      const phone = walkInPhone.trim();
+      if (!name || !phone) {
+        alert(lang === 'en' ? 'Please enter name and phone' : 'נא להזין שם וטלפון');
+        return;
+      }
+      const now = new Date().toISOString();
+      const phoneNorm = phone.replace(/\D/g, '');
+      let guestIndex = guests.findIndex((g: any) => {
+        const gp = String(g.phone || '').replace(/\D/g, '');
+        return gp && phoneNorm && gp === phoneNorm;
+      });
+      const updated = [...guests];
+      let guest: any;
+      if (guestIndex === -1) {
+        guest = {
+          id: Date.now() + Math.random(),
+          name,
+          phone,
+          quantity: '0',
+          confirmed: 'לא מגיע',
+          confirmedCount: 0,
+          count: 0,
+          notes: 'נוסף מקישור כללי',
+          group: '',
+          inviteCode: String(Date.now()).slice(-10),
+          confirmedSource: 'public-link',
+          confirmedAt: now,
+        };
+        updated.push(guest);
+      } else {
+        guest = {
+          ...updated[guestIndex],
+          name: name || updated[guestIndex].name,
+          confirmed: 'לא מגיע',
+          confirmedCount: 0,
+          count: 0,
+          confirmedSource: 'public-link',
+          confirmedAt: now,
+        };
+        updated[guestIndex] = guest;
+      }
+      await persistGuestUpdate(updated, guest);
+      setRsvpStatus('notComing');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     const guestIndex = findGuestIndex(guests, String(code));
     if (guestIndex === -1) {
       setRsvpStatus('notFound');
@@ -468,8 +599,9 @@ function LandingPageContent() {
 
   const handleUnknown = async () => {
     if (!eventId || !code) {
-      setRsvpStatus('general');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!code) {
+        alert(lang === 'en' ? 'Please use the personal link for this option' : 'לאפשרות זו יש להשתמש בקישור האישי');
+      }
       return;
     }
     const guestIndex = findGuestIndex(guests, String(code));
@@ -593,12 +725,12 @@ function LandingPageContent() {
               </p>
               <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
               {event?.hasSeparation === 'כן' ? (
-  <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
-) : (event?.hasTransport === 'כן' || event?.hasTransport === true) ? (
-  <p className="text-sm text-green-600 mt-4">
-    {lang === 'en' ? 'Redirecting to transport selection...' : 'מעביר אותך לבחירת הסעה...'}
-  </p>
-) : null}
+                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+              ) : event?.hasTransport === 'כן' || event?.hasTransport === true ? (
+                <p className="text-sm text-green-600 mt-4">
+                  {lang === 'en' ? 'Redirecting to transport selection...' : 'מעביר אותך לבחירת הסעה...'}
+                </p>
+              ) : null}
             </div>
           )}
           {rsvpStatus === 'notComing' && (
@@ -623,15 +755,48 @@ function LandingPageContent() {
             </div>
           )}
           {rsvpStatus === 'general' && (
-            <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-12 shadow-xl">
-              <h3 className="text-2xl font-bold text-amber-700 mb-4">{t.generalLink}</h3>
-              <p className="whitespace-pre-line">{t.generalLinkText}</p>
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-3xl p-8 shadow-xl text-right">
+              <h3 className="text-2xl font-bold text-amber-800 mb-2">
+                {lang === 'en' ? 'Guest details' : 'פרטי המוזמן'}
+              </h3>
+              <p className="text-amber-700 mb-6 text-sm">
+                {lang === 'en'
+                  ? 'Enter your name and phone to confirm attendance'
+                  : 'הזינו שם וטלפון כדי לאשר הגעה'}
+              </p>
+              <label className="block text-sm font-medium mb-1">
+                {lang === 'en' ? 'Full name' : 'שם מלא'}
+              </label>
+              <input
+                type="text"
+                value={walkInName}
+                onChange={(e) => setWalkInName(e.target.value)}
+                className="w-full border rounded-2xl px-4 py-3 mb-4 text-lg"
+                placeholder={lang === 'en' ? 'Your name' : 'השם המלא'}
+              />
+              <label className="block text-sm font-medium mb-1">
+                {lang === 'en' ? 'Phone' : 'טלפון'}
+              </label>
+              <input
+                type="tel"
+                value={walkInPhone}
+                onChange={(e) => setWalkInPhone(e.target.value)}
+                className="w-full border rounded-2xl px-4 py-3 mb-6 text-lg"
+                placeholder="050-..."
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => setRsvpStatus('none')}
+                className="w-full bg-[#3f2a1e] text-white py-3 rounded-2xl font-bold"
+              >
+                {lang === 'en' ? 'Continue' : 'המשך לאישור הגעה'}
+              </button>
             </div>
           )}
         </div>
       ) : (
         <>
-          {/* תמונה רחבה + מסגרת */}
           <div className="flex justify-center pt-6 pb-2 px-3 sm:px-6">
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
@@ -659,7 +824,6 @@ function LandingPageContent() {
             </div>
           </div>
 
-          {/* תוכן צמוד — בלי חור באמצע */}
           <div className="max-w-2xl mx-auto px-5 pt-5 pb-12 text-center">
             <div className="mb-6 text-[#3f2a1e]">
               <div className="text-4xl font-semibold mb-2 tracking-wide">
@@ -673,6 +837,27 @@ function LandingPageContent() {
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">{t.gladToSee}</h2>
+
+            {/* שדות לקישור ציבורי */}
+            {!code && (
+              <div className="mb-8 max-w-md mx-auto space-y-3 text-right">
+                <input
+                  type="text"
+                  value={walkInName}
+                  onChange={(e) => setWalkInName(e.target.value)}
+                  className="w-full border-2 border-[#c4a574] rounded-2xl px-4 py-3 text-lg"
+                  placeholder={lang === 'en' ? 'Full name' : 'שם מלא'}
+                />
+                <input
+                  type="tel"
+                  value={walkInPhone}
+                  onChange={(e) => setWalkInPhone(e.target.value)}
+                  className="w-full border-2 border-[#c4a574] rounded-2xl px-4 py-3 text-lg"
+                  placeholder="050-..."
+                  dir="ltr"
+                />
+              </div>
+            )}
 
             <div className="space-y-6">
               {isTwoButtons && (
@@ -718,8 +903,6 @@ function LandingPageContent() {
               {!isTwoButtons && !isThreeButtons && (
                 <>
                   <p className="text-xl mb-2">{t.howMany}</p>
-
-                  {/* כפתורים בגודל המקורי — w-20 h-20 */}
                   <div className="flex flex-wrap gap-4 justify-center">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
