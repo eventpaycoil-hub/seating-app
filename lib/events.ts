@@ -2,16 +2,16 @@
 import { supabase } from './supabase.js';
 
 export type DbEvent = {
-  id: number;
-  title?: string | null;
+  id?: number | string | null;
   owners?: string | null;
+  title?: string | null;
   event_type?: string | null;
-  hall_name?: string | null;
-  city?: string | null;
   event_date?: string | null;
   full_date?: string | null;
   time?: string | null;
   day?: string | null;
+  hall_name?: string | null;
+  city?: string | null;
   groom_parents?: string | null;
   bride_parents?: string | null;
   email?: string | null;
@@ -24,6 +24,7 @@ export type DbEvent = {
   has_separation?: string | null;
   has_transport?: string | null;
   seating_arrangement?: string | null;
+  nufar_event?: string | null;
   qr_code?: string | null;
   guest_notes?: string | null;
   show_seating_link?: string | null;
@@ -32,6 +33,11 @@ export type DbEvent = {
   username?: string | null;
   password?: string | null;
   client_phone?: string | null;
+  rsvp_mode?: string | null;
+  welcome_line?: string | null;
+  use_external_landing?: string | null;
+  external_landing_url?: string | null;
+  transport_options?: any;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -58,17 +64,19 @@ export function dbToAppEvent(row: DbEvent) {
     notes: row.notes || '',
     isActive: !!row.is_active,
     creditLink: row.credit_link || '',
-    hasSeparation: row.has_separation || 'לא',
-    hasTransport: row.has_transport || 'לא',
-    seatingArrangement: row.seating_arrangement || 'כן',
-    qrCode: row.qr_code || 'כן',
-    guestNotes: row.guest_notes || 'כן',
-    showSeatingLink: row.show_seating_link || 'כן',
-    smsService: row.sms_service || 'כן',
-    stewardService: row.steward_service || 'לא',
-    username: row.username || '',
-    password: row.password || '',
-    clientPhone: row.client_phone || '',
+          hasSeparation: row.has_separation || 'לא',
+      hasTransport: row.has_transport || 'לא',
+            seatingArrangement: row.seating_arrangement || 'לא',
+      nufarEvent: row.nufar_event || 'לא',
+      qrCode: row.qr_code || 'כן',
+      guestNotes: row.guest_notes || 'כן',
+      showSeatingLink: row.show_seating_link || 'לא',
+      smsService: row.sms_service || 'כן',
+      stewardService: row.steward_service || 'לא',
+      
+      username: row.username || '',
+      password: row.password || '',
+      clientPhone: row.client_phone || '',
   };
 }
 
@@ -97,6 +105,7 @@ export function appToDbEvent(event: any): Partial<DbEvent> {
     has_separation: event.hasSeparation || event.has_separation || 'לא',
     has_transport: event.hasTransport || event.has_transport || 'לא',
     seating_arrangement: event.seatingArrangement || event.seating_arrangement || null,
+          nufar_event: event.nufarEvent || event.nufar_event || null,
     qr_code: event.qrCode || event.qr_code || null,
     guest_notes: event.guestNotes || event.guest_notes || null,
     show_seating_link: event.showSeatingLink || event.show_seating_link || null,

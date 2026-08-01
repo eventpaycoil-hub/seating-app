@@ -281,7 +281,7 @@ export default function EditEventPage() {
     try {
       await supabase
         .from('events')
-        .update({
+                .update({
           rsvp_mode: formData.rsvpMode || 'רגיל',
           welcome_line: formData.welcomeLine || '',
           use_external_landing: formData.useExternalLanding || 'לא',
@@ -292,6 +292,9 @@ export default function EditEventPage() {
           is_active: formData.isActive === true || formData.isActive === 'כן',
           username: formData.username || null,
           password: formData.password || null,
+          seating_arrangement: formData.seatingArrangement || 'לא',
+          nufar_event: formData.nufarEvent || 'לא',
+          show_seating_link: formData.showSeatingLink || 'לא',
         })
         .eq('id', Number(eventId));
     } catch (err) {

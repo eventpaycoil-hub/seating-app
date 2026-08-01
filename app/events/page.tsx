@@ -26,7 +26,6 @@ export default function EventsPage() {
             setEvents(list);
             localStorage.setItem('myEvents', JSON.stringify(list));
           } else {
-            // גיבוי מקומי
             const local = JSON.parse(localStorage.getItem('myEvents') || '[]');
             setEvents(local);
             if (!local.length) setErrorMsg('לא נמצאו אירועים בענן ובמקומי');
@@ -82,10 +81,18 @@ export default function EventsPage() {
   const hasSeating = (event) =>
     event.seatingArrangement === 'כן' ||
     event.seatingArrangement === true ||
-    event.showSeatingLink === 'כן';
+    event.showSeatingLink === 'כן' ||
+    event.showSeatingLink === true ||
+    event.hasSeating === 'כן' ||
+    event.hasSeating === true;
 
   const isNufar = (event) =>
-    event.nufarEvent === 'כן' || event.nufarEvent === true;
+    event.nufarEvent === 'כן' ||
+    event.nufarEvent === true ||
+    event.isNufar === 'כן' ||
+    event.isNufar === true ||
+    event.nufar === 'כן' ||
+    event.nufar === true;
 
   const filteredEvents = events
     .filter((event) => selectedMonth === 'הכל' || getMonthName(event) === selectedMonth)
@@ -155,7 +162,7 @@ export default function EventsPage() {
                 const dateStr = formatShortDate(event);
                 const colorClass = seating
                   ? 'text-red-600 hover:text-red-800'
-                  : 'text-blue-600 hover:text-blue-800';
+                  : 'text-cyan-600 hover:text-cyan-800';
 
                 return (
                   <span key={event.id} className="inline-flex items-center gap-1.5">
@@ -180,7 +187,7 @@ export default function EventsPage() {
             <span className="text-red-600 font-medium">אדום</span> = עם סידורי הושבה
           </span>
           <span>
-            <span className="text-blue-600 font-medium">כחול</span> = בלי הושבה
+            <span className="text-cyan-600 font-medium">תכלת</span> = בלי הושבה
           </span>
           <span>(נופר) = אירוע של נופר</span>
         </div>
