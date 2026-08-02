@@ -155,7 +155,7 @@ export default function WhatsAppTemplatesPage() {
     }
     const time = currentEvent?.time || '';
 
-    const general_text_1 = `${eventType} של ${owners}`;
+    const general_text_1 = owners;
     const general_text_2 = time ? `${date} בשעה ${time}` : date;
 
     const origin =
