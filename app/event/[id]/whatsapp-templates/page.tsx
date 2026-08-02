@@ -155,8 +155,15 @@ export default function WhatsAppTemplatesPage() {
     }
 
     const time = currentEvent?.time || '';
-    const general_text_1 = owners;
-    const general_text_2 = time ? `${date} בשעה ${time}` : date;
+    const hall = currentEvent?.hallName || currentEvent?.hall_name || '';
+const city = currentEvent?.city || '';
+const place = [hall ? `"${hall}"` : '', city ? `ב${city}` : ''].filter(Boolean).join(' ');
+
+const general_text_1 = place
+  ? `${owners} ${place}`
+  : owners;
+
+const general_text_2 = time ? `${date} בשעה ${time}` : date;
 
     const groomParents = currentEvent?.groomParents || '';
     const brideParents = currentEvent?.brideParents || '';
