@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 
-const AUTOMATION_ID = 'e3d8174d-2823-4d4f-a923-32cda5537f39';
+const AUTOMATION_ID = '9214e9ce-3786-46c2-ae2f-f2fc5c0cdc8e';
 
 type HeyyTemplate = {
   id: string;
