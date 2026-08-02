@@ -140,7 +140,7 @@ export default function WhatsAppTemplatesPage() {
     return (t.name || '').toLowerCase().includes(search.trim().toLowerCase());
   });
 
-       const buildAttributesForGuest = (guestId?: string | null) => {
+         const buildAttributesForGuest = (guestId?: string | null) => {
     const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
 
     let date =
@@ -156,14 +156,13 @@ export default function WhatsAppTemplatesPage() {
 
     const time = currentEvent?.time || '';
     const hall = currentEvent?.hallName || currentEvent?.hall_name || '';
-const city = currentEvent?.city || '';
-const place = [hall ? `"${hall}"` : '', city ? `ב${city}` : ''].filter(Boolean).join(' ');
+    const city = currentEvent?.city || '';
+    const place = [hall ? `"${hall}"` : '', city ? `ב${city}` : '']
+      .filter(Boolean)
+      .join(' ');
 
-const general_text_1 = place
-  ? `${owners} ${place}`
-  : owners;
-
-const general_text_2 = time ? `${date} בשעה ${time}` : date;
+    const general_text_1 = place ? `${owners} ${place}` : owners;
+    const general_text_2 = time ? `${date} בשעה ${time}` : date;
 
     const groomParents = currentEvent?.groomParents || '';
     const brideParents = currentEvent?.brideParents || '';
@@ -196,15 +195,6 @@ const general_text_2 = time ? `${date} בשעה ${time}` : date;
       ? `${origin}/landing?eventId=${eventId}&ref=${refCode}&img=1`
       : `${origin}/landing?eventId=${eventId}`;
 
-    const header_image =
-      currentEvent?.coverUrl ||
-      currentEvent?.cover_url ||
-      currentEvent?.landingCover ||
-      currentEvent?.image ||
-      currentEvent?.invitationImage ||
-      currentEvent?.coverUrl2 ||
-      '';
-
     return {
       general_text_1,
       general_text_2,
@@ -213,10 +203,8 @@ const general_text_2 = time ? `${date} בשעה ${time}` : date;
       num3,
       num4,
       rsvp_link,
-      header_image,
     };
   };
-
       const getTemplateBody = (t: any) => {
     if (!t) return '';
 
