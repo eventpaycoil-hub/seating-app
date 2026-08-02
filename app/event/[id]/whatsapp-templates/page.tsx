@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-
-const AUTOMATION_ID = '9214e9ce-3786-46c2-ae2f-f2fc5c0cdc8e';
+import { supabase } from '../../../../lib/supabase.js';
+ const AUTOMATION_ID = 'fbd6dcf2-a123-4e02-91a2-776be06aabba';
 
 type HeyyTemplate = {
   id: string;
@@ -46,12 +46,41 @@ export default function WhatsAppTemplatesPage() {
   const [allGuests, setAllGuests] = useState<any[]>([]);
 
   useEffect(() => {
+  let cancelled = false;
+
+  (async () => {
+    let event: any = null;
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-      const event = events.find((e: any) => e.id.toString() === eventId.toString());
-      if (event) setCurrentEvent(event);
+      event = events.find((e: any) => e.id.toString() === eventId.toString()) || null;
     } catch {}
-  }, [eventId]);
+
+    // משיכת תמונה מ-Supabase
+    try {
+      const { data } = await supabase
+        .from('events')
+        .select('cover_url, cover_url2, coverUrl, coverUrl2')
+        .eq('id', Number(eventId))
+        .maybeSingle();
+
+      if (data && !cancelled) {
+        event = {
+          ...(event || {}),
+          coverUrl: data.cover_url || data.coverUrl || event?.coverUrl || '',
+          coverUrl2: data.cover_url2 || data.coverUrl2 || event?.coverUrl2 || '',
+        };
+      }
+    } catch (e) {
+      console.warn('cover fetch failed', e);
+    }
+
+    if (!cancelled && event) setCurrentEvent(event);
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [eventId]);
 
   useEffect(() => {
     const p = searchParams.get('phone');
