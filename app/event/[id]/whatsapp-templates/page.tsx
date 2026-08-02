@@ -172,11 +172,21 @@ export default function WhatsAppTemplatesPage() {
       refCode = String(g?.inviteCode || g?.code || g?.id || guestId);
     }
 
-    const rsvp_link = refCode
+        const rsvp_link = refCode
       ? `${origin}/landing?eventId=${eventId}&ref=${encodeURIComponent(refCode)}&img=1`
       : `${origin}/landing?eventId=${eventId}`;
 
-    return { general_text_1, general_text_2, rsvp_link };
+    return {
+      general_text_1,
+      general_text_2,
+      rsvp_link,
+
+      // משתנים שהתבנית ב-Heyy מצפה להם
+      num1: general_text_1,
+      num2: general_text_2,
+      num3: '',
+      num4: '',
+    };
   };
 
       const getTemplateBody = (t: any) => {
