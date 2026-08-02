@@ -275,6 +275,17 @@ export default function WhatsAppTemplatesPage() {
       const attributes = buildAttributesForGuest(
         targets[0]?.guestId || searchParams.get('guestId')
       );
+      console.log('ATTRS SENT', attributes);
+console.log('PHONES PAYLOAD', phonesPayload);
+console.log('AUTOMATION', AUTOMATION_ID);
+console.log('EVENT IMAGE FIELDS', {
+  coverUrl: currentEvent?.coverUrl,
+  cover_url: currentEvent?.cover_url,
+  landingCover: currentEvent?.landingCover,
+  image: currentEvent?.image,
+  invitationImage: currentEvent?.invitationImage,
+  coverUrl2: currentEvent?.coverUrl2,
+});
 
       const res = await fetch('/api/heyy/send', {
         method: 'POST',
