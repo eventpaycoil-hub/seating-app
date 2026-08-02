@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AUTOMATION_ID = '9214e9ce-3786-46c2-ae2f-f2fc5c0cdc8e';
+const AUTOMATION_ID = 'fbd6dcf2-a123-4e02-91a2-776be06aabba';
 
 function toIntlPhone(phone: string): string {
   let p = String(phone || '').replace(/\D/g, '');
