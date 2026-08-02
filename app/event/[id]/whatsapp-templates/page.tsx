@@ -140,7 +140,7 @@ export default function WhatsAppTemplatesPage() {
     return (t.name || '').toLowerCase().includes(search.trim().toLowerCase());
   });
 
-     const buildAttributesForGuest = (guestId?: string | null) => {
+       const buildAttributesForGuest = (guestId?: string | null) => {
     const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
 
     let date =
@@ -158,15 +158,18 @@ export default function WhatsAppTemplatesPage() {
     const general_text_1 = owners;
     const general_text_2 = time ? `${date} בשעה ${time}` : date;
 
-    // הורים — ננסה כמה שמות שדות נפוצים
-        const groomParents = currentEvent?.groomParents || '';
+    const groomParents = currentEvent?.groomParents || '';
     const brideParents = currentEvent?.brideParents || '';
 
     const num3 = groomParents
-      ? (String(groomParents).includes('הורי') ? String(groomParents) : `הורי החתן: ${groomParents}`)
+      ? String(groomParents).includes('הורי')
+        ? String(groomParents)
+        : `הורי החתן: ${groomParents}`
       : '';
     const num4 = brideParents
-      ? (String(brideParents).includes('הורי') ? String(brideParents) : `הורי הכלה: ${brideParents}`)
+      ? String(brideParents).includes('הורי')
+        ? String(brideParents)
+        : `הורי הכלה: ${brideParents}`
       : '';
 
     const origin =
@@ -183,18 +186,27 @@ export default function WhatsAppTemplatesPage() {
     }
 
     const rsvp_link = refCode
-      ? `${origin}/landing?eventId=${eventId}&ref=${encodeURIComponent(refCode)}&img=1`
+      ? `${origin}/landing?eventId=${eventId}&ref=${refCode}&img=1`
       : `${origin}/landing?eventId=${eventId}`;
+
+    const header_image =
+      currentEvent?.coverUrl ||
+      currentEvent?.cover_url ||
+      currentEvent?.landingCover ||
+      currentEvent?.image ||
+      currentEvent?.invitationImage ||
+      currentEvent?.coverUrl2 ||
+      '';
 
     return {
       general_text_1,
       general_text_2,
-      rsvp_link,
-
       num1: general_text_1,
       num2: general_text_2,
       num3,
       num4,
+      rsvp_link,
+      header_image,
     };
   };
 
