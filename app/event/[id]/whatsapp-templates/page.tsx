@@ -425,25 +425,23 @@ export default function WhatsAppTemplatesPage() {
                   </div>
                 </div>
             {selected.messageContent?.body ? (
-              <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
-                <div className="text-xs text-gray-500 mb-2">תוכן התבנית</div>
-                {selected.messageContent.body}
-                {selected.messageContent.header && (
-                  <div className="text-xs text-gray-400 mt-2">
-                    כותרת: {selected.messageContent.header}
-                  </div>
-                )}
-                {selected.messageContent.footer && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    פוטר: {selected.messageContent.footer}
-                  </div>
-                )}
-              </div>
-            ) : getTemplateBody(selected) ? (
-              <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
-                {getTemplateBody(selected)}
-              </div>
-            ) : null}
+  <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
+    <div className="text-xs text-gray-500 mb-2">תוכן התבנית (תצוגה מקדימה)</div>
+    {selected.messageContent.body
+      .replace(/\{\{contact\.general_text_1\}\}/g, previewAttrs.general_text_1 || '')
+      .replace(/\{\{contact\.general_text_2\}\}/g, previewAttrs.general_text_2 || '')
+      .replace(/\{\{contact\.rsvp_link\}\}/g, previewAttrs.rsvp_link || '')
+      .replace(/\{\{var\.num1\}\}/g, previewAttrs.general_text_1 || '')
+      .replace(/\{\{var\.num2\}\}/g, previewAttrs.general_text_2 || '')
+      .replace(/\{\{1\}\}/g, previewAttrs.general_text_1 || '')
+      .replace(/\{\{2\}\}/g, previewAttrs.general_text_2 || '')
+      .replace(/\{\{3\}\}/g, previewAttrs.rsvp_link || '')}
+  </div>
+) : getTemplateBody(selected) ? (
+  <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
+    {getTemplateBody(selected)}
+  </div>
+) : null}
                 {getTemplateBody(selected) ? (
                   <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed text-slate-800">
                     <div className="text-xs text-emerald-700 font-medium mb-2">
