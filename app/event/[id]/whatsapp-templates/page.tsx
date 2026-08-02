@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabase.js';
- const AUTOMATION_ID = 'fbd6dcf2-a123-4e02-91a2-776be06aabba';
+const AUTOMATION_ID = '9214e9ce-3786-46c2-ae2f-f2fc5c0cdc8e';
 
 type HeyyTemplate = {
   id: string;
