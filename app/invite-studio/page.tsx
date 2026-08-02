@@ -1,20 +1,131 @@
 // @ts-nocheck
 'use client';
+
 import { supabase } from '../../lib/supabase.js';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 const TEMPLATES = [
-  { id: 'classic-cream', name: 'קלאסי שמנת', bg: '#f7f3eb', text: '#1c1917', muted: '#57534e', line: '#d6d3d1', deco: 'none', frame: 'simple' },
-  { id: 'double-frame', name: 'מסגרת כפולה', bg: '#faf8f4', text: '#1c1917', muted: '#57534e', line: '#a8a29e', deco: 'none', frame: 'double' },
-  { id: 'rings', name: 'טבעות זהב', bg: '#fffbeb', text: '#422006', muted: '#92400e', line: '#fcd34d', deco: 'rings', frame: 'simple' },
-  { id: 'floral-soft', name: 'פרחים רכים', bg: '#fdfcf9', text: '#365314', muted: '#4d7c0f', line: '#d9f99d', deco: 'floral', frame: 'simple' },
-  { id: 'romantic-heart', name: 'רומנטי', bg: '#fff1f2', text: '#4c0519', muted: '#9f1239', line: '#fecdd3', deco: 'hearts', frame: 'simple' },
-  { id: 'navy-elegant', name: 'כחול אלגנטי', bg: '#0f172a', text: '#f8fafc', muted: '#94a3b8', line: '#334155', deco: 'none', frame: 'double' },
-  { id: 'olive-garden', name: 'ירוק זית', bg: '#f5f7f0', text: '#3f6212', muted: '#65a30d', line: '#bef264', deco: 'leaves', frame: 'simple' },
-  { id: 'minimal-bw', name: 'מינימלי שחור', bg: '#ffffff', text: '#0a0a0a', muted: '#525252', line: '#e5e5e5', deco: 'line', frame: 'simple' },
-  { id: 'vintage', name: 'וינטג׳', bg: '#faf7f2', text: '#44403c', muted: '#78716c', line: '#d6d3d1', deco: 'ornament', frame: 'double' },
-  { id: 'bar-party', name: 'בר/בת שמח', bg: '#eff6ff', text: '#1e3a8a', muted: '#3b82f6', line: '#93c5fd', deco: 'stars', frame: 'simple' },
+  {
+    id: 'classic-cream',
+    name: 'קלאסי שמנת',
+    bg: '#f7f3eb',
+    text: '#1c1917',
+    muted: '#57534e',
+    line: '#d6d3d1',
+    deco: 'none',
+    frame: 'simple',
+  },
+  {
+    id: 'double-frame',
+    name: 'מסגרת כפולה',
+    bg: '#faf8f4',
+    text: '#1c1917',
+    muted: '#57534e',
+    line: '#a8a29e',
+    deco: 'none',
+    frame: 'double',
+  },
+  {
+    id: 'rings-gold',
+    name: 'טבעות זהב + שמפניה',
+    bg: '#fffbeb',
+    text: '#422006',
+    muted: '#92400e',
+    line: '#fcd34d',
+    deco: 'rings-champagne',
+    frame: 'simple',
+  },
+  {
+    id: 'floral-soft',
+    name: 'פרחים רכים',
+    bg: '#fdfcf9',
+    text: '#365314',
+    muted: '#4d7c0f',
+    line: '#d9f99d',
+    deco: 'floral',
+    frame: 'simple',
+  },
+  {
+    id: 'romantic-peach',
+    name: 'רומנטי אפרסק',
+    bg: '#fff7ed',
+    text: '#9a3412',
+    muted: '#c2410c',
+    line: '#fdba74',
+    deco: 'peach-floral',
+    frame: 'simple',
+  },
+  {
+    id: 'dancing-couple',
+    name: 'רקדנים אלגנטי',
+    bg: '#fafaf9',
+    text: '#1c1917',
+    muted: '#57534e',
+    line: '#d6d3d1',
+    deco: 'dancers',
+    frame: 'simple',
+  },
+  {
+    id: 'dark-luxury',
+    name: 'יוקרה כהה',
+    bg: '#0c0a09',
+    text: '#fafaf9',
+    muted: '#a8a29e',
+    line: '#44403c',
+    deco: 'ornament',
+    frame: 'double',
+  },
+  {
+    id: 'olive-garden',
+    name: 'ירוק זית עשיר',
+    bg: '#f5f7f0',
+    text: '#3f6212',
+    muted: '#65a30d',
+    line: '#bef264',
+    deco: 'leaves',
+    frame: 'simple',
+  },
+  {
+    id: 'navy-elegant',
+    name: 'כחול אלגנטי',
+    bg: '#0f172a',
+    text: '#f8fafc',
+    muted: '#94a3b8',
+    line: '#334155',
+    deco: 'none',
+    frame: 'double',
+  },
+  {
+    id: 'minimal-bw',
+    name: 'מינימלי שחור',
+    bg: '#ffffff',
+    text: '#0a0a0a',
+    muted: '#525252',
+    line: '#e5e5e5',
+    deco: 'line',
+    frame: 'simple',
+  },
+  {
+    id: 'vintage',
+    name: 'וינטג׳ זהב',
+    bg: '#faf7f2',
+    text: '#44403c',
+    muted: '#78716c',
+    line: '#d6d3d1',
+    deco: 'ornament',
+    frame: 'double',
+  },
+  {
+    id: 'bar-party',
+    name: 'בר/בת שמח',
+    bg: '#eff6ff',
+    text: '#1e3a8a',
+    muted: '#3b82f6',
+    line: '#93c5fd',
+    deco: 'stars',
+    frame: 'simple',
+  },
 ];
 
 const EMPTY = {
@@ -36,13 +147,42 @@ const EMPTY = {
 };
 
 function Deco({ type }) {
-  if (type === 'rings') return <div className="text-2xl mb-2 opacity-80">💍 💍</div>;
-  if (type === 'floral') return <div className="text-lg mb-2 opacity-70">🌿 🌸 🌿</div>;
-  if (type === 'hearts') return <div className="text-lg mb-2 opacity-70">♡</div>;
-  if (type === 'leaves') return <div className="text-lg mb-2 opacity-70">🍃 ✨ 🍃</div>;
-  if (type === 'stars') return <div className="text-lg mb-2 opacity-70">✦ ★ ✦</div>;
-  if (type === 'ornament') return <div className="text-sm mb-2 tracking-[0.3em] opacity-60">❖ ❖ ❖</div>;
-  if (type === 'line') return <div className="w-px h-8 mx-auto mb-3 bg-current opacity-40" />;
+  if (type === 'rings-champagne') {
+    return (
+      <div className="flex items-center justify-center gap-3 mb-3 text-2xl opacity-90">
+        <span>💍</span>
+        <span className="text-xl">🥂</span>
+        <span>💍</span>
+      </div>
+    );
+  }
+  if (type === 'dancers') {
+    return <div className="text-3xl mb-3 opacity-90 tracking-widest">💃 🕺</div>;
+  }
+  if (type === 'peach-floral') {
+    return <div className="text-lg mb-2 opacity-80">🌸 🏵️ 🌸</div>;
+  }
+  if (type === 'rings') {
+    return <div className="text-2xl mb-2 opacity-80">💍 💍</div>;
+  }
+  if (type === 'floral') {
+    return <div className="text-lg mb-2 opacity-70">🌿 🌸 🌿</div>;
+  }
+  if (type === 'hearts') {
+    return <div className="text-lg mb-2 opacity-70">♡</div>;
+  }
+  if (type === 'leaves') {
+    return <div className="text-lg mb-2 opacity-70">🍃 ✨ 🍃</div>;
+  }
+  if (type === 'stars') {
+    return <div className="text-lg mb-2 opacity-70">✦ ★ ✦</div>;
+  }
+  if (type === 'ornament') {
+    return <div className="text-sm mb-2 tracking-[0.3em] opacity-60">❖ ❖ ❖</div>;
+  }
+  if (type === 'line') {
+    return <div className="w-px h-8 mx-auto mb-3 bg-current opacity-40" />;
+  }
   return null;
 }
 
@@ -58,38 +198,97 @@ function InviteCard({ form, template, formatDate, compact = false }) {
         background: template.bg,
         color: template.text,
         maxWidth: compact ? 280 : 420,
-        border: template.frame === 'double' ? `3px double ${template.line}` : `1px solid ${template.line}`,
+        border:
+          template.frame === 'double'
+            ? `3px double ${template.line}`
+            : `1px solid ${template.line}`,
       }}
     >
-      <div className={`absolute ${compact ? 'top-1.5 left-1.5 text-[8px]' : 'top-3 left-3 text-[11px]'} opacity-50`}>בס״ד</div>
-      {template.deco === 'floral' && (
+      <div className={`absolute ${compact ? 'top-1.5 left-1.5 text-[8px]' : 'top-3 left-3 text-[11px]'} opacity-50`}>
+        בס״ד
+      </div>
+
+      {(template.deco === 'floral' || template.deco === 'peach-floral') && (
         <>
           <div className={`absolute ${compact ? 'top-1 right-1 text-sm' : 'top-2 right-2 text-xl'} opacity-50`}>🌸</div>
           <div className={`absolute ${compact ? 'bottom-1 left-1 text-sm' : 'bottom-2 left-2 text-xl'} opacity-50`}>🌿</div>
+          <div className={`absolute ${compact ? 'bottom-1 right-1 text-sm' : 'bottom-2 right-2 text-xl'} opacity-50`}>🌸</div>
         </>
       )}
+
       <div className={`${pad} text-center`}>
+        {form.quote && !compact && (
+          <div className="text-sm mb-4 leading-relaxed opacity-80" style={{ color: template.muted }}>
+            "{form.quote}"
+          </div>
+        )}
+
         <Deco type={template.deco} />
-        {form.monogram && <div className={`${compact ? 'text-lg' : 'text-2xl'} tracking-[0.2em] mb-2 font-light`}>{form.monogram}</div>}
+
+        {form.monogram && (
+          <div className={`${compact ? 'text-lg' : 'text-2xl'} tracking-[0.2em] mb-2 font-light`}>
+            {form.monogram}
+          </div>
+        )}
+
         <div className={`${compact ? 'text-[8px]' : 'text-[11px]'} tracking-[0.25em] uppercase mb-2 opacity-60`}>
           {form.eventType === 'חתונה' ? 'THE WEDDING' : form.eventType}
         </div>
-        <div className={`${titleSize} font-serif leading-snug mb-1`}>{form.owners || 'שמות בעלי השמחה'}</div>
-        <div className={`${compact ? 'w-8 my-2' : 'w-12 my-5'} h-px mx-auto`} style={{ background: template.line }} />
-        <div className={`${compact ? 'text-[10px]' : 'text-sm'} mb-3 opacity-80`}>{form.inviteLine}</div>
-        <div className={`${dateSize} font-light mb-1`}>{formatDate(form.date) || '00.00.0000'}</div>
-        {form.hebrewDate && !compact && <div className="text-sm mb-3 opacity-70">{form.hebrewDate}</div>}
-        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>{[form.hallName, form.city].filter(Boolean).join(' | ') || 'אולם | עיר'}</div>
-        <div className={`flex justify-center ${compact ? 'gap-3 text-[9px] mb-2' : 'gap-8 text-sm mb-5'}`}>
-          <div><div className="opacity-60 text-[0.85em]">קבלת פנים</div><div>{form.receptionTime || '19:30'}</div></div>
-          <div className="w-px self-stretch opacity-40" style={{ background: template.line }} />
-          <div><div className="opacity-60 text-[0.85em]">חופה</div><div>{form.chuppahTime || '20:30'}</div></div>
+
+        <div className={`${titleSize} font-serif leading-snug mb-1`}>
+          {form.owners || 'שמות בעלי השמחה'}
         </div>
-        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-6'} opacity-80`}>{form.welcomeLine}</div>
+
+        <div
+          className={`${compact ? 'w-8 my-2' : 'w-12 my-5'} h-px mx-auto`}
+          style={{ background: template.line }}
+        />
+
+        <div className={`${compact ? 'text-[10px]' : 'text-sm'} mb-3 opacity-80`}>
+          {form.inviteLine || 'הנכם מוזמנים לחגוג עמנו'}
+        </div>
+
+        <div className={`${dateSize} font-light tracking-wide mb-1`}>
+          {formatDate(form.date) || '00.00.0000'}
+        </div>
+
+        {form.hebrewDate && !compact && (
+          <div className="text-sm mb-3 opacity-70">{form.hebrewDate}</div>
+        )}
+
+        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>
+          {[form.hallName, form.city].filter(Boolean).join(' | ') || 'אולם | עיר'}
+        </div>
+
+        <div className={`flex justify-center ${compact ? 'gap-3 text-[9px] mb-2' : 'gap-8 text-sm mb-5'}`}>
+          <div>
+            <div className="opacity-60 text-[0.85em] mb-0.5">קבלת פנים</div>
+            <div>{form.receptionTime || '19:30'}</div>
+          </div>
+          <div className="w-px self-stretch opacity-40" style={{ background: template.line }} />
+          <div>
+            <div className="opacity-60 text-[0.85em] mb-0.5">חופה</div>
+            <div>{form.chuppahTime || '20:30'}</div>
+          </div>
+        </div>
+
+        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-6'} opacity-80`}>
+          {form.welcomeLine || 'נשמח לראותכם'}
+        </div>
+
         {(form.groomParents || form.brideParents) && (
-          <div className={`flex justify-between gap-3 ${compact ? 'text-[8px]' : 'text-xs'}`} style={{ color: template.muted }}>
-            <div className="flex-1 text-right"><div className="mb-0.5 opacity-70">הורי החתן</div><div className="whitespace-pre-line">{form.groomParents || '—'}</div></div>
-            <div className="flex-1 text-left"><div className="mb-0.5 opacity-70">הורי הכלה</div><div className="whitespace-pre-line">{form.brideParents || '—'}</div></div>
+          <div
+            className={`flex justify-between gap-3 ${compact ? 'text-[8px]' : 'text-xs'}`}
+            style={{ color: template.muted }}
+          >
+            <div className="flex-1 text-right">
+              <div className="mb-0.5 opacity-70">הורי החתן</div>
+              <div className="whitespace-pre-line">{form.groomParents || '—'}</div>
+            </div>
+            <div className="flex-1 text-left">
+              <div className="mb-0.5 opacity-70">הורי הכלה</div>
+              <div className="whitespace-pre-line">{form.brideParents || '—'}</div>
+            </div>
           </div>
         )}
       </div>
@@ -131,8 +330,9 @@ export default function InviteStudioPage() {
       ? `${window.location.origin}/i/${inviteId}`
       : '';
 
-    const save = async () => {
+  const save = async () => {
     if (!inviteId) return;
+
     const payload = {
       id: inviteId,
       template_id: form.templateId,
@@ -195,7 +395,9 @@ export default function InviteStudioPage() {
             <h1 className="text-3xl font-bold">סטודיו הזמנות</h1>
             <p className="text-slate-500 text-sm mt-1">בלי אירוע · בוחרים דוגמה · מקבלים לינק</p>
           </div>
-          <Link href="/" className="text-blue-600 hover:underline text-sm">← חזרה</Link>
+          <Link href="/" className="text-blue-600 hover:underline text-sm">
+            ← חזרה
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -210,8 +412,10 @@ export default function InviteStudioPage() {
                       key={t.id}
                       type="button"
                       onClick={() => set('templateId', t.id)}
-                      className={`rounded-2xl border-2 overflow-hidden text-right ${
-                        active ? 'border-amber-500 ring-2 ring-amber-200' : 'border-slate-200'
+                      className={`rounded-2xl border-2 overflow-hidden text-right transition ${
+                        active
+                          ? 'border-amber-500 ring-2 ring-amber-200'
+                          : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       <InviteCard form={form} template={t} formatDate={formatDate} compact />
@@ -257,8 +461,11 @@ export default function InviteStudioPage() {
                   </Link>
                 )}
               </div>
+
               {publicLink && (
-                <div className="text-xs text-slate-500 break-all bg-slate-50 rounded-xl p-3 mt-2">{publicLink}</div>
+                <div className="text-xs text-slate-500 break-all bg-slate-50 rounded-xl p-3 mt-2">
+                  {publicLink}
+                </div>
               )}
             </div>
           </div>
