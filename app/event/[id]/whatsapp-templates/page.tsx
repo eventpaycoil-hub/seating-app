@@ -424,36 +424,28 @@ export default function WhatsAppTemplatesPage() {
                     {selected.language ? ` · ${selected.language}` : ''}
                   </div>
                 </div>
-            {selected.messageContent?.body ? (
+     {selected.messageContent?.body ? (
   <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
     <div className="text-xs text-gray-500 mb-2">תוכן התבנית (תצוגה מקדימה)</div>
     {selected.messageContent.body
+      // contact.*
       .replace(/\{\{contact\.general_text_1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{contact\.general_text_2\}\}/g, previewAttrs.general_text_2 || '')
       .replace(/\{\{contact\.rsvp_link\}\}/g, previewAttrs.rsvp_link || '')
+      .replace(/\{\{contact\.name\}\}/g, 'שם המוזמן')
+      // var.*
       .replace(/\{\{var\.num1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{var\.num2\}\}/g, previewAttrs.general_text_2 || '')
+      .replace(/\{\{var\.num3\}\}/g, previewAttrs.rsvp_link || '')
+      // מספריים רגילים
       .replace(/\{\{1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{2\}\}/g, previewAttrs.general_text_2 || '')
-      .replace(/\{\{3\}\}/g, previewAttrs.rsvp_link || '')}
-  </div>
-) : getTemplateBody(selected) ? (
-  <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
-    {getTemplateBody(selected)}
+      .replace(/\{\{3\}\}/g, previewAttrs.rsvp_link || '')
+      // אם נשארו משתנים — להבליט
+      .replace(/\{\{[^}]+\}\}/g, (m) => `⚠️${m}`)}
   </div>
 ) : null}
-                {getTemplateBody(selected) ? (
-                  <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed text-slate-800">
-                    <div className="text-xs text-emerald-700 font-medium mb-2">
-                      תצוגה מקדימה:
-                    </div>
-                    {getTemplateBody(selected)}
-                  </div>
-                ) : (
-                  <div className="text-xs text-amber-600">
-                    לא התקבל תוכן מ-Heyy — בדוק Console אחרי רענון תבניות
-                  </div>
-                )}
+                
               </div>
             ) : (
               <p className="text-gray-400 mb-4">בחר תבנית מהרשימה משמאל</p>
