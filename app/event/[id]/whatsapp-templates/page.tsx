@@ -159,18 +159,8 @@ export default function WhatsAppTemplatesPage() {
     const general_text_2 = time ? `${date} בשעה ${time}` : date;
 
     // הורים — ננסה כמה שמות שדות נפוצים
-    const groomParents =
-      currentEvent?.groomParents ||
-      currentEvent?.parentsGroom ||
-      currentEvent?.groom_parents ||
-      currentEvent?.fatherGroom ||
-      '';
-    const brideParents =
-      currentEvent?.brideParents ||
-      currentEvent?.parentsBride ||
-      currentEvent?.bride_parents ||
-      currentEvent?.fatherBride ||
-      '';
+        const groomParents = currentEvent?.groomParents || '';
+    const brideParents = currentEvent?.brideParents || '';
 
     const num3 = groomParents
       ? (String(groomParents).includes('הורי') ? String(groomParents) : `הורי החתן: ${groomParents}`)
@@ -463,12 +453,12 @@ export default function WhatsAppTemplatesPage() {
       .replace(/\{\{contact\.name\}\}/g, 'שם המוזמן')
       .replace(/\{\{var\.num1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{var\.num2\}\}/g, previewAttrs.general_text_2 || '')
-      .replace(/\{\{var\.num3\}\}/g, previewAttrs.rsvp_link || '')
-      .replace(/\{\{var\.num4\}\}/g, previewAttrs.rsvp_link || '')
-      .replace(/\{\{1\}\}/g, previewAttrs.general_text_1 || '')
-      .replace(/\{\{2\}\}/g, previewAttrs.general_text_2 || '')
-      .replace(/\{\{3\}\}/g, previewAttrs.rsvp_link || '')
-      .replace(/\{\{4\}\}/g, previewAttrs.rsvp_link || '')
+      .replace(/\{\{var\.num3\}\}/g, previewAttrs.num3 || '')
+.replace(/\{\{var\.num4\}\}/g, previewAttrs.num4 || '')
+.replace(/\{\{1\}\}/g, previewAttrs.general_text_1 || '')
+.replace(/\{\{2\}\}/g, previewAttrs.general_text_2 || '')
+.replace(/\{\{3\}\}/g, previewAttrs.num3 || '')
+.replace(/\{\{4\}\}/g, previewAttrs.num4 || '')
       .replace(/\{\{[^}]+\}\}/g, (m: string) => `⚠️${m}`)}
   </div>
 ) : null}
