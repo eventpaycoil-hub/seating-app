@@ -424,25 +424,23 @@ export default function WhatsAppTemplatesPage() {
                     {selected.language ? ` · ${selected.language}` : ''}
                   </div>
                 </div>
-     {selected.messageContent?.body ? (
+     {selected?.messageContent?.body ? (
   <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
     <div className="text-xs text-gray-500 mb-2">תוכן התבנית (תצוגה מקדימה)</div>
     {selected.messageContent.body
-      // contact.*
       .replace(/\{\{contact\.general_text_1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{contact\.general_text_2\}\}/g, previewAttrs.general_text_2 || '')
       .replace(/\{\{contact\.rsvp_link\}\}/g, previewAttrs.rsvp_link || '')
       .replace(/\{\{contact\.name\}\}/g, 'שם המוזמן')
-      // var.*
       .replace(/\{\{var\.num1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{var\.num2\}\}/g, previewAttrs.general_text_2 || '')
       .replace(/\{\{var\.num3\}\}/g, previewAttrs.rsvp_link || '')
-      // מספריים רגילים
+      .replace(/\{\{var\.num4\}\}/g, previewAttrs.rsvp_link || '')
       .replace(/\{\{1\}\}/g, previewAttrs.general_text_1 || '')
       .replace(/\{\{2\}\}/g, previewAttrs.general_text_2 || '')
       .replace(/\{\{3\}\}/g, previewAttrs.rsvp_link || '')
-      // אם נשארו משתנים — להבליט
-      .replace(/\{\{[^}]+\}\}/g, (m) => `⚠️${m}`)}
+      .replace(/\{\{4\}\}/g, previewAttrs.rsvp_link || '')
+      .replace(/\{\{[^}]+\}\}/g, (m: string) => `⚠️${m}`)}
   </div>
 ) : null}
                 
