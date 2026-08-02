@@ -103,7 +103,6 @@ export async function POST(req: NextRequest) {
       variables = {},
     } = body;
 
-    // תמיכה גם ב־phone בודד וגם ב־phones מערך
     let phonesList: any[] = [];
     if (Array.isArray(phones) && phones.length > 0) {
       phonesList = phones;
@@ -120,6 +119,12 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // מיזוג attributes + variables לקמפיין
+    const finalVariables = {
+      ...(variables || {}),
+      ...(attributes || {}),
+    };
 
     const steps: any = {};
     const contactIds: string[] = [];
@@ -158,7 +163,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         name: finalCampaignName,
         automationId,
-        variables,
+        variables: finalVariables,
       }),
     });
     const campaignId = campaignRes.data?.data?.id || campaignRes.data?.id || null;
@@ -186,7 +191,7 @@ export async function POST(req: NextRequest) {
 
     const startRes = await heyyFetch(`/v3/campaigns/${campaignId}/start`, token, {
       method: 'POST',
-      body: JSON.stringify({ variables }),
+      body: JSON.stringify({ variables: finalVariables }),
     });
     steps.start = { ok: startRes.ok, response: startRes.data };
 
