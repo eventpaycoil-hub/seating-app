@@ -12,10 +12,20 @@ type HeyyTemplate = {
   status?: string;
   category?: string;
   language?: string;
-  body?: string;
-  content?: string;
-  text?: string;
-  components?: any[];
+  messageContent?: {
+    body?: string;
+    header?: string;
+    footer?: string;
+    code?: string;
+    attachments?: any[];
+  };
+  variables?: string[];
+  vendorDetails?: {
+    name?: string;
+    language?: string;
+    category?: string;
+    status?: string;
+  };
 };
 
 export default function WhatsAppTemplatesPage() {
@@ -414,7 +424,26 @@ export default function WhatsAppTemplatesPage() {
                     {selected.language ? ` · ${selected.language}` : ''}
                   </div>
                 </div>
-
+            {selected.messageContent?.body ? (
+              <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
+                <div className="text-xs text-gray-500 mb-2">תוכן התבנית</div>
+                {selected.messageContent.body}
+                {selected.messageContent.header && (
+                  <div className="text-xs text-gray-400 mt-2">
+                    כותרת: {selected.messageContent.header}
+                  </div>
+                )}
+                {selected.messageContent.footer && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    פוטר: {selected.messageContent.footer}
+                  </div>
+                )}
+              </div>
+            ) : getTemplateBody(selected) ? (
+              <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
+                {getTemplateBody(selected)}
+              </div>
+            ) : null}
                 {getTemplateBody(selected) ? (
                   <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-sm whitespace-pre-wrap leading-relaxed text-slate-800">
                     <div className="text-xs text-emerald-700 font-medium mb-2">
