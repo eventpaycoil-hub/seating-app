@@ -192,18 +192,26 @@ export default function WhatsAppTemplatesPage() {
     }
 
     const rsvp_link = refCode
-      ? `${origin}/landing?eventId=${eventId}&ref=${refCode}&img=1`
-      : `${origin}/landing?eventId=${eventId}`;
+  ? `${origin}/landing?eventId=${eventId}&ref=${refCode}&img=1`
+  : `${origin}/landing?eventId=${eventId}`;
 
-    return {
-      general_text_1,
-      general_text_2,
-      num1: general_text_1,
-      num2: general_text_2,
-      num3,
-      num4,
-      rsvp_link,
-    };
+const header_image =
+  currentEvent?.coverUrl ||
+  currentEvent?.cover_url ||
+  currentEvent?.coverUrl2 ||
+  currentEvent?.landingCover ||
+  '';
+
+return {
+  general_text_1,
+  general_text_2,
+  num1: general_text_1,
+  num2: general_text_2,
+  num3,
+  num4,
+  rsvp_link,
+  header_image,
+};
   };
       const getTemplateBody = (t: any) => {
     if (!t) return '';
