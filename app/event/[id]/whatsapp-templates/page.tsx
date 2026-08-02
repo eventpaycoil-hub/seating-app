@@ -57,19 +57,20 @@ export default function WhatsAppTemplatesPage() {
 
     // משיכת תמונה מ-Supabase
     try {
-      const { data } = await supabase
-        .from('events')
-        .select('cover_url, cover_url2, coverUrl, coverUrl2')
-        .eq('id', Number(eventId))
-        .maybeSingle();
+      const { data, error } = await supabase
+  .from('events')
+  .select('cover_url')
+  .eq('id', Number(eventId))
+  .maybeSingle();
 
-      if (data && !cancelled) {
-        event = {
-          ...(event || {}),
-          coverUrl: data.cover_url || data.coverUrl || event?.coverUrl || '',
-          coverUrl2: data.cover_url2 || data.coverUrl2 || event?.coverUrl2 || '',
-        };
-      }
+if (error) console.warn('cover fetch error', error);
+
+if (data && !cancelled) {
+  event = {
+    ...(event || {}),
+    coverUrl: data.cover_url || '',
+  };
+}
     } catch (e) {
       console.warn('cover fetch failed', e);
     }
