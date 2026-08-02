@@ -140,10 +140,10 @@ export default function WhatsAppTemplatesPage() {
     return (t.name || '').toLowerCase().includes(search.trim().toLowerCase());
   });
 
-    const buildAttributesForGuest = (guestId?: string | null) => {
+     const buildAttributesForGuest = (guestId?: string | null) => {
     const owners = currentEvent?.owners || currentEvent?.title || 'בעלי השמחה';
-    const eventType = currentEvent?.eventType || 'אירוע';
-        let date =
+
+    let date =
       currentEvent?.eventDate ||
       currentEvent?.fullDate ||
       currentEvent?.date ||
@@ -153,17 +153,37 @@ export default function WhatsAppTemplatesPage() {
       const [y, m, d] = String(date).slice(0, 10).split('-');
       date = `${d}/${m}/${y}`;
     }
-    const time = currentEvent?.time || '';
 
+    const time = currentEvent?.time || '';
     const general_text_1 = owners;
     const general_text_2 = time ? `${date} בשעה ${time}` : date;
+
+    // הורים — ננסה כמה שמות שדות נפוצים
+    const groomParents =
+      currentEvent?.groomParents ||
+      currentEvent?.parentsGroom ||
+      currentEvent?.groom_parents ||
+      currentEvent?.fatherGroom ||
+      '';
+    const brideParents =
+      currentEvent?.brideParents ||
+      currentEvent?.parentsBride ||
+      currentEvent?.bride_parents ||
+      currentEvent?.fatherBride ||
+      '';
+
+    const num3 = groomParents
+      ? (String(groomParents).includes('הורי') ? String(groomParents) : `הורי החתן: ${groomParents}`)
+      : '';
+    const num4 = brideParents
+      ? (String(brideParents).includes('הורי') ? String(brideParents) : `הורי הכלה: ${brideParents}`)
+      : '';
 
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://www.eventpay1.co.il';
 
-    // מוצאים inviteCode כמו ב-SMS — לא רק id
     let refCode = '';
     if (guestId) {
       const g = (allGuests || []).find(
@@ -172,7 +192,7 @@ export default function WhatsAppTemplatesPage() {
       refCode = String(g?.inviteCode || g?.code || g?.id || guestId);
     }
 
-        const rsvp_link = refCode
+    const rsvp_link = refCode
       ? `${origin}/landing?eventId=${eventId}&ref=${encodeURIComponent(refCode)}&img=1`
       : `${origin}/landing?eventId=${eventId}`;
 
@@ -181,11 +201,10 @@ export default function WhatsAppTemplatesPage() {
       general_text_2,
       rsvp_link,
 
-      // משתנים שהתבנית ב-Heyy מצפה להם
       num1: general_text_1,
       num2: general_text_2,
-      num3: '',
-      num4: '',
+      num3,
+      num4,
     };
   };
 
