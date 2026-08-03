@@ -513,6 +513,7 @@ export default function SeatingArrivalPage() {
           הושבת מוזמנים {eventTitle && `• ${eventTitle}`}
         </h1>
 
+        {/* סטטיסטיקות */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-10">
           <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
             <div className="text-xs sm:text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
@@ -528,8 +529,9 @@ export default function SeatingArrivalPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 mb-6 sm:mb-10">
-          <div className="relative w-full max-w-2xl mx-auto">
+        {/* חיפוש + כפתורים: בטלפון עמודה, מטאבלט ומעלה בשורה כמו FAST */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-10 sm:justify-center">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[280px] sm:max-w-xl lg:max-w-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
             <input
               ref={searchInputRef}
@@ -553,50 +555,49 @@ export default function SeatingArrivalPage() {
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            {filteredGuests.length > 0 && (
-              <button
-                type="button"
-                onClick={() => searchInputRef.current?.focus()}
-                className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-full hover:bg-amber-100"
-              >
-                ✎ המשך חיפוש
-              </button>
-            )}
+          {filteredGuests.length > 0 && (
             <button
-              onClick={clearSearch}
-              className="bg-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-gray-100 font-medium text-sm sm:text-base"
+              type="button"
+              onClick={() => searchInputRef.current?.focus()}
+              className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-full hover:bg-amber-100"
             >
-              נקה
+              ✎ המשך חיפוש
             </button>
-            <button
-              onClick={refresh}
-              className="bg-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium text-sm sm:text-base"
-            >
-              <RefreshCw size={18} /> רענן
-            </button>
-            <button
-              onClick={printPage}
-              className="bg-amber-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium text-sm sm:text-base"
-            >
-              <Printer size={18} /> PDF
-            </button>
-            <button
-              onClick={openAddModal}
-              className="bg-blue-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium text-sm sm:text-base"
-            >
-              <UserPlus size={18} /> הוסף מוזמן
-            </button>
-            <Link
-              href={`/event/${eventId}/checkin?from=seating-arrival`}
-              className="bg-emerald-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium text-sm sm:text-base"
-            >
-              <QrCode size={18} /> סריקת כניסה
-            </Link>
-          </div>
+          )}
+
+          <button
+            onClick={clearSearch}
+            className="bg-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-gray-100 font-medium text-sm sm:text-base"
+          >
+            נקה
+          </button>
+          <button
+            onClick={refresh}
+            className="bg-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-gray-100 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+          >
+            <RefreshCw size={18} /> רענן
+          </button>
+          <button
+            onClick={printPage}
+            className="bg-amber-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-amber-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+          >
+            <Printer size={18} /> PDF
+          </button>
+          <button
+            onClick={openAddModal}
+            className="bg-blue-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-blue-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+          >
+            <UserPlus size={18} /> הוסף מוזמן
+          </button>
+          <Link
+            href={`/event/${eventId}/checkin?from=seating-arrival`}
+            className="bg-emerald-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-emerald-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+          >
+            <QrCode size={18} /> סריקת כניסה
+          </Link>
         </div>
 
-        {/* מובייל: כרטיסים */}
+        {/* מובייל בלבד: כרטיסים */}
         <div className="md:hidden space-y-3">
           {filteredGuests.length > 0 ? (
             filteredGuests.map((guest: any) => {
@@ -681,7 +682,7 @@ export default function SeatingArrivalPage() {
           )}
         </div>
 
-        {/* טאבלט/מחשב: טבלה */}
+        {/* טאבלט + מחשב: טבלה כמו קודם */}
         <div className="hidden md:block bg-white rounded-3xl shadow-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-amber-100">
