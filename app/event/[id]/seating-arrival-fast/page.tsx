@@ -205,15 +205,18 @@ export default function SeatingArrivalFastPage() {
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
-        if (guest) {
-      try {
-        await updateGuestInSupabase(guest, String(eventId));
-      } catch (e) {
-        console.warn('arrival sync failed', e);
+            if (guest) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueGuestUpdate(String(eventId), guest);
+      } else {
+        try {
+          await updateGuestInSupabase(guest, String(eventId));
+        } catch (e) {
+          console.warn('arrival sync failed', e);
+          enqueueGuestUpdate(String(eventId), guest);
+        }
       }
     }
-
     setSearchTerm('');
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);

@@ -223,12 +223,16 @@ export default function SeatingArrivalPage() {
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
-        if (guest) {
-      try {
-        await updateGuestInSupabase(guest, String(eventId));
-      } catch (e) {
-        console.warn('arrival sync failed', e);
+            if (guest) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueGuestUpdate(String(eventId), guest);
+      } else {
+        try {
+          await updateGuestInSupabase(guest, String(eventId));
+        } catch (e) {
+          console.warn('arrival sync failed', e);
+          enqueueGuestUpdate(String(eventId), guest);
+        }
       }
     }
 
@@ -310,11 +314,15 @@ export default function SeatingArrivalPage() {
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-        try {
-      await updateGuestInSupabase(newGuest, String(eventId));
-    } catch (e) {
-      console.warn('add live guest sync failed', e);
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       enqueueGuestUpdate(String(eventId), newGuest);
+    } else {
+      try {
+        await updateGuestInSupabase(newGuest, String(eventId));
+      } catch (e) {
+        console.warn('add live guest sync failed', e);
+        enqueueGuestUpdate(String(eventId), newGuest);
+      }
     }
 
     if (assignToTable && selectedTableId) {
