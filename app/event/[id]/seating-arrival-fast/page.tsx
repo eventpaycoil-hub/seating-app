@@ -24,7 +24,6 @@ export default function SeatingArrivalFastPage() {
   const [newQty, setNewQty] = useState(1);
   const [isListening, setIsListening] = useState(false);
 
-  // בחירת שולחן
   const [selectedTableId, setSelectedTableId] = useState<string | number>('');
   const [availableTables, setAvailableTables] = useState<any[]>([]);
 
@@ -59,7 +58,6 @@ export default function SeatingArrivalFastPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // סגירת מקלדת אוטומטית אחרי חיפוש (טאבלט)
   useEffect(() => {
     if (searchTerm.trim().length < 2) return;
     if (forceEmptyList) return;
@@ -118,7 +116,7 @@ export default function SeatingArrivalFastPage() {
       }
     };
 
-    const id = setInterval(tick, 1800000); // 30 דקות
+    const id = setInterval(tick, 1800000);
     return () => clearInterval(id);
   }, [eventId]);
 
@@ -195,10 +193,7 @@ export default function SeatingArrivalFastPage() {
         name: g.name,
         arrivedCount: Number(g.arrivedCount) || 0,
       }));
-    localStorage.setItem(
-      `arrived_event_${eventId}`,
-      JSON.stringify(arrivedOnly)
-    );
+    localStorage.setItem(`arrived_event_${eventId}`, JSON.stringify(arrivedOnly));
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
@@ -226,7 +221,6 @@ export default function SeatingArrivalFastPage() {
     setTableMapVersion((prev) => prev + 1);
   };
 
-  // פתיחת מודל + טעינת שולחנות
   const openAddModal = () => {
     try {
       const raw =
@@ -269,19 +263,16 @@ export default function SeatingArrivalFastPage() {
       customerExpectation: '',
     };
 
-    // 1. מוסיפים לזיכרון המקומי מיד
     const updated = [...allGuests, newGuest];
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-    // 2. סנכרון לענן
     try {
       await updateGuestInSupabase(newGuest, String(eventId));
     } catch (e) {
       console.warn('add live guest sync failed', e);
     }
 
-    // 3. הושבה לשולחן (אם נבחר)
     if (assignToTable && selectedTableId) {
       try {
         const keyEvent = `seatingTables_${eventId}`;
@@ -311,7 +302,6 @@ export default function SeatingArrivalFastPage() {
           const currentSeats = Number(table.seats) || 0;
           const free = currentSeats - currentOccupied;
 
-          // רק אם אין מספיק מקום – מגדילים בדיוק בכמה שחסר
           if (free < qty) {
             table.seats = currentSeats + (qty - Math.max(0, free));
           }
@@ -342,7 +332,6 @@ export default function SeatingArrivalFastPage() {
       }
     }
 
-    // 4. מציגים מיד את האורח החדש
     setShowAddModal(false);
     setSelectedTableId('');
     setNewName('');
@@ -435,52 +424,71 @@ export default function SeatingArrivalFastPage() {
     w.document.close();
   };
 
+  const renderGuestActions = (guest: any) => {
+    const confirmed =
+      getConfirmedQty(guest) || guest.confirmedCount || guest.quantity || 1;
+    const isAlreadyArrived = guest.arrivedCount > 0;
+    const isNotComing = guest.confirmed === 'לא מגיע';
+    const isPending =
+      !guest.confirmed ||
+      guest.confirmed === '' ||
+      guest.confirmed === 'לא ידוע' ||
+      guest.confirmed === 'ממתין';
+    const tableNum = tableMap.get(guest.name?.trim().toLowerCase());
+    return { confirmed, isAlreadyArrived, isNotComing, isPending, tableNum };
+  };
+
+  const emptyHint = forceEmptyList
+    ? 'הרשימה נוקתה. חפש מוזמן חדש...'
+    : 'לא נמצאו תוצאות';
+
   return (
-    <div className="min-h-screen bg-[#f5e8c7] p-8" dir="rtl">
+    <div className="min-h-screen bg-[#f5e8c7] p-4 sm:p-6 md:p-8 overflow-x-hidden" dir="rtl">
       <div className="max-w-[1600px] mx-auto">
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link
             href={`/event/${eventId}/guests`}
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
           >
             <ArrowLeft size={20} /> חזרה לרשימת המוזמנים
           </Link>
         </div>
 
-        <h1 className="text-4xl font-bold text-center mb-8 text-amber-900">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-6 sm:mb-8 text-amber-900">
           הושבה מהירה {eventTitle && `• ${eventTitle}`}
         </h1>
 
-        <div className="flex justify-center gap-8 mb-12 flex-wrap">
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">אישרו</div>
-            <div className="text-5xl font-bold text-blue-600">{confirmedPeople}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-10">
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">אישרו</div>
+            <div className="text-3xl sm:text-5xl font-bold text-blue-600">{confirmedPeople}</div>
           </div>
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">הגיעו</div>
-            <div className="text-5xl font-bold text-green-600">{arrivedCount}</div>
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">הגיעו</div>
+            <div className="text-3xl sm:text-5xl font-bold text-green-600">{arrivedCount}</div>
           </div>
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
-            <div className="text-5xl font-bold text-orange-500">{stillNotArrived}</div>
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
+            <div className="text-3xl sm:text-5xl font-bold text-orange-500">{stillNotArrived}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 mb-10 justify-center flex-wrap">
-          <div className="relative w-full max-w-2xl">
-            <Search className="absolute left-6 top-5 text-gray-400" size={24} />
+        {/* חיפוש + כפתורים בשורה מטאבלט */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-10 sm:justify-center">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[280px] sm:max-w-xl lg:max-w-2xl">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="חיפוש שם או טלפון..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-16 pr-20 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
+              className="w-full pl-12 pr-16 py-4 sm:py-5 bg-white border border-gray-300 rounded-2xl sm:rounded-3xl text-base sm:text-xl focus:outline-none focus:border-amber-600"
             />
             <button
               type="button"
               onClick={startVoiceSearch}
-              className={`absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center text-xl transition ${
+              className={`absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-xl transition ${
                 isListening
                   ? 'bg-red-500 text-white animate-pulse'
                   : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
@@ -490,39 +498,126 @@ export default function SeatingArrivalFastPage() {
               🎤
             </button>
           </div>
+
           <button
             onClick={clearSearch}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium"
+            className="bg-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-gray-100 font-medium text-sm sm:text-base"
           >
             נקה
           </button>
           <button
             onClick={refresh}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"
+            className="bg-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-gray-100 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
-            <RefreshCw size={20} /> רענן שולחנות
+            <RefreshCw size={18} /> רענן שולחנות
           </button>
           <button
             onClick={printPage}
-            className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"
+            className="bg-amber-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-amber-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
-            <Printer size={20} /> PDF
+            <Printer size={18} /> PDF
           </button>
           <button
             onClick={openAddModal}
-            className="bg-blue-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium"
+            className="bg-blue-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-blue-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
-            <UserPlus size={20} /> הוסף מוזמן
+            <UserPlus size={18} /> הוסף מוזמן
           </button>
           <Link
             href={`/event/${eventId}/checkin?from=seating-arrival-fast`}
-            className="bg-emerald-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium"
+            className="bg-emerald-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-emerald-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
-            <QrCode size={20} /> סריקת כניסה
+            <QrCode size={18} /> סריקת כניסה
           </Link>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+        {/* מובייל: כרטיסים */}
+        <div className="md:hidden space-y-3">
+          {filteredGuests.length > 0 ? (
+            filteredGuests.map((guest: any) => {
+              const {
+                confirmed,
+                isAlreadyArrived,
+                isNotComing,
+                isPending,
+                tableNum,
+              } = renderGuestActions(guest);
+
+              return (
+                <div
+                  key={guest.id}
+                  className="bg-white rounded-2xl shadow border border-amber-100 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="font-bold text-lg text-slate-900">{guest.name}</div>
+                      <div className="text-gray-600 font-mono text-sm" dir="ltr">
+                        {guest.phone || '—'}
+                      </div>
+                    </div>
+                    <div className="text-amber-700 font-bold text-sm whitespace-nowrap">
+                      {tableNum ? `שולחן ${tableNum}` : 'לא הושב'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-3">
+                    {isNotComing ? (
+                      <span className="text-red-600 font-semibold text-sm">❌ לא מגיע</span>
+                    ) : isPending ? (
+                      <span className="text-amber-600 font-medium text-sm">⏳ ממתין</span>
+                    ) : (
+                      <span className="text-emerald-700 font-semibold text-sm">✅ {confirmed}</span>
+                    )}
+                    {isAlreadyArrived && (
+                      <span className="text-gray-600 text-sm">הגיע {guest.arrivedCount}</span>
+                    )}
+                  </div>
+
+                  {isAlreadyArrived ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="bg-gray-400 text-white px-4 py-3 rounded-2xl font-bold text-center">
+                        אורח זה כבר הגיע
+                      </div>
+                      <button
+                        onClick={() => markArrival(guest.id, 0)}
+                        className="w-full py-3 rounded-2xl border-2 border-red-300 text-red-600 hover:bg-red-50 font-medium"
+                      >
+                        בטל הגעה
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => markArrival(guest.id, confirmed)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-bold text-lg"
+                      >
+                        {confirmed} הגיע
+                      </button>
+                      <div className="flex gap-2 justify-center flex-wrap">
+                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => markArrival(guest.id, num)}
+                            className="w-11 h-11 rounded-xl font-bold border-2 bg-white border-gray-300 hover:bg-emerald-50"
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-2xl shadow p-10 text-center text-gray-500">
+              {emptyHint}
+            </div>
+          )}
+        </div>
+
+        {/* טאבלט/מחשב: טבלה */}
+        <div className="hidden md:block bg-white rounded-3xl shadow-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-amber-100">
               <tr>
@@ -536,16 +631,13 @@ export default function SeatingArrivalFastPage() {
             <tbody>
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest: any) => {
-                  const confirmed =
-                    getConfirmedQty(guest) || guest.confirmedCount || guest.quantity || 1;
-                  const isAlreadyArrived = guest.arrivedCount > 0;
-                  const isNotComing = guest.confirmed === 'לא מגיע';
-                  const isPending =
-                    !guest.confirmed ||
-                    guest.confirmed === '' ||
-                    guest.confirmed === 'לא ידוע' ||
-                    guest.confirmed === 'ממתין';
-                  const tableNum = tableMap.get(guest.name?.trim().toLowerCase());
+                  const {
+                    confirmed,
+                    isAlreadyArrived,
+                    isNotComing,
+                    isPending,
+                    tableNum,
+                  } = renderGuestActions(guest);
 
                   return (
                     <tr key={guest.id} className="border-b hover:bg-amber-50">
@@ -574,7 +666,9 @@ export default function SeatingArrivalFastPage() {
                             <div className="bg-emerald-100 text-emerald-700 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
                               ✅
                             </div>
-                            <div className="text-emerald-700 font-semibold text-lg mt-1">{confirmed}</div>
+                            <div className="text-emerald-700 font-semibold text-lg mt-1">
+                              {confirmed}
+                            </div>
                           </div>
                         )}
                       </td>
@@ -584,7 +678,9 @@ export default function SeatingArrivalFastPage() {
                             <div className="bg-gray-400 text-white px-8 py-4 rounded-3xl font-bold text-2xl shadow">
                               אורח זה כבר הגיע
                             </div>
-                            <div className="text-gray-600 font-semibold">הגיע {guest.arrivedCount}</div>
+                            <div className="text-gray-600 font-semibold">
+                              הגיע {guest.arrivedCount}
+                            </div>
                           </div>
                         ) : (
                           <button
@@ -623,7 +719,7 @@ export default function SeatingArrivalFastPage() {
               ) : (
                 <tr>
                   <td colSpan={5} className="py-20 text-center text-gray-500 text-xl">
-                    {forceEmptyList ? 'הרשימה נוקתה. חפש מוזמן חדש...' : 'לא נמצאו תוצאות'}
+                    {emptyHint}
                   </td>
                 </tr>
               )}
@@ -634,8 +730,8 @@ export default function SeatingArrivalFastPage() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">הוסף מוזמן</h2>
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-6 text-center">הוסף מוזמן</h2>
 
             <label className="block text-sm font-medium mb-2">שם</label>
             <input
@@ -685,7 +781,7 @@ export default function SeatingArrivalFastPage() {
                 })}
             </select>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
