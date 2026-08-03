@@ -11,7 +11,7 @@ import {
   fetchGuestsFromSupabase,
 } from '../../../../lib/guests';
 import { saveSeating } from '../../../../lib/seating';
-
+import { enqueueGuestUpdate, flushSyncQueue, getPendingCount } from '../../../../lib/offlineSync';
 export default function SeatingArrivalPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -223,11 +223,12 @@ export default function SeatingArrivalPage() {
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
-    if (guest) {
+        if (guest) {
       try {
         await updateGuestInSupabase(guest, String(eventId));
       } catch (e) {
         console.warn('arrival sync failed', e);
+        enqueueGuestUpdate(String(eventId), guest);
       }
     }
 
@@ -309,10 +310,11 @@ export default function SeatingArrivalPage() {
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-    try {
+        try {
       await updateGuestInSupabase(newGuest, String(eventId));
     } catch (e) {
       console.warn('add live guest sync failed', e);
+      enqueueGuestUpdate(String(eventId), newGuest);
     }
 
     if (assignToTable && selectedTableId) {

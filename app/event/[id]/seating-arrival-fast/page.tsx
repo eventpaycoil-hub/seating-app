@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-react';
 import { loadGuests, updateGuestInSupabase } from '../../../../lib/guests';
 import { saveSeating } from '../../../../lib/seating';
-
+import { enqueueGuestUpdate, flushSyncQueue, getPendingCount } from '../../../../lib/offlineSync';
 export default function SeatingArrivalFastPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -57,7 +57,15 @@ export default function SeatingArrivalFastPage() {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-
+  useEffect(() => {
+    const onOnline = () => {
+      flushSyncQueue(updateGuestInSupabase).then((res) => {
+        if (res.ok > 0) console.log('auto-synced', res);
+      });
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
   useEffect(() => {
     if (searchTerm.trim().length < 2) return;
     if (forceEmptyList) return;
@@ -197,11 +205,12 @@ export default function SeatingArrivalFastPage() {
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
-    if (guest) {
+        if (guest) {
       try {
         await updateGuestInSupabase(guest, String(eventId));
       } catch (e) {
         console.warn('arrival sync failed', e);
+        enqueueGuestUpdate(String(eventId), guest);
       }
     }
 
@@ -267,10 +276,11 @@ export default function SeatingArrivalFastPage() {
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-    try {
+        try {
       await updateGuestInSupabase(newGuest, String(eventId));
     } catch (e) {
       console.warn('add live guest sync failed', e);
+      enqueueGuestUpdate(String(eventId), newGuest);
     }
 
     if (assignToTable && selectedTableId) {
@@ -510,6 +520,25 @@ export default function SeatingArrivalFastPage() {
             className="bg-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-gray-100 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
             <RefreshCw size={18} /> רענן שולחנות
+          </button>
+                    <button
+            type="button"
+            onClick={async () => {
+              const res = await flushSyncQueue(updateGuestInSupabase);
+              if (res.offline) {
+                alert('אין רשת — הסנכרון יידחה');
+                return;
+              }
+              alert(
+                res.pending === 0
+                  ? `✅ סונכרן: ${res.ok} שינויים`
+                  : `סונכרן ${res.ok}, נשארו ${res.pending} בתור`
+              );
+            }}
+            className="bg-indigo-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-indigo-700 font-medium text-sm sm:text-base"
+          >
+            ☁ סנכרן
+            {getPendingCount() > 0 ? ` (${getPendingCount()})` : ''}
           </button>
           <button
             onClick={printPage}
