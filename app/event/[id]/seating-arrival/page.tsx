@@ -11,6 +11,7 @@ import {
   fetchGuestsFromSupabase,
 } from '../../../../lib/guests';
 import { saveSeating } from '../../../../lib/seating';
+
 export default function SeatingArrivalPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -28,7 +29,6 @@ export default function SeatingArrivalPage() {
   const [newQty, setNewQty] = useState(1);
   const [isListening, setIsListening] = useState(false);
 
-  // חדש – בחירת שולחן
   const [selectedTableId, setSelectedTableId] = useState<string | number>('');
   const [availableTables, setAvailableTables] = useState<any[]>([]);
 
@@ -68,22 +68,19 @@ export default function SeatingArrivalPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // סגירת מקלדת רק אחרי הפסקה בהקלדה (טאבלט) — מאפשר לדייק חיפוש
-useEffect(() => {
-  if (searchTerm.trim().length < 2) return;
-  if (forceEmptyList) return;
+  useEffect(() => {
+    if (searchTerm.trim().length < 2) return;
+    if (forceEmptyList) return;
 
-  const t = setTimeout(() => {
-    // סוגר מקלדת רק אם המשתמש הפסיק להקליד
-    if (document.activeElement === searchInputRef.current) {
-      searchInputRef.current?.blur();
-    }
-  }, 1200); // 1.2 שניות בלי הקלדה
+    const t = setTimeout(() => {
+      if (document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+      }
+    }, 1200);
 
-  return () => clearTimeout(t);
-}, [searchTerm, forceEmptyList]);
+    return () => clearTimeout(t);
+  }, [searchTerm, forceEmptyList]);
 
-  // טעינה ראשונית
   useEffect(() => {
     if (!eventId) return;
 
@@ -117,7 +114,6 @@ useEffect(() => {
     };
   }, [eventId]);
 
-  // סנכרון בין טאבלטים — כל 60 שניות (ערב לחץ)
   useEffect(() => {
     if (!eventId) return;
 
@@ -160,17 +156,16 @@ useEffect(() => {
   );
   const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
 
- const filteredGuests = useMemo(() => {
-  if (forceEmptyList) return [];
-  const term = searchTerm.trim();
-  if (term.length < 2) return [];
-  const lower = term.toLowerCase();
-  return allGuests.filter(
-    (g: any) =>
-      g.name?.toLowerCase().includes(lower) ||
-      (g.phone || '').includes(term)
-  );
-}, [allGuests, searchTerm, forceEmptyList]);
+  const filteredGuests = useMemo(() => {
+    if (forceEmptyList) return [];
+    const term = searchTerm.trim();
+    if (term.length < 2) return [];
+    const lower = term.toLowerCase();
+    return allGuests.filter(
+      (g: any) =>
+        g.name?.toLowerCase().includes(lower) || (g.phone || '').includes(term)
+    );
+  }, [allGuests, searchTerm, forceEmptyList]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -224,10 +219,7 @@ useEffect(() => {
         name: g.name,
         arrivedCount: Number(g.arrivedCount) || 0,
       }));
-    localStorage.setItem(
-      `arrived_event_${eventId}`,
-      JSON.stringify(arrivedOnly)
-    );
+    localStorage.setItem(`arrived_event_${eventId}`, JSON.stringify(arrivedOnly));
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
@@ -271,7 +263,6 @@ useEffect(() => {
     }
   };
 
-  // פתיחת מודל + טעינת שולחנות
   const openAddModal = () => {
     try {
       const raw =
@@ -292,111 +283,108 @@ useEffect(() => {
   };
 
   const addLiveGuest = async (assignToTable = false) => {
-  const name = newName.trim();
-  if (!name) {
-    alert('נא להזין שם');
-    return;
-  }
+    const name = newName.trim();
+    if (!name) {
+      alert('נא להזין שם');
+      return;
+    }
 
-  const qty = Math.min(5, Math.max(1, Number(newQty) || 1));
+    const qty = Math.min(5, Math.max(1, Number(newQty) || 1));
 
-  const newGuest = {
-    id: Date.now(),
-    name,
-    phone: '',
-    quantity: String(qty),
-    confirmed: String(qty),
-    confirmedCount: qty,
-    arrivedCount: qty,
-    notes: assignToTable ? 'נוסף בלייב + הושבה' : 'נוסף בלייב – ללא הושבה',
-    group: 'כללי',
-    transportation: '',
-    customerExpectation: '',
+    const newGuest = {
+      id: Date.now(),
+      name,
+      phone: '',
+      quantity: String(qty),
+      confirmed: String(qty),
+      confirmedCount: qty,
+      arrivedCount: qty,
+      notes: assignToTable ? 'נוסף בלייב + הושבה' : 'נוסף בלייב – ללא הושבה',
+      group: 'כללי',
+      transportation: '',
+      customerExpectation: '',
+    };
+
+    const updated = [...allGuests, newGuest];
+    setAllGuests(updated);
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    try {
+      await updateGuestInSupabase(newGuest, String(eventId));
+    } catch (e) {
+      console.warn('add live guest sync failed', e);
+    }
+
+    if (assignToTable && selectedTableId) {
+      try {
+        const keyEvent = `seatingTables_${eventId}`;
+        const raw =
+          localStorage.getItem(keyEvent) ||
+          localStorage.getItem('seatingTables') ||
+          '[]';
+        const tables: any[] = JSON.parse(raw);
+
+        const tableIndex = tables.findIndex(
+          (t) => String(t.id) === String(selectedTableId)
+        );
+
+        if (tableIndex < 0) {
+          alert('השולחן שנבחר לא נמצא');
+        } else {
+          const table = { ...tables[tableIndex] };
+          const assignedGuests = [...(table.assignedGuests || [])];
+          const guestSeats = { ...(table.guestSeats || {}) };
+
+          let currentOccupied = 0;
+          for (const n of assignedGuests) {
+            const q = Number(guestSeats[n]);
+            currentOccupied += Number.isFinite(q) && q > 0 ? q : 1;
+          }
+
+          const currentSeats = Number(table.seats) || 0;
+          const free = currentSeats - currentOccupied;
+
+          if (free < qty) {
+            table.seats = currentSeats + (qty - Math.max(0, free));
+          }
+
+          if (!assignedGuests.includes(name)) {
+            assignedGuests.push(name);
+          }
+          guestSeats[name] = qty;
+
+          table.assignedGuests = assignedGuests;
+          table.guestSeats = guestSeats;
+          tables[tableIndex] = table;
+
+          localStorage.setItem(keyEvent, JSON.stringify(tables));
+          localStorage.setItem('seatingTables', JSON.stringify(tables));
+
+          try {
+            await saveSeating(eventId, tables);
+          } catch (e) {
+            console.warn('saveSeating failed', e);
+          }
+
+          setTableMapVersion((v) => v + 1);
+        }
+      } catch (err) {
+        console.error('שגיאה בהושבה לשולחן', err);
+        alert('האורח נוסף, אבל ההושבה לשולחן נכשלה');
+      }
+    }
+
+    setShowAddModal(false);
+    setSelectedTableId('');
+    setNewName('');
+    setNewQty(1);
+    setForceEmptyList(false);
+    setSearchTerm(name);
+    setDebouncedTerm(name);
+    setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
-  // 1. מוסיפים לזיכרון המקומי מיד
-  const updated = [...allGuests, newGuest];
-  setAllGuests(updated);
-  localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
-
-  // 2. סנכרון לענן
-  try {
-    await updateGuestInSupabase(newGuest, String(eventId));
-  } catch (e) {
-    console.warn('add live guest sync failed', e);
-  }
-
-    // 3. הושבה לשולחן (אם נבחר)
-if (assignToTable && selectedTableId) {
-  try {
-    const keyEvent = `seatingTables_${eventId}`;
-    const raw =
-      localStorage.getItem(keyEvent) ||
-      localStorage.getItem('seatingTables') ||
-      '[]';
-    const tables: any[] = JSON.parse(raw);
-
-    const tableIndex = tables.findIndex(
-      (t) => String(t.id) === String(selectedTableId)
-    );
-
-    if (tableIndex < 0) {
-      alert('השולחן שנבחר לא נמצא');
-    } else {
-      const table = { ...tables[tableIndex] };
-      const assignedGuests = [...(table.assignedGuests || [])];
-      const guestSeats = { ...(table.guestSeats || {}) };
-
-      let currentOccupied = 0;
-      for (const n of assignedGuests) {
-        const q = Number(guestSeats[n]);
-        currentOccupied += Number.isFinite(q) && q > 0 ? q : 1;
-      }
-
-      const currentSeats = Number(table.seats) || 0;
-      const free = currentSeats - currentOccupied;
-
-      // רק אם אין מספיק מקום – מגדילים בדיוק בכמה שחסר
-      if (free < qty) {
-        table.seats = currentSeats + (qty - Math.max(0, free));
-      }
-
-      if (!assignedGuests.includes(name)) {
-        assignedGuests.push(name);
-      }
-      guestSeats[name] = qty;
-
-      table.assignedGuests = assignedGuests;
-      table.guestSeats = guestSeats;
-      tables[tableIndex] = table;
-
-      localStorage.setItem(keyEvent, JSON.stringify(tables));
-      localStorage.setItem('seatingTables', JSON.stringify(tables));
-
-      try {
-        await saveSeating(eventId, tables);
-      } catch (e) {
-        console.warn('saveSeating failed', e);
-      }
-
-      setTableMapVersion((v) => v + 1);
-    }
-  } catch (err) {
-    console.error('שגיאה בהושבה לשולחן', err);
-    alert('האורח נוסף, אבל ההושבה לשולחן נכשלה');
-  }
-}
-  // 4. מציגים מיד את האורח החדש בטבלה
-  setShowAddModal(false);
-  setSelectedTableId('');
-  setNewName('');
-  setNewQty(1);
-  setForceEmptyList(false);
-  setSearchTerm(name);        // ← חשוב
-  setDebouncedTerm(name);     // ← חשוב
-  setTimeout(() => searchInputRef.current?.focus(), 80);
-};
-    const printPage = () => {
+  const printPage = () => {
     let seatingData: any[] = [];
     try {
       seatingData = JSON.parse(localStorage.getItem('seatingTables') || '[]');
@@ -488,107 +476,213 @@ if (assignToTable && selectedTableId) {
     return '';
   })();
 
+  const renderGuestActions = (guest: any) => {
+    const confirmed =
+      getConfirmedQty(guest) || guest.confirmedCount || guest.quantity || 1;
+    const isAlreadyArrived = guest.arrivedCount > 0;
+    const isNotComing = guest.confirmed === 'לא מגיע';
+    const isPending =
+      !guest.confirmed ||
+      guest.confirmed === '' ||
+      guest.confirmed === 'לא ידוע' ||
+      guest.confirmed === 'ממתין';
+    const tableNum = tableMap.get(guest.name?.trim().toLowerCase());
+
+    return {
+      confirmed,
+      isAlreadyArrived,
+      isNotComing,
+      isPending,
+      tableNum,
+    };
+  };
+
   return (
-    <div className="min-h-screen bg-[#f5e8c7] p-8" dir="rtl">
+    <div className="min-h-screen bg-[#f5e8c7] p-4 sm:p-6 md:p-8 overflow-x-hidden" dir="rtl">
       <div className="max-w-[1600px] mx-auto">
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link
             href={`/event/${eventId}/guests`}
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
           >
             <ArrowLeft size={20} /> חזרה לרשימת המוזמנים
           </Link>
         </div>
 
-        <h1 className="text-4xl font-bold text-center mb-8 text-amber-900">
-          הושבת מוזמנים באירוע {eventTitle && `• ${eventTitle}`}
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-6 sm:mb-8 text-amber-900">
+          הושבת מוזמנים {eventTitle && `• ${eventTitle}`}
         </h1>
 
-        <div className="flex justify-center gap-8 mb-12 flex-wrap">
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
-            <div className="text-5xl font-bold text-blue-600">{confirmedPeople}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-10">
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
+            <div className="text-3xl sm:text-5xl font-bold text-blue-600">{confirmedPeople}</div>
           </div>
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">כבר הגיעו</div>
-            <div className="text-5xl font-bold text-green-600">{arrivedCount}</div>
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">כבר הגיעו</div>
+            <div className="text-3xl sm:text-5xl font-bold text-green-600">{arrivedCount}</div>
           </div>
-          <div className="bg-white px-10 py-6 rounded-3xl shadow text-center min-w-[260px]">
-            <div className="text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
-            <div className="text-5xl font-bold text-orange-500">{stillNotArrived}</div>
+          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
+            <div className="text-3xl sm:text-5xl font-bold text-orange-500">{stillNotArrived}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 mb-10 justify-center flex-wrap">
-          <div className="relative w-full max-w-2xl">
-            <Search className="absolute left-6 top-5 text-gray-400" size={24} />
+        <div className="flex flex-col gap-3 mb-6 sm:mb-10">
+          <div className="relative w-full max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="חיפוש שם או טלפון (לפחות 2 תווים)..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-16 pr-20 py-5 bg-white border border-gray-300 rounded-3xl text-xl focus:outline-none focus:border-amber-600"
+              className="w-full pl-12 pr-16 py-4 sm:py-5 bg-white border border-gray-300 rounded-2xl sm:rounded-3xl text-base sm:text-xl focus:outline-none focus:border-amber-600"
             />
             <button
               type="button"
               onClick={startVoiceSearch}
               className={
                 isListening
-                  ? 'absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center text-xl bg-red-500 text-white animate-pulse'
-                  : 'absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center text-xl bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  ? 'absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-xl bg-red-500 text-white animate-pulse'
+                  : 'absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-xl bg-amber-100 text-amber-700 hover:bg-amber-200'
               }
               title="חיפוש קולי"
             >
               🎤
             </button>
           </div>
-{filteredGuests.length > 0 && (
-  <button
-    type="button"
-    onClick={() => searchInputRef.current?.focus()}
-    className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 px-4 py-2 rounded-full hover:bg-amber-100"
-  >
-    ✎ המשך חיפוש
-  </button>
-)}
-          <button
-            onClick={clearSearch}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium"
-          >
-            נקה
-          </button>
 
-          <button
-            onClick={refresh}
-            className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium"
-          >
-            <RefreshCw size={20} /> רענן
-          </button>
-
-          <button
-            onClick={printPage}
-            className="bg-amber-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium"
-          >
-            <Printer size={20} /> PDF
-          </button>
-
-          <button
-            onClick={openAddModal}
-            className="bg-blue-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium"
-          >
-            <UserPlus size={20} /> הוסף מוזמן
-          </button>
-
-          <Link
-            href={`/event/${eventId}/checkin?from=seating-arrival`}
-            className="bg-emerald-600 text-white px-8 py-5 rounded-3xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium"
-          >
-            <QrCode size={20} /> סריקת כניסה
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {filteredGuests.length > 0 && (
+              <button
+                type="button"
+                onClick={() => searchInputRef.current?.focus()}
+                className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-full hover:bg-amber-100"
+              >
+                ✎ המשך חיפוש
+              </button>
+            )}
+            <button
+              onClick={clearSearch}
+              className="bg-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-gray-100 font-medium text-sm sm:text-base"
+            >
+              נקה
+            </button>
+            <button
+              onClick={refresh}
+              className="bg-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-gray-100 flex items-center gap-2 font-medium text-sm sm:text-base"
+            >
+              <RefreshCw size={18} /> רענן
+            </button>
+            <button
+              onClick={printPage}
+              className="bg-amber-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-amber-700 flex items-center gap-2 font-medium text-sm sm:text-base"
+            >
+              <Printer size={18} /> PDF
+            </button>
+            <button
+              onClick={openAddModal}
+              className="bg-blue-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-blue-700 flex items-center gap-2 font-medium text-sm sm:text-base"
+            >
+              <UserPlus size={18} /> הוסף מוזמן
+            </button>
+            <Link
+              href={`/event/${eventId}/checkin?from=seating-arrival`}
+              className="bg-emerald-600 text-white px-4 sm:px-6 py-3 rounded-2xl shadow hover:bg-emerald-700 flex items-center gap-2 font-medium text-sm sm:text-base"
+            >
+              <QrCode size={18} /> סריקת כניסה
+            </Link>
+          </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+        {/* מובייל: כרטיסים */}
+        <div className="md:hidden space-y-3">
+          {filteredGuests.length > 0 ? (
+            filteredGuests.map((guest: any) => {
+              const {
+                confirmed,
+                isAlreadyArrived,
+                isNotComing,
+                isPending,
+                tableNum,
+              } = renderGuestActions(guest);
+
+              return (
+                <div
+                  key={guest.id}
+                  className="bg-white rounded-2xl shadow border border-amber-100 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="font-bold text-lg text-slate-900">{guest.name}</div>
+                      <div className="text-gray-600 font-mono text-sm" dir="ltr">
+                        {guest.phone || '—'}
+                      </div>
+                    </div>
+                    <div className="text-amber-700 font-bold text-sm whitespace-nowrap">
+                      {tableNum ? `שולחן ${tableNum}` : 'לא הושב'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-3">
+                    {isNotComing ? (
+                      <span className="text-red-600 font-semibold text-sm">❌ לא מגיע</span>
+                    ) : isPending ? (
+                      <span className="text-amber-600 font-medium text-sm">⏳ ממתין</span>
+                    ) : (
+                      <span className="text-emerald-700 font-semibold text-sm">✅ {confirmed}</span>
+                    )}
+                    {isAlreadyArrived && (
+                      <span className="text-gray-600 text-sm">הגיע {guest.arrivedCount}</span>
+                    )}
+                  </div>
+
+                  {isAlreadyArrived ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="bg-gray-400 text-white px-4 py-3 rounded-2xl font-bold text-center">
+                        אורח זה כבר הגיע
+                      </div>
+                      <button
+                        onClick={() => markArrival(guest.id, 0)}
+                        className="w-full py-3 rounded-2xl border-2 border-red-300 text-red-600 hover:bg-red-50 font-medium"
+                      >
+                        בטל הגעה
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => markArrival(guest.id, confirmed)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-bold text-lg"
+                      >
+                        {confirmed} הגיע
+                      </button>
+                      <div className="flex gap-2 justify-center flex-wrap">
+                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => markArrival(guest.id, num)}
+                            className="w-11 h-11 rounded-xl font-bold border-2 bg-white border-gray-300 hover:bg-emerald-50"
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-2xl shadow p-10 text-center text-gray-500">
+              {searchHint}
+            </div>
+          )}
+        </div>
+
+        {/* טאבלט/מחשב: טבלה */}
+        <div className="hidden md:block bg-white rounded-3xl shadow-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-amber-100">
               <tr>
@@ -602,19 +696,13 @@ if (assignToTable && selectedTableId) {
             <tbody>
               {filteredGuests.length > 0 ? (
                 filteredGuests.map((guest: any) => {
-                  const confirmed =
-                    getConfirmedQty(guest) ||
-                    guest.confirmedCount ||
-                    guest.quantity ||
-                    1;
-                  const isAlreadyArrived = guest.arrivedCount > 0;
-                  const isNotComing = guest.confirmed === 'לא מגיע';
-                  const isPending =
-                    !guest.confirmed ||
-                    guest.confirmed === '' ||
-                    guest.confirmed === 'לא ידוע' ||
-                    guest.confirmed === 'ממתין';
-                  const tableNum = tableMap.get(guest.name?.trim().toLowerCase());
+                  const {
+                    confirmed,
+                    isAlreadyArrived,
+                    isNotComing,
+                    isPending,
+                    tableNum,
+                  } = renderGuestActions(guest);
 
                   return (
                     <tr key={guest.id} className="border-b hover:bg-amber-50">
@@ -631,16 +719,12 @@ if (assignToTable && selectedTableId) {
                             <div className="bg-red-100 text-red-600 w-14 h-14 rounded-2xl flex items-center justify-center text-4xl font-bold">
                               ❌
                             </div>
-                            <div className="text-red-600 font-semibold text-sm mt-1">
-                              לא מגיע
-                            </div>
+                            <div className="text-red-600 font-semibold text-sm mt-1">לא מגיע</div>
                           </div>
                         ) : isPending ? (
                           <div className="flex flex-col items-center">
                             <div className="text-4xl">⏳</div>
-                            <div className="text-amber-600 font-medium text-sm mt-1">
-                              ממתין
-                            </div>
+                            <div className="text-amber-600 font-medium text-sm mt-1">ממתין</div>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
@@ -711,10 +795,8 @@ if (assignToTable && selectedTableId) {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">
-              הוסף מוזמן
-            </h2>
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold mb-6 text-center">הוסף מוזמן</h2>
 
             <label className="block text-sm font-medium mb-2">שם</label>
             <input
@@ -764,7 +846,7 @@ if (assignToTable && selectedTableId) {
                 })}
             </select>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
                   setShowAddModal(false);
