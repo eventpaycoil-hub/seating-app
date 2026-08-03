@@ -133,7 +133,52 @@ function downloadGuestsExcel(guestsList: any[], filename: string) {
 
   XLSX.writeFile(workbook, `${filename}.xlsx`);
 }
+function downloadEventBackup(eventId: string) {
+  try {
+    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+    const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
 
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      eventId: String(eventId),
+      event: currentEvent || null,
+      guests: JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]'),
+      groups: JSON.parse(localStorage.getItem(`groups_event_${eventId}`) || '[]'),
+      seatingTables: JSON.parse(
+        localStorage.getItem(`seatingTables_${eventId}`) ||
+          localStorage.getItem('seatingTables') ||
+          '[]'
+      ),
+      gifts: JSON.parse(localStorage.getItem(`gifts_event_${eventId}`) || '{}'),
+      transportOptions: JSON.parse(
+        localStorage.getItem(`transport_options_${eventId}`) || '[]'
+      ),
+      arrived: JSON.parse(localStorage.getItem(`arrived_event_${eventId}`) || '[]'),
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const name = (currentEvent?.owners || currentEvent?.title || eventId)
+      .toString()
+      .replace(/[^\w\u0590-\u05FF\- ]+/g, '')
+      .trim()
+      .slice(0, 40);
+    a.href = url;
+    a.download = `backup-${name || eventId}-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    alert('שגיאה ביצירת הגיבוי');
+  }
+}
 export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
@@ -595,6 +640,7 @@ export default function GuestsPage() {
               { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: '👀' },
               { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },
               { id: 'edit-event', href: `/event/${eventId}/edit`, label: 'עריכת אירוע', icon: '✏️' },
+                  { id: 'backup', href: '#', label: 'גיבוי מלא', icon: '💾' },
               { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: '📩' },
               { id: 'email', href: `/event/${eventId}/email`, label: 'שליחת מיילים', icon: '📧' },
               { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: '💬' },
@@ -612,16 +658,28 @@ export default function GuestsPage() {
                 if (ADMIN_ONLY.has(item.id)) return false;
                 return visibleActions.includes(item.id);
               })
-              .map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-400 hover:shadow-md transition-all text-center"
-                >
-                  <div className="text-4xl">{item.icon}</div>
-                  <div className="text-sm font-medium text-gray-700">{item.label}</div>
-                </Link>
-              ))}
+                        .map((item) =>
+            item.id === 'backup' ? (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => downloadEventBackup(String(eventId))}
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
+              >
+                <div className="text-4xl">{item.icon}</div>
+                <div className="text-sm font-medium text-gray-700">{item.label}</div>
+              </button>
+            ) : (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
+              >
+                <div className="text-4xl">{item.icon}</div>
+                <div className="text-sm font-medium text-gray-700">{item.label}</div>
+              </Link>
+            )
+          )}
           </div>
         </div>
       </div>
