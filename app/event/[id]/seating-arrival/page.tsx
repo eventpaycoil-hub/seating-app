@@ -68,17 +68,20 @@ export default function SeatingArrivalPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // סגירת מקלדת אוטומטית אחרי חיפוש (טאבלט)
-  useEffect(() => {
-    if (searchTerm.trim().length < 2) return;
-    if (forceEmptyList) return;
+  // סגירת מקלדת רק אחרי הפסקה בהקלדה (טאבלט) — מאפשר לדייק חיפוש
+useEffect(() => {
+  if (searchTerm.trim().length < 2) return;
+  if (forceEmptyList) return;
 
-    const t = setTimeout(() => {
+  const t = setTimeout(() => {
+    // סוגר מקלדת רק אם המשתמש הפסיק להקליד
+    if (document.activeElement === searchInputRef.current) {
       searchInputRef.current?.blur();
-    }, 450);
+    }
+  }, 1200); // 1.2 שניות בלי הקלדה
 
-    return () => clearTimeout(t);
-  }, [searchTerm, forceEmptyList]);
+  return () => clearTimeout(t);
+}, [searchTerm, forceEmptyList]);
 
   // טעינה ראשונית
   useEffect(() => {
@@ -157,16 +160,17 @@ export default function SeatingArrivalPage() {
   );
   const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
 
-  const filteredGuests = useMemo(() => {
-    if (forceEmptyList) return [];
-    const term = debouncedTerm.trim();
-    if (term.length < 2) return [];
-    const lower = term.toLowerCase();
-    return allGuests.filter(
-      (g: any) =>
-        g.name?.toLowerCase().includes(lower) || g.phone?.includes(term)
-    );
-  }, [allGuests, debouncedTerm, forceEmptyList]);
+ const filteredGuests = useMemo(() => {
+  if (forceEmptyList) return [];
+  const term = searchTerm.trim();
+  if (term.length < 2) return [];
+  const lower = term.toLowerCase();
+  return allGuests.filter(
+    (g: any) =>
+      g.name?.toLowerCase().includes(lower) ||
+      (g.phone || '').includes(term)
+  );
+}, [allGuests, searchTerm, forceEmptyList]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -539,7 +543,15 @@ if (assignToTable && selectedTableId) {
               🎤
             </button>
           </div>
-
+{filteredGuests.length > 0 && (
+  <button
+    type="button"
+    onClick={() => searchInputRef.current?.focus()}
+    className="text-sm font-medium text-amber-800 bg-amber-50 border border-amber-200 px-4 py-2 rounded-full hover:bg-amber-100"
+  >
+    ✎ המשך חיפוש
+  </button>
+)}
           <button
             onClick={clearSearch}
             className="bg-white px-8 py-5 rounded-3xl shadow hover:bg-gray-100 font-medium"
