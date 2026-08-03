@@ -214,45 +214,45 @@ function TransportContent() {
 
   // ===== מסך בחירה למוזמן =====
   return (
-        <div className="min-h-screen bg-[#f5f0e6] overflow-x-hidden" dir="rtl">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="text-center mb-8 sm:mb-12">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3">הסעות לאירוע</h1>
-          <p className="text-lg sm:text-2xl text-gray-800">
-            {eventData?.owners || 'האירוע'}
-          </p>
+            <div className="min-h-screen bg-[#f5f0e6] overflow-x-hidden" dir="rtl">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold mb-2">הסעות לאירוע</h1>
+          <p className="text-lg text-gray-800">{eventData?.owners || 'האירוע'}</p>
         </div>
 
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-5 sm:p-10">
-          <div className="text-center mb-6 sm:mb-10">
-            <h2 className="text-xl sm:text-3xl font-semibold mb-2">בחר הסעה</h2>
-            <p className="text-gray-600 text-sm sm:text-base">לחץ על האופציה המתאימה לך</p>
+        <div className="bg-white rounded-2xl shadow-xl p-5">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold mb-2">בחר הסעה</h2>
+            <p className="text-gray-600 text-sm">לחץ על האופציה המתאימה לך</p>
           </div>
 
           {activeOptions.length === 0 ? (
-            <p className="text-center text-gray-500 text-base sm:text-lg py-8 sm:py-10">
+            <p className="text-center text-gray-500 py-8">
               עדיין לא הוגדרו הסעות לאירוע זה
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-3">
               {activeOptions.map((option) => (
                 <button
                   key={option.id}
                   onClick={() => handleChoose(option)}
-                                      className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl border-2 border-gray-200 hover:border-[#d4a017] hover:bg-[#fff8e1] text-right transition-all active:scale-[0.985] w-full min-w-0"
+                  className="w-full p-5 rounded-2xl border-2 border-gray-200 hover:border-[#d4a017] hover:bg-[#fff8e1] text-right"
                 >
-                                        <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1">{option.name}</div>
-                  {option.time && (
-                                            <div className="text-gray-600 text-sm sm:text-lg">יציאה בשעה {option.time}</div>
-                  )}
+                  <div className="text-lg font-bold text-gray-900">{option.name}</div>
+                  {option.time ? (
+                    <div className="text-gray-600 text-sm mt-1">יציאה בשעה {option.time}</div>
+                  ) : null}
                 </button>
               ))}
 
               <button
-                onClick={() => handleChoose({ id: 7, name: 'לא תודה אגיע עצמאית', time: '' })}
-                                className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 text-right transition-all active:scale-[0.985] w-full min-w-0"
+                onClick={() =>
+                  handleChoose({ id: 7, name: 'לא תודה אגיע עצמאית', time: '' })
+                }
+                className="w-full p-5 rounded-2xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 text-right"
               >
-                <div className="text-2xl font-bold text-gray-900">לא תודה אגיע עצמאית</div>
+                <div className="text-lg font-bold text-gray-900">לא תודה אגיע עצמאית</div>
               </button>
             </div>
           )}
