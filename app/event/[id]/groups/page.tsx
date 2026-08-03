@@ -77,20 +77,20 @@ export default function GroupsPage() {
       }
     });
 
-            const existingMax = Math.max(
-      0,
-      ...Array.from(byName.values()).map((g) => Number(g.simCount) || 0)
-    );
+              const list = Array.from(byName.values());
+
+    const withNum = list.filter((g) => Number(g.simCount) > 0);
+    const withoutNum = list
+      .filter((g) => !(Number(g.simCount) > 0))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'he'));
+
+    const existingMax = Math.max(0, ...withNum.map((g) => Number(g.simCount) || 0));
     let nextNum = existingMax + 1;
 
-    const merged = Array.from(byName.values()).map((g) => {
-      const num = Number(g.simCount);
-      if (num > 0) return { ...g, simCount: num };
-      const assigned = nextNum++;
-      return { ...g, simCount: assigned };
-    });
-
-    merged.sort((a, b) => (a.simCount || 0) - (b.simCount || 0));
+    const merged = [
+      ...withNum,
+      ...withoutNum.map((g) => ({ ...g, simCount: nextNum++ })),
+    ].sort((a, b) => (a.simCount || 0) - (b.simCount || 0));
 
     setGroups(merged);
     localStorage.setItem(`groups_event_${eventId}`, JSON.stringify(merged));
