@@ -376,6 +376,7 @@ export default function InviteBuilderPage() {
   const [saved, setSaved] = useState(false);
   const [customBg, setCustomBg] = useState('');
   const [makingVideo, setMakingVideo] = useState(false);
+  const [previewOpened, setPreviewOpened] = useState(false);
   const [presetFilter, setPresetFilter] = useState('הכל');
 
   useEffect(() => {
@@ -1130,19 +1131,70 @@ export default function InviteBuilderPage() {
           </div>
 
           <div className="bg-white rounded-3xl border shadow-sm p-5 lg:sticky lg:top-4 h-fit">
-            <div className="font-bold mb-4">תצוגה מקדימה · {template.name}</div>
-            <InviteCard
-              form={form}
-              template={template}
-              formatDate={formatDate}
-              customBg={customBg}
-            />
-            {form.monogram && (
-              <p className="text-xs text-slate-400 text-center mt-3">
-                מונוגרם גדול מוצג בראש ההזמנה
-              </p>
-            )}
+  <div className="flex items-center justify-between gap-2 mb-4">
+    <div className="font-bold">תצוגה מקדימה · {template.name}</div>
+    <button
+      type="button"
+      onClick={() => setPreviewOpened(false)}
+      className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full hover:bg-amber-100"
+    >
+      ✉️ הצג מעטפה
+    </button>
+  </div>
+
+  {!previewOpened ? (
+    <button
+      type="button"
+      onClick={() => setPreviewOpened(true)}
+      className="w-full group cursor-pointer border-0 bg-transparent p-0"
+    >
+      <div className="relative mx-auto transition-transform duration-500 group-hover:scale-[1.02]" style={{ width: 260, height: 180 }}>
+        <div
+          className="absolute inset-x-0 bottom-0 rounded-b-sm shadow-xl"
+          style={{
+            height: 130,
+            background: 'linear-gradient(160deg, #c4a574 0%, #8b6914 45%, #6b4423 100%)',
+          }}
+        />
+        <div
+          className="absolute top-0 left-0 right-0"
+          style={{
+            height: 80,
+            background: 'linear-gradient(180deg, #d4b896 0%, #b8956c 100%)',
+            clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+          }}
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center pt-6 pointer-events-none">
+          <div className="text-3xl font-serif tracking-[0.15em] text-[#f5f0e6]">
+            {form.monogram ||
+              (form.owners
+                ? form.owners
+                    .split(/\s+&\s+|\s+ו\s+/)
+                    .map((p) => (p.trim()[0] || '').toUpperCase())
+                    .join('')
+                    .slice(0, 3)
+                : '✦')}
           </div>
+          <div className="mt-2 text-[10px] tracking-widest text-[#f5f0e6]/90">הזמנה</div>
+        </div>
+      </div>
+      <div className="mt-5 text-center">
+        <span className="inline-block bg-[#3f2a1e] text-[#f5f0e6] px-6 py-2.5 rounded-full text-sm font-medium shadow">
+          פתחו את המעטפה
+        </span>
+        <p className="mt-2 text-stone-400 text-xs">כך זה יופיע למוזמנים</p>
+      </div>
+    </button>
+  ) : (
+    <>
+      <InviteCard form={form} template={template} formatDate={formatDate} customBg={customBg} />
+      {form.monogram && (
+        <p className="text-xs text-slate-400 text-center mt-3">מונוגרם גדול מוצג בראש ההזמנה</p>
+      )}
+    </>
+  )}
+</div>
         </div>
       </div>
     </div>
