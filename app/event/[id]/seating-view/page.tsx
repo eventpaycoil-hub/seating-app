@@ -175,9 +175,11 @@ export default function SeatingViewPage() {
   const canvasH = Math.max(700, maxY);
 
   const isSideways = rotation % 180 === 90;
+   const isMobile = winSize.w < 768;
+  const pad = isMobile ? 56 : 24;
   const viewScale = Math.min(
-    (winSize.w - 24) / (isSideways ? canvasH : canvasW),
-    (winSize.h - 24) / (isSideways ? canvasW : canvasH),
+    (winSize.w - pad) / (isSideways ? canvasH : canvasW),
+    (winSize.h - pad) / (isSideways ? canvasW : canvasH),
     1.2
   );
 
