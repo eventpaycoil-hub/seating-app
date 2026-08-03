@@ -77,34 +77,37 @@ export default function GroupsPage() {
       }
     });
 
-    const merged = Array.from(byName.values()).map((g, i) => ({
-      ...g,
-      simCount: i + 1,
-    }));
+            const existingMax = Math.max(
+      0,
+      ...Array.from(byName.values()).map((g) => Number(g.simCount) || 0)
+    );
+    let nextNum = existingMax + 1;
+
+    const merged = Array.from(byName.values()).map((g) => {
+      const num = Number(g.simCount);
+      if (num > 0) return { ...g, simCount: num };
+      const assigned = nextNum++;
+      return { ...g, simCount: assigned };
+    });
+
+    merged.sort((a, b) => (a.simCount || 0) - (b.simCount || 0));
 
     setGroups(merged);
-    // שומרים את המיזוג כדי שהדף והעריכות יישארו מסונכרנים
     localStorage.setItem(`groups_event_${eventId}`, JSON.stringify(merged));
   }, [eventId]);
 
   const addNewGroup = () => {
-    const groupName = prompt('הזן שם לקבוצה החדשה:', `קבוצה ${groups.length + 1}`);
-    if (!groupName || !groupName.trim()) return;
-
-    const name = groupName.trim();
-    if (groups.some((g) => g.name === name)) {
-      alert('הקבוצה כבר קיימת');
-      return;
-    }
-
+        const maxNum = Math.max(0, ...groups.map((g) => Number(g.simCount) || 0));
     const updated = [
       ...groups,
       {
         id: Date.now(),
         name,
-        simCount: groups.length + 1,
+        simCount: maxNum + 1,
       },
-    ].map((g, i) => ({ ...g, simCount: i + 1 }));
+    ];
+
+    
 
     persist(updated);
   };
