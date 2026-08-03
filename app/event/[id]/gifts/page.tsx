@@ -286,8 +286,112 @@ export default function GiftsPage() {
           </div>
         </div>
 
-        {/* טבלה */}
-        <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+                {/* מובייל: כרטיסים */}
+        <div className="md:hidden space-y-4">
+          {grouped.length === 0 ? (
+            <div className="bg-white rounded-2xl border p-8 text-center text-slate-400">
+              אין מוזמנים להצגה
+            </div>
+          ) : (
+            grouped.map(([groupName, list]) => {
+              let groupCash = 0;
+              let groupCredit = 0;
+              list.forEach((g) => {
+                const row = gifts[guestKey(g)];
+                groupCash += Number(row?.cash) || 0;
+                groupCredit += Number(row?.credit) || 0;
+              });
+              const groupSum = groupCash + groupCredit;
+
+              return (
+                <div key={groupName} className="space-y-2">
+                  <div className="bg-amber-100 border border-amber-200 rounded-xl px-3 py-2 font-bold text-amber-950">
+                    {groupName}
+                    <span className="text-amber-700 font-normal text-sm mr-2">
+                      ({list.length}) · ₪{groupSum.toLocaleString('he-IL')}
+                    </span>
+                  </div>
+
+                  {list.map((g) => {
+                    const key = guestKey(g);
+                    const row = gifts[key] || { cash: 0, credit: 0 };
+                    const sum = (Number(row.cash) || 0) + (Number(row.credit) || 0);
+
+                    return (
+                      <div
+                        key={key}
+                        className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <div className="font-bold text-slate-800">{g.name}</div>
+                            <div className="text-xs text-slate-500 font-mono" dir="ltr">
+                              {g.phone || '—'}
+                            </div>
+                          </div>
+                          <div className="text-emerald-700 font-bold text-sm whitespace-nowrap">
+                            {sum > 0 ? `₪${sum.toLocaleString('he-IL')}` : '—'}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-amber-700 mb-1 block">מזומן</label>
+                            <input
+                              type="number"
+                              min={0}
+                              inputMode="numeric"
+                              value={row.cash || ''}
+                              onChange={(e) => updateGift(key, 'cash', e.target.value)}
+                              placeholder="0"
+                              className="w-full text-center border border-slate-200 rounded-xl px-2 py-2 focus:border-amber-400 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-blue-700 mb-1 block">אשראי</label>
+                            <input
+                              type="number"
+                              min={0}
+                              inputMode="numeric"
+                              value={row.credit || ''}
+                              onChange={(e) => updateGift(key, 'credit', e.target.value)}
+                              placeholder="0"
+                              className="w-full text-center border border-slate-200 rounded-xl px-2 py-2 focus:border-blue-400 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })
+          )}
+
+          <div className="bg-slate-800 text-white rounded-2xl p-4 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-xs text-slate-300">סה״כ</div>
+              <div className="font-black text-emerald-300">
+                ₪{totals.sum.toLocaleString('he-IL')}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-300">מזומן</div>
+              <div className="font-bold text-amber-300">
+                ₪{totals.cash.toLocaleString('he-IL')}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-300">אשראי</div>
+              <div className="font-bold text-blue-300">
+                ₪{totals.credit.toLocaleString('he-IL')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* מחשב/טאבלט: טבלה */}
+        <div className="hidden md:block bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -333,7 +437,8 @@ export default function GiftsPage() {
                         {list.map((g, idx) => {
                           const key = guestKey(g);
                           const row = gifts[key] || { cash: 0, credit: 0 };
-                          const sum = (Number(row.cash) || 0) + (Number(row.credit) || 0);
+                          const sum =
+                            (Number(row.cash) || 0) + (Number(row.credit) || 0);
                           const bg = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
 
                           return (
