@@ -5,10 +5,10 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase.js';
+
 function TransportContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') || '1';
-  // תומך גם ב-guestId וגם ב-ref (מה-SMS)
   const guestRef =
     searchParams.get('guestId') ||
     searchParams.get('ref') ||
@@ -29,7 +29,7 @@ function TransportContent() {
     { id: 6, name: '', time: '' },
   ]);
 
-    useEffect(() => {
+  useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const current = events.find((e: any) => e.id.toString() === eventId.toString());
     if (current) setEventData(current);
@@ -77,7 +77,7 @@ function TransportContent() {
     setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, [field]: value } : o)));
   };
 
-    const saveOptions = async () => {
+  const saveOptions = async () => {
     localStorage.setItem(`transport_options_${eventId}`, JSON.stringify(options));
     try {
       const { error } = await supabase
@@ -94,6 +94,7 @@ function TransportContent() {
       alert('נשמר במכשיר בלבד: ' + (e?.message || ''));
     }
   };
+
   const findGuestIndex = (guests: any[], ref: string) => {
     if (!ref || !Array.isArray(guests)) return -1;
     const sc = String(ref).trim();
@@ -111,7 +112,7 @@ function TransportContent() {
     });
   };
 
-    const handleChoose = async (option: any) => {
+  const handleChoose = async (option: any) => {
     const transportText =
       option.id === 7
         ? 'לא תודה אגיע עצמאית'
@@ -142,18 +143,24 @@ function TransportContent() {
     setShowThankYou(true);
   };
 
-  const activeOptions = options.filter((o) => o.name.trim() !== '');
+  const activeOptions = options.filter((o) => o.name && o.name.trim() !== '');
 
   if (showThankYou) {
     return (
-      <div className="min-h-screen bg-[#f8f1e3] flex items-center justify-center p-6" dir="rtl">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center">
-          <div className="text-7xl mb-6">🙏</div>
-          <h2 className="text-3xl font-bold text-[#3f2a1e] mb-4">תודה על בחירתך!</h2>
-          <p className="text-xl text-gray-700 mb-8">הבחירה נרשמה בהצלחה.</p>
-
-          <div className="bg-[#f8f1e3] rounded-2xl p-5 mb-8">
-            <p className="text-lg font-medium text-[#5c4033]">{chosenOption}</p>
+      <div
+        className="min-h-screen bg-[#f8f1e3] flex items-center justify-center p-4 overflow-x-hidden"
+        dir="rtl"
+      >
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-6 sm:p-10 text-center">
+          <div className="text-5xl sm:text-7xl mb-4 sm:mb-6">🙏</div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#3f2a1e] mb-3 sm:mb-4">
+            תודה על בחירתך!
+          </h2>
+          <p className="text-base sm:text-xl text-gray-700 mb-6 sm:mb-8">
+            הבחירה נרשמה בהצלחה.
+          </p>
+          <div className="bg-[#f8f1e3] rounded-2xl p-4 sm:p-5">
+            <p className="text-base sm:text-lg font-medium text-[#5c4033]">{chosenOption}</p>
           </div>
         </div>
       </div>
@@ -163,22 +170,32 @@ function TransportContent() {
   // ===== מצב מנהל =====
   if (isAdmin) {
     return (
-      <div className="min-h-screen bg-[#f8f1e3] py-12" dir="rtl">
-        <div className="max-w-3xl mx-auto px-6">
-          <Link href={`/event/${eventId}/guests`} className="text-blue-600 hover:underline mb-8 inline-block">
+      <div className="min-h-screen bg-[#f8f1e3] py-6 sm:py-12 overflow-x-hidden" dir="rtl">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <Link
+            href={`/event/${eventId}/guests`}
+            className="text-blue-600 hover:underline mb-6 sm:mb-8 inline-block text-sm sm:text-base"
+          >
             ← חזרה לרשימת מוזמנים
           </Link>
 
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold mb-2">הגדרת הסעות</h1>
-            <p className="text-xl text-gray-700">{eventData?.owners || 'אירוע'}</p>
-            <p className="text-gray-500 mt-2">רשום רק את ההסעות שאתה צריך. השאר ריק לא יופיע.</p>
+          <div className="text-center mb-6 sm:mb-10">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">הגדרת הסעות</h1>
+            <p className="text-base sm:text-xl text-gray-700">
+              {eventData?.owners || 'אירוע'}
+            </p>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base">
+              רשום רק את ההסעות שאתה צריך. השאר ריק לא יופיע.
+            </p>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-xl p-8 space-y-5">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-8 space-y-4 sm:space-y-5">
             {options.map((opt) => (
-              <div key={opt.id} className="flex gap-4 items-center">
-                <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
+              <div
+                key={opt.id}
+                className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center"
+              >
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold flex-shrink-0">
                   {opt.id}
                 </div>
                 <input
@@ -186,22 +203,22 @@ function TransportContent() {
                   placeholder={`שם הסעה ${opt.id} (למשל: הסעה מתל אביב)`}
                   value={opt.name}
                   onChange={(e) => updateOption(opt.id, 'name', e.target.value)}
-                  className="flex-1 p-4 border border-gray-300 rounded-2xl text-lg"
+                  className="w-full flex-1 p-3 sm:p-4 border border-gray-300 rounded-xl sm:rounded-2xl text-base sm:text-lg min-w-0"
                 />
                 <input
                   type="text"
                   placeholder="שעה"
                   value={opt.time}
                   onChange={(e) => updateOption(opt.id, 'time', e.target.value)}
-                  className="w-28 p-4 border border-gray-300 rounded-2xl text-lg text-center"
+                  className="w-full sm:w-28 p-3 sm:p-4 border border-gray-300 rounded-xl sm:rounded-2xl text-base sm:text-lg text-center"
                 />
               </div>
             ))}
 
-            <div className="pt-6 border-t">
+            <div className="pt-4 sm:pt-6 border-t">
               <button
                 onClick={saveOptions}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-5 rounded-2xl text-xl font-bold"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-bold"
               >
                 💾 שמור הסעות
               </button>
@@ -214,7 +231,7 @@ function TransportContent() {
 
   // ===== מסך בחירה למוזמן =====
   return (
-            <div className="min-h-screen bg-[#f5f0e6] overflow-x-hidden" dir="rtl">
+    <div className="min-h-screen bg-[#f5f0e6] overflow-x-hidden" dir="rtl">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">הסעות לאירוע</h1>
@@ -228,14 +245,13 @@ function TransportContent() {
           </div>
 
           {activeOptions.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
-              עדיין לא הוגדרו הסעות לאירוע זה
-            </p>
+            <p className="text-center text-gray-500 py-8">עדיין לא הוגדרו הסעות לאירוע זה</p>
           ) : (
             <div className="flex flex-col gap-3">
               {activeOptions.map((option) => (
                 <button
                   key={option.id}
+                  type="button"
                   onClick={() => handleChoose(option)}
                   className="w-full p-5 rounded-2xl border-2 border-gray-200 hover:border-[#d4a017] hover:bg-[#fff8e1] text-right"
                 >
@@ -247,6 +263,7 @@ function TransportContent() {
               ))}
 
               <button
+                type="button"
                 onClick={() =>
                   handleChoose({ id: 7, name: 'לא תודה אגיע עצמאית', time: '' })
                 }
