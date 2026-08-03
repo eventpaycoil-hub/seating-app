@@ -183,26 +183,28 @@ export default function SeatingViewPage() {
 
   return (
     <div className="fixed inset-0 bg-slate-900 overflow-hidden" dir="rtl">
-      <div className="absolute top-4 left-4 z-50 flex gap-2">
-        <Link
-          href={`/event/${eventId}/seating`}
-          className="bg-white/90 hover:bg-white text-slate-800 px-4 py-2 rounded-xl shadow-lg font-bold text-sm"
-        >
-          ← חזרה להושבה
-        </Link>
-        <button
-          onClick={cycleRotation}
-          className="bg-white/90 hover:bg-white text-slate-800 px-4 py-2 rounded-xl shadow-lg font-bold text-sm"
-        >
-          🔄 סיבוב {rotation}°
-        </button>
-      </div>
-
-      {eventTitle && (
-        <div className="absolute top-4 right-4 z-50 bg-black/50 text-white px-4 py-2 rounded-xl text-sm">
-          {eventTitle}
+           <div className="absolute top-2 left-2 right-2 z-50 flex flex-wrap items-center gap-2 pointer-events-none">
+        <div className="flex gap-2 pointer-events-auto">
+          <Link
+            href={`/event/${eventId}/seating`}
+            className="bg-white/95 hover:bg-white text-slate-800 px-3 py-2 sm:px-4 rounded-xl shadow-lg font-bold text-xs sm:text-sm"
+          >
+            ← חזרה
+          </Link>
+          <button
+            type="button"
+            onClick={cycleRotation}
+            className="bg-white/95 hover:bg-white text-slate-800 px-3 py-2 sm:px-4 rounded-xl shadow-lg font-bold text-xs sm:text-sm"
+          >
+            🔄 {rotation}°
+          </button>
         </div>
-      )}
+        {eventTitle ? (
+          <div className="mr-auto pointer-events-auto bg-black/55 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm max-w-[55%] truncate">
+            {eventTitle}
+          </div>
+        ) : null}
+      </div>
 
       <div className="w-full h-full overflow-hidden flex items-center justify-center">
         <div
