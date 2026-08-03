@@ -587,6 +587,25 @@ export default function SeatingArrivalPage() {
           >
             <RefreshCw size={18} /> רענן
           </button>
+                    <button
+            type="button"
+            onClick={async () => {
+              const res = await flushSyncQueue(updateGuestInSupabase);
+              if (res.offline) {
+                alert('אין רשת — הסנכרון יידחה');
+                return;
+              }
+              alert(
+                res.pending === 0
+                  ? `✅ סונכרן: ${res.ok} שינויים`
+                  : `סונכרן ${res.ok}, נשארו ${res.pending} בתור`
+              );
+            }}
+            className="bg-indigo-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-indigo-700 font-medium text-sm sm:text-base"
+          >
+            ☁ סנכרן
+            {getPendingCount() > 0 ? ` (${getPendingCount()})` : ''}
+          </button>
           <button
             onClick={printPage}
             className="bg-amber-600 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-amber-700 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
