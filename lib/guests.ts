@@ -9,11 +9,43 @@ export function normalizeGuest(guest: any) {
   if (!guest) return guest;
 
   const id =
-  guest.id ??
-  Date.now() * 1000000 +
-    Math.floor(Math.random() * 1000000) +
-    Math.floor(Math.random() * 100000) +
-    Math.floor(Math.random() * 10000);
+    guest.id ??
+    Date.now() * 1000000 +
+      Math.floor(Math.random() * 1000000) +
+      Math.floor(Math.random() * 100000) +
+      Math.floor(Math.random() * 10000);
+
+  // --- סטטוס אישור הגעה ---
+  let confirmed = guest.confirmed ?? '';
+  const confStr = String(confirmed).trim();
+
+  let confirmedCount =
+    guest.confirmedCount !== undefined && guest.confirmedCount !== null
+      ? Number(guest.confirmedCount)
+      : 0;
+
+  if (confStr === '0' || confStr === 'לא מגיע' || /^no$/i.test(confStr) || confStr === 'לא') {
+    confirmed = 'לא מגיע';
+    confirmedCount = 0;
+  } else if (
+    confStr === '' ||
+    /^unknown$/i.test(confStr) ||
+    confStr === 'לא ידוע' ||
+    confStr === 'ממתין'
+  ) {
+    confirmed = 'לא ידוע';
+    confirmedCount = 0;
+  } else if (!isNaN(Number(confStr)) && Number(confStr) >= 1) {
+    confirmed = String(Number(confStr));
+    confirmedCount = Number(confStr);
+  } else if (!isNaN(Number(guest.confirmedCount)) && Number(guest.confirmedCount) >= 1) {
+    confirmed = String(Number(guest.confirmedCount));
+    confirmedCount = Number(guest.confirmedCount);
+  } else if (confStr) {
+    // ערך לא מוכר → ממתין
+    confirmed = 'לא ידוע';
+    confirmedCount = 0;
+  }
 
   return {
     ...guest,
@@ -26,13 +58,8 @@ export function normalizeGuest(guest: any) {
       guest.code ||
       guest.inviteCode ||
       String(id).replace(/\./g, '').slice(-12),
-    confirmed: guest.confirmed ?? '',
-    confirmedCount:
-      guest.confirmedCount !== undefined && guest.confirmedCount !== null
-        ? Number(guest.confirmedCount)
-        : !isNaN(Number(guest.confirmed))
-          ? Number(guest.confirmed)
-          : 0,
+    confirmed,
+    confirmedCount,
     arrivedCount: Number(guest.arrivedCount) || 0,
     quantity: guest.quantity ?? '',
     group: guest.group ?? guest.guest_group ?? '',
@@ -71,7 +98,12 @@ if (!Number.isFinite(idNum) || idNum <= 0) {
     quantity: n.quantity || null,
     guest_group: n.group || null,
     transportation: n.transportation || null,
-    confirmed: n.confirmed || null,
+    confirmed: (() => {
+  const c = String(n.confirmed ?? '').trim();
+  if (c === '0' || c === 'לא מגיע') return 'לא מגיע';
+  if (!c || /^unknown$/i.test(c) || c === 'לא ידוע' || c === 'ממתין') return 'לא ידוע';
+  return c || null;
+})(),
     count: countValue,
     customer_expectation: n.customerExpectation || null,
     notes: n.notes || null,
