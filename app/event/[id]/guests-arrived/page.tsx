@@ -5,6 +5,10 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
+import {
+  loadGuests,
+  fetchGuestsFromSupabase,
+} from '../../../../lib/guests';
 
 export default function GuestsArrivedPage() {
   const params = useParams();
@@ -14,40 +18,73 @@ export default function GuestsArrivedPage() {
   const [eventTitle, setEventTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'arrived' | 'notArrived' | 'notComing'>('all');
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = () => {
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const current = events.find((e: any) => e.id.toString() === eventId);
-    if (current) setEventTitle(current.owners || current.title || '');
-
-    const saved = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
-
-    const arrivedById = new Map<any, number>();
-    const arrivedByName = new Map<string, number>();
+    const loadData = async () => {
+    setRefreshing(true);
     try {
-      const arrivedOnly = JSON.parse(
-        localStorage.getItem(`arrived_event_${eventId}`) || '[]'
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const current = events.find((e: any) => e.id.toString() === eventId);
+      if (current) setEventTitle(current.owners || current.title || '');
+
+      // מקור אמת להגעה בלייב = מקומי
+      let local: any[] = [];
+      try {
+        local = JSON.parse(localStorage.getItem(`guests_event_${eventId}`) || '[]');
+      } catch {
+        local = [];
+      }
+
+      // ענן (לשאר הפרטים) — בלי לדרוס arrivedCount מקומי
+      let cloud: any[] = [];
+      try {
+        if (typeof fetchGuestsFromSupabase === 'function') {
+          cloud = (await fetchGuestsFromSupabase(String(eventId))) || [];
+        } else if (typeof loadGuests === 'function') {
+          cloud = (await loadGuests(String(eventId))) || [];
+        }
+      } catch (e) {
+        console.warn('cloud guests fetch failed, using local', e);
+      }
+
+      const localById = new Map(local.map((g) => [String(g.id), g]));
+      const localByName = new Map(
+        local.map((g) => [String(g.name || '').trim().toLowerCase(), g])
       );
-      (arrivedOnly || []).forEach((g: any) => {
-        const n = Number(g.arrivedCount) || 0;
-        if (n <= 0) return;
-        if (g.id != null) arrivedById.set(g.id, n);
-        if (g.name) arrivedByName.set(String(g.name).trim(), n);
-      });
-    } catch {}
 
-    const merged = (saved || []).map((g: any) => {
-      const restored =
-        arrivedById.get(g.id) ||
-        arrivedByName.get(String(g.name || '').trim()) ||
-        Number(g.arrivedCount) ||
-        0;
-      return { ...g, arrivedCount: restored };
-    });
+      let merged: any[];
 
-    setGuests(merged);
+      if (Array.isArray(cloud) && cloud.length > 0) {
+        merged = cloud.map((cg) => {
+          const lg =
+            localById.get(String(cg.id)) ||
+            localByName.get(String(cg.name || '').trim().toLowerCase());
+
+          if (lg) {
+            return {
+              ...cg,
+              ...lg,
+              // הגעה מהמקומי תמיד מנצחת
+              arrivedCount: Number(lg.arrivedCount) || 0,
+            };
+          }
+          return { ...cg, arrivedCount: Number(cg.arrivedCount) || 0 };
+        });
+
+        // מוזמנים שקיימים רק מקומית
+        const cloudIds = new Set(cloud.map((g) => String(g.id)));
+        local.forEach((lg) => {
+          if (!cloudIds.has(String(lg.id))) merged.push(lg);
+        });
+      } else {
+        merged = local;
+      }
+
+      setGuests(merged);
+    } finally {
+      setRefreshing(false);
+    }
   };
-
   useEffect(() => {
     loadData();
   }, [eventId]);
@@ -119,7 +156,7 @@ export default function GuestsArrivedPage() {
   }, [guests, filter, search]);
 
   const exportExcel = () => {
-         const rows = guests.map((g) => {
+    const rows = guests.map((g) => {
       const conf = getConfirmedQty(g);
       const arr = Number(g.arrivedCount) || 0;
       let status = 'ממתין / לא אישר';
@@ -155,12 +192,15 @@ export default function GuestsArrivedPage() {
           </Link>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={loadData}
-              className="bg-white px-5 py-3 rounded-2xl shadow font-medium hover:bg-gray-50"
+              disabled={refreshing}
+              className="bg-white px-5 py-3 rounded-2xl shadow font-medium hover:bg-gray-50 disabled:opacity-60"
             >
-              רענן נתונים
+              {refreshing ? 'מרענן...' : 'רענן נתונים'}
             </button>
             <button
+              type="button"
               onClick={exportExcel}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold shadow"
             >
@@ -169,7 +209,7 @@ export default function GuestsArrivedPage() {
           </div>
         </div>
 
-                <h1 className="text-4xl font-bold text-center mb-2 text-amber-900">
+        <h1 className="text-4xl font-bold text-center mb-2 text-amber-900">
           אורחים שהגיעו
           {eventTitle ? ` • ${eventTitle}` : ''}
         </h1>
@@ -212,6 +252,7 @@ export default function GuestsArrivedPage() {
           ].map((f) => (
             <button
               key={f.id}
+              type="button"
               onClick={() => setFilter(f.id as any)}
               className={`px-5 py-3 rounded-2xl font-medium ${
                 filter === f.id
@@ -281,7 +322,7 @@ export default function GuestsArrivedPage() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          הנתונים נמשכים מדף ההושבה / הושבה מהירה (סימון הגעה בלייב)
+          הנתונים נמשכים מדף ההושבה / הושבה מהירה (סימון הגעה בלייב) · רענון מושך גם מהענן
         </p>
       </div>
     </div>
