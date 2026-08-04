@@ -348,26 +348,28 @@ export default function SeatingViewPage() {
                       })}
                   </div>
 
-                  {!table.isSpecial && (
-  <div
-    className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-bold"
-    style={{
-      top: '100%',
-      marginTop: 4,
-      fontSize: 11,
-      background: 'rgba(255,255,255,0.9)',
-      padding: '1px 7px',
-      borderRadius: 6,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-    }}
-  >
-    <span style={{ color: '#ffffff', textShadow: '0 0 2px #000' }}>{table.seats}</span>
-    <span style={{ color: '#64748b' }}>/</span>
-    <span style={{ color: '#dc2626' }}>{occupied}</span>
-    <span style={{ color: '#64748b' }}>/</span>
-    <span style={{ color: '#2563eb' }}>{arrivedSeats}</span>
-  </div>
-)}
+                                   {!table.isSpecial && (
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-bold pointer-events-none"
+                      style={{
+                        bottom: 3,
+                        top: 'auto',
+                        fontSize: 10,
+                        lineHeight: 1.1,
+                        background: 'rgba(255,255,255,0.92)',
+                        padding: '1px 5px',
+                        borderRadius: 5,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                        zIndex: 40,
+                      }}
+                    >
+                      <span style={{ color: '#1e293b' }}>{table.seats}</span>
+                      <span style={{ color: '#64748b' }}>/</span>
+                      <span style={{ color: '#dc2626' }}>{occupied}</span>
+                      <span style={{ color: '#64748b' }}>/</span>
+                      <span style={{ color: '#2563eb' }}>{arrivedSeats}</span>
+                    </div>
+                  )}
                 </div>
               );
             })
