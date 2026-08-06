@@ -254,18 +254,22 @@ savedGuests.forEach((g: any) => {
   meta[g.name] = { group };
   qtyMap[g.name] = num;
 
-  // כמה כבר יושבים בשולחנות (כולל הושבה חלקית)
-  let seated = 0;
-  tables.forEach((t) => {
-    if ((t.assignedGuests || []).includes(g.name)) {
-      seated += Number(t.guestSeats?.[g.name]) || num;
-    }
-  });
-
-  const remaining = num - seated;
-  if (remaining > 0) {
-    list.push({ name: g.name, qty: remaining, group });
+  // כמה כבר יושבים בשולחנות (מתחשב בהגעה בפועל)
+let seated = 0;
+tables.forEach((t) => {
+  if ((t.assignedGuests || []).includes(g.name)) {
+    const assigned = Number(t.guestSeats?.[g.name]) || num;
+    const arrived = Number(map[norm(g.name)] || 0);
+    // אם סומנה הגעה – סופרים כמה שבאמת הגיעו
+    // אם עדיין לא הגיע – משאירים את כל מה שהוקצה
+    seated += arrived > 0 ? Math.min(assigned, arrived) : assigned;
   }
+});
+
+const remaining = num - seated;
+if (remaining > 0) {
+  list.push({ name: g.name, qty: remaining, group });
+}
 });
       guestMetaRef.current = meta;
       setGuestQtyMap(qtyMap);
@@ -300,17 +304,26 @@ savedGuests.forEach((g: any) => {
 
   const getGuestQty = (name: string) => guestQtyMap[name] || 1;
 
-  const getSeatedQty = (table: PlacedTable, name: string) =>
-    
-    table.guestSeats?.[name] ?? getGuestQty(name);
+  const getSeatedQty = (table: PlacedTable, name: string) => {
+  const assigned = table.guestSeats?.[name] ?? getGuestQty(name);
+  const arrived = Number(
+    arrivedMap[String(name || '').trim()] || arrivedMap[name] || 0
+  );
+  return arrived > 0 ? Math.min(assigned, arrived) : assigned;
+};
   const getGuestGroup = (name: string, fallback?: string) => {
     return guestMetaRef.current?.[name]?.group || fallback || 'כללי';
   };
   const getOccupiedSeats = (table: PlacedTable) =>
-    (table.assignedGuests || []).reduce(
-      (sum, name) => sum + (table.guestSeats?.[name] ?? getGuestQty(name)),
-      0
+  (table.assignedGuests || []).reduce((sum, name) => {
+    const assigned = table.guestSeats?.[name] ?? getGuestQty(name);
+    const arrived = Number(
+      arrivedMap[String(name || '').trim()] || arrivedMap[name] || 0
     );
+    // אם סומנה הגעה – לוקחים כמה שבאמת הגיעו
+    // אם עדיין לא הגיע – משאירים את כל הכמות שהוקצתה
+    return sum + (arrived > 0 ? Math.min(assigned, arrived) : assigned);
+  }, 0);
 
       // מחזיר קבוצה שמורה – לא מאבד בהחזרה מהשולחן
   const addRegularTable = () => {
@@ -1137,20 +1150,27 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
                 <div
                   className="absolute inset-0 flex items-center justify-center"
                   style={{
-                    borderRadius: isRound ? '9999px' : 10,
+                                                          borderRadius: isRound ? '9999px' : 10,
                     background: table.isSpecial
-                      ? table.type === 'dj' ? '#1f2937' : '#334155'
+                      ? table.type === 'dj'
+                        ? '#1f2937'
+                        : '#334155'
                       : table.isReserve
                       ? '#ef4444'
+                      : selectedId === table.id
+                      ? '#facc15'
                       : '#f5e6c8',
-                    border: selectedId === table.id
-                      ? '3px solid #f59e0b'
-                      : table.isReserve
+                    border: table.isReserve
                       ? '3px solid #991b1b'
+                      : selectedId === table.id
+                      ? '2.5px solid #ca8a04'
                       : '2.5px solid #78350f',
-                    boxShadow: selectedId === table.id
-                      ? '0 0 0 3px rgba(245,158,11,0.4), 0 4px 12px rgba(0,0,0,0.3)'
-                      : '0 3px 10px rgba(0,0,0,0.25)',
+                    boxShadow:
+                      selectedId === table.id
+                        ? '0 0 0 6px rgba(250,204,21,0.55), 0 0 18px rgba(234,179,8,0.75)'
+                        : '0 3px 10px rgba(0,0,0,0.25)',
+                    outline: selectedId === table.id ? '3px solid #eab308' : 'none',
+                    outlineOffset: selectedId === table.id ? '3px' : '0',
                   }}
                 >
                   {!table.isSpecial && (
@@ -1169,12 +1189,13 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
                   )}
                                     {!table.isSpecial &&
                     seatPositions.map((pos, i) => {
-                      const arrivedSeats = (table.assignedGuests || []).reduce((sum, name) => {
-                        if ((arrivedMap[String(name || '').trim()] || arrivedMap[name] || 0) > 0) {
-                          return sum + (table.guestSeats?.[name] ?? getGuestQty(name));
-                        }
-                        return sum;
-                      }, 0);
+                    const arrivedSeats = (table.assignedGuests || []).reduce((sum, name) => {
+  const assigned = table.guestSeats?.[name] ?? getGuestQty(name);
+  const arrived = Number(
+    arrivedMap[String(name || '').trim()] || arrivedMap[name] || 0
+  );
+  return sum + Math.min(assigned, arrived);
+}, 0);
                       const isArrived = i < arrivedSeats;
                       const isOccupied = i < occupied;
                       const chairSize = table.seats >= 20 ? 7 : table.seats >= 14 ? 8 : 10;

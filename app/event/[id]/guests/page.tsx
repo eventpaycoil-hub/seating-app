@@ -1,10 +1,42 @@
 'use client';
+
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { loadGuests, saveGuests, getGuests } from '../../../../lib/guests';
 import * as XLSX from 'xlsx';
 import { supabase } from '../../../../lib/supabase.js';
+import {
+  Home,
+  Phone,
+  Video,
+  Image,
+  Calculator,
+  Users,
+  UserCheck,
+  Armchair,
+  Map,
+  Gift,
+  UserPlus,
+  Zap,
+  QrCode,
+  Copy,
+  PlusSquare,
+  ExternalLink,
+  LineChart,
+  Mail,
+  Banknote,
+  Eye,
+  List,
+  Pencil,
+  HardDrive,
+  MessageSquare,
+  MessageCircle,
+  Globe,
+  Bus,
+  LayoutGrid,
+} from 'lucide-react';
+
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
 const EDITOR_ALLOWED = [
   'home',
@@ -25,7 +57,6 @@ const DEFAULT_CLIENT_ACTIONS = [
   'video',
   'guests-arrived',
 ] as const;
-
 function normalizePhone(raw: string): string {
   if (!raw) return '';
   let p = raw.toString().trim().replace(/[^\d+]/g, '');
@@ -621,41 +652,38 @@ export default function GuestsPage() {
             <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 mt-6">
             {[
-              { id: 'home', href: '/', label: 'עמוד הבית', icon: '🏠' },
-              { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: '📞' },
-              { id: 'video', href: `/videos?eventId=${eventId}`, label: 'וידאו האירוע', icon: '🎥' },
-              { id: 'photo', href: `/gallery?eventId=${eventId}`, label: 'תמונות האירוע', icon: '🖼' },
-              { id: 'calculator', href: '/calculator', label: 'מחשבון', icon: '🧮' },
-              { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: '👥' },
-              { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: '✅' },
-              { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: '🪑' },
-              { id: 'waze', href: '/venue', label: 'רשומות WAZE', icon: '📍' },
-              { id: 'gifts', href: `/event/${eventId}/gifts`, label: 'מתנות שקיבלנו', icon: '🎁' },
-              { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: 'הוספת מוזמנים', icon: '➕' },
-              { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: 'הושבת מוזמנים', icon: '🪑' },
-              { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: 'הושבה מהירה', icon: '⚡' },
-              { id: 'checkin', href: `/event/${eventId}/checkin`, label: 'סריקת כניסה', icon: '📷' },
-              { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: 'מספרים כפולים', icon: '🔁' },
-              { id: 'add-tables', href: `/addtable?eventId=${eventId}`, label: 'הוספת שולחנות', icon: '➕' },
-              { id: 'external-links', href: '/external-links', label: 'קישורים חיצוניים', icon: '🔗' },
-              { id: 'customer-tracking', href: '/customer-tracking', label: 'מעקב לקוחות', icon: '📋' },
-              { id: 'invite-builder', href: `/event/${eventId}/invite-builder`, label: 'הזמנה דיגיטלית', icon: '💌' },
-              { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: '💰' },
-              { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: '👀' },
-              { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: '📅' },
-              { id: 'edit-event', href: `/event/${eventId}/edit`, label: 'עריכת אירוע', icon: '✏️' },
-                  { id: 'backup', href: '#', label: 'גיבוי מלא', icon: '💾' },
-              { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: '📩' },
-              { id: 'email', href: `/event/${eventId}/email`, label: 'שליחת מיילים', icon: '📧' },
-              { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: '💬' },
-              { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: '🌐' },
-              { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: '🚌' },
-              { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: '🪑' },
-              { id: 'seating-view', href: `/event/${eventId}/seating-view`, label: 'תצוגת אולם', icon: '🗺️' },
-              { id: 'new-event', href: '/create-event', label: 'פתח אירוע חדש', icon: '➕' },
-              { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: '🔐' },
+              { id: 'home', href: '/', label: 'עמוד הבית', icon: Home },
+              { id: 'fix-phones', href: `/event/${eventId}/fix-phones`, label: 'תיקון מספרים', icon: Phone },
+              { id: 'video', href: `/videos?eventId=${eventId}`, label: 'וידאו האירוע', icon: Video },
+              { id: 'photo', href: `/gallery?eventId=${eventId}`, label: 'תמונות האירוע', icon: Image },
+              { id: 'calculator', href: '/calculator', label: 'מחשבון', icon: Calculator },
+              { id: 'groups', href: `/event/${eventId}/groups`, label: 'קבוצות מוזמנים', icon: Users },
+              { id: 'guests-arrived', href: `/event/${eventId}/guests-arrived`, label: 'אורחים שהגיעו', icon: UserCheck },
+              { id: 'tables-status', href: `/event/${eventId}/tables-status`, label: 'מצב שולחנות נוכחי', icon: Armchair },
+              { id: 'waze', href: '/venue', label: 'ניווט WAZE', icon: Map },
+              { id: 'gifts', href: `/event/${eventId}/gifts`, label: 'מתנות שקיבלנו', icon: Gift },
+              { id: 'add-guests', href: `/add-guests?eventId=${eventId}`, label: 'הוספת מוזמנים', icon: UserPlus },
+              { id: 'seating', href: `/event/${eventId}/seating-arrival`, label: 'הושבת מוזמנים', icon: Armchair },
+              { id: 'fast-seating', href: `/event/${eventId}/seating-arrival-fast`, label: 'הושבה מהירה', icon: Zap },
+              { id: 'checkin', href: `/event/${eventId}/checkin`, label: 'סריקת נוכחות', icon: QrCode },
+              { id: 'duplicate-phones', href: `/event/${eventId}/duplicate-phones`, label: 'מספרים כפולים', icon: Copy },
+              { id: 'add-tables', href: `/add-table?eventId=${eventId}`, label: 'הוספת שולחנות', icon: PlusSquare },
+              { id: 'external-links', href: '/external-links', label: 'קישורים חיצוניים', icon: ExternalLink },
+              { id: 'customer-tracking', href: '/customer-tracking', label: 'מעקב לקוחות', icon: LineChart },
+              { id: 'invite-builder', href: `/event/${eventId}/invite-builder`, label: 'הזמנה דיגיטלית', icon: Mail },
+              { id: 'pricing', href: '/pricing', label: 'הצעות מחיר', icon: Banknote },
+              { id: 'pricing-view', href: '/pricing-view', label: 'צפייה בהצעות', icon: Eye },
+              { id: 'events-list', href: '/events', label: 'רשימת אירועים', icon: List },
+              { id: 'edit-event', href: `/event/${eventId}/edit`, label: 'עריכת אירוע', icon: Pencil },
+              { id: 'backup', href: '#', label: 'גיבוי מלא', icon: HardDrive },
+              { id: 'sms', href: `/event/${eventId}/sms`, label: 'SMS', icon: MessageSquare },
+              { id: 'email', href: `/event/${eventId}/email`, label: 'שליחת מיילים', icon: Mail },
+              { id: 'whatsapp', href: `/event/${eventId}/whatsapp-templates`, label: 'תבניות ווטסאפ', icon: MessageCircle },
+              { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: Globe },
+              { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: Bus },
+              { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: LayoutGrid },
             ]
               .filter((item) => {
                 if (isFullAdmin) return true;
@@ -664,28 +692,32 @@ export default function GuestsPage() {
                 if (ADMIN_ONLY.has(item.id)) return false;
                 return visibleActions.includes(item.id);
               })
-                        .map((item) =>
-            item.id === 'backup' ? (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => downloadEventBackup(String(eventId))}
-                className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
-              >
-                <div className="text-4xl">{item.icon}</div>
-                <div className="text-sm font-medium text-gray-700">{item.label}</div>
-              </button>
-            ) : (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
-              >
-                <div className="text-4xl">{item.icon}</div>
-                <div className="text-sm font-medium text-gray-700">{item.label}</div>
-              </Link>
-            )
-          )}
+              .map((item) =>
+                item.id === 'backup' ? (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => downloadEventBackup(String(eventId))}
+                    className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
+                  >
+                    <div className="w-10 h-10 flex items-center justify-center text-slate-700">
+                      <item.icon className="w-7 h-7" strokeWidth={1.75} />
+                    </div>
+                    <div className="text-sm font-medium text-gray-700 text-center">{item.label}</div>
+                  </button>
+                ) : (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition"
+                  >
+                    <div className="w-10 h-10 flex items-center justify-center text-slate-700">
+                      <item.icon className="w-7 h-7" strokeWidth={1.75} />
+                    </div>
+                    <div className="text-sm font-medium text-gray-700 text-center">{item.label}</div>
+                  </Link>
+                )
+              )}
           </div>
         </div>
       </div>

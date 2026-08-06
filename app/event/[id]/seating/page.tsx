@@ -471,21 +471,31 @@ if (remaining > 0) {
     setDraggedNewTable(null);
   };
 
-  const calcSize = (table: PlacedTable) => {
+    const calcSize = (table: PlacedTable) => {
     let tableW = 55;
     let tableH = 55;
+
     if (table.isSpecial) {
       tableW = table.type === 'dj' ? 92 : 110;
       tableH = table.type === 'dj' ? 55 : 110;
-    } else if (table.type === 'rect') {
-      tableW = 52;
-      tableH = 83;
+        } else if (table.type === 'rect') {
+      const seats = Number(table.seats) || 12;
+            tableW = 55;
+      if (seats >= 32) {
+        tableH = 165; // 3 משבצות (55*3)
+      } else if (seats >= 24) {
+        tableH = 110; // 2 משבצות (55*2) — מדויק
+      } else {
+        tableH = 83; // רגיל
+      }
+
       if ((table.angle || 0) === 90) {
         const tmp = tableW;
         tableW = tableH;
         tableH = tmp;
       }
     }
+
     return { tableW, tableH };
   };
   const getTableBox = (table: any) => {
@@ -516,12 +526,14 @@ if (remaining > 0) {
     }
     const { tableW, tableH } = calcSize(table);
     
-    const el = e.currentTarget as HTMLElement;
-const rect = el.getBoundingClientRect();
-const centerX = (e.clientX - rect.left + (el.scrollLeft || 0)) / floorZoom;
-const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
-    let x = Math.round(centerX / GRID - 0.5) * GRID + GRID / 2 - tableW / 2;
-    let y = Math.round(centerY / GRID - 0.5) * GRID + GRID / 2 - tableH / 2;
+        const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    const dropX = (e.clientX - rect.left + (el.scrollLeft || 0)) / floorZoom;
+    const dropY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
+
+    // נצמד לפינה — עובד ל־1 / 2 / 3 משבצות
+    let x = Math.round((dropX - tableW / 2) / GRID) * GRID;
+    let y = Math.round((dropY - tableH / 2) / GRID) * GRID;
     x = Math.max(0, x);
     y = Math.max(0, y);
         if (isOverlapping(x, y, tableW, tableH, draggedId)) {
@@ -569,14 +581,14 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
     );
   };
 
-  const onTouchEndFloor = () => {
+    const onTouchEndFloor = () => {
     if (!touchDragRef.current) return;
     const id = touchDragRef.current.id;
     const table = placedTables.find((t) => t.id === id);
     if (table) {
-      const { tableW, tableH } = calcSize(table);
-      const x = Math.round((table.x + tableW / 2) / GRID - 0.5) * GRID + GRID / 2 - tableW / 2;
-      const y = Math.round((table.y + tableH / 2) / GRID - 0.5) * GRID + GRID / 2 - tableH / 2;
+      // נצמד לפינה השמאלית-עליונה של המשבצת — עובד ל־1/2/3 משבצות
+      const x = Math.round(table.x / GRID) * GRID;
+      const y = Math.round(table.y / GRID) * GRID;
       setPlacedTables((prev) => prev.map((t) => (t.id === id ? { ...t, x, y } : t)));
     }
     touchDragRef.current = null;
@@ -1097,32 +1109,17 @@ const centerY = (e.clientY - rect.top + (el.scrollTop || 0)) / floorZoom;
             }}
           >
             {placedTables.map((table) => {
-              const occupied = getOccupiedSeats(table);
+                            const occupied = getOccupiedSeats(table);
               const isWide = table.type === 'rect';
               const isRound = table.type === 'round';
               const isRotated = (table.angle || 0) === 90;
 
-              let tableW = 55;
-              let tableH = 55;
-              if (table.isSpecial) {
-                tableW = table.type === 'dj' ? 92 : 110;
-                tableH = table.type === 'dj' ? 55 : 110;
-              } else if (table.type === 'round' || table.type === 'square') {
-                tableW = 55;
-                tableH = 55;
-              } else if (table.type === 'rect') {
-                tableW = 52;
-                tableH = 83;
-              }
-              if (isRotated && !table.isSpecial) {
-                const tmp = tableW;
-                tableW = tableH;
-                tableH = tmp;
-              }
+              const { tableW, tableH } = calcSize(table);
 
               const seatPositions = !table.isSpecial
                 ? getSeatPositions(table.type, table.seats, tableW, tableH)
                 : [];
+              
 
               return (
                 <div

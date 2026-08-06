@@ -243,9 +243,16 @@ export default function SeatingViewPage() {
               } else if (table.type === 'round' || table.type === 'square') {
                 tableW = 55;
                 tableH = 55;
-              } else if (table.type === 'rect') {
-                tableW = 52;
-                tableH = 83;
+                            } else if (table.type === 'rect') {
+                const seats = Number(table.seats) || 12;
+                tableW = 55;
+                if (seats >= 32) {
+                  tableH = 165;
+                } else if (seats >= 24) {
+                  tableH = 110;
+                } else {
+                  tableH = 83;
+                }
               }
               if (isRotated && !table.isSpecial) {
                 const tmp = tableW;
