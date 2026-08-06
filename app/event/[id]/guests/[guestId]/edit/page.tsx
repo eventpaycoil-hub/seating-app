@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { saveGuests } from '../../../../../../lib/guests';
+import { saveGuests, updateGuestInSupabase } from '../../../../../../lib/guests';
 
 function isPending(g: any) {
   return !g.confirmed || g.confirmed === '' || g.confirmed === 'לא ידוע' || g.confirmed === 'ממתין';
@@ -196,19 +196,34 @@ export default function EditGuestPage() {
     }
   };
 
-  const saveGuestField = (updatedGuest: any) => {
+    const saveGuestField = async (updatedGuest: any) => {
     const normalized = {
       ...updatedGuest,
       quantity: updatedGuest.quantity ?? '',
-      customerExpectation: updatedGuest.quantity ?? updatedGuest.customerExpectation ?? '',
+      customerExpectation:
+        updatedGuest.quantity ?? updatedGuest.customerExpectation ?? '',
     };
+
     setGuest(normalized);
+
     const guestsKey = `guests_event_${eventId}`;
     let savedGuests = JSON.parse(localStorage.getItem(guestsKey) || '[]');
     savedGuests = savedGuests.map((g: any) =>
-      g.id.toString() === guestId ? normalized : g
+      g.id.toString() === guestId.toString() ? normalized : g
     );
-    saveGuests(eventId, savedGuests);
+    localStorage.setItem(guestsKey, JSON.stringify(savedGuests));
+
+    try {
+      await saveGuests(eventId, savedGuests);
+    } catch (e) {
+      console.warn('saveGuests failed', e);
+    }
+
+    try {
+      await updateGuestInSupabase(normalized, String(eventId));
+    } catch (e) {
+      console.warn('updateGuestInSupabase failed', e);
+    }
   };
 
   const isAdmin =
@@ -234,7 +249,7 @@ export default function EditGuestPage() {
     saveGuestField(updated);
   };
 
-  const setCountAndConfirm = (num: number) => {
+    const setCountAndConfirm = async (num: number) => {
     const now = new Date().toISOString();
     const updatedGuest = {
       ...guest,
@@ -244,11 +259,11 @@ export default function EditGuestPage() {
       confirmedSource: 'manual',
       confirmedAt: now,
     };
-    saveGuestField(updatedGuest);
+    await saveGuestField(updatedGuest);
     goNextOrList();
   };
 
-  const markAsNotComing = () => {
+    const markAsNotComing = async () => {
     const now = new Date().toISOString();
     const updatedGuest = {
       ...guest,
@@ -258,7 +273,7 @@ export default function EditGuestPage() {
       confirmedSource: 'manual',
       confirmedAt: now,
     };
-    saveGuestField(updatedGuest);
+    await saveGuestField(updatedGuest);
     goNextOrList();
   };
 
@@ -285,8 +300,8 @@ export default function EditGuestPage() {
     setGenderMode('simple');
   };
 
-  const saveAndGoBack = () => {
-    saveGuestField(guest);
+    const saveAndGoBack = async () => {
+    await saveGuestField(guest);
     goNextOrList();
   };
 

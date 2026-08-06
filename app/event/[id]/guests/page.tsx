@@ -1,7 +1,7 @@
 'use client';
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { loadGuests, saveGuests, getGuests } from '../../../../lib/guests';
 import * as XLSX from 'xlsx';
 import { supabase } from '../../../../lib/supabase.js';
@@ -183,7 +183,7 @@ export default function GuestsPage() {
   const params = useParams();
   const rawId = params.id;
   const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || '1');
-
+  const pathname = usePathname();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
@@ -200,6 +200,7 @@ export default function GuestsPage() {
   const [isEditorMode, setIsEditorMode] = useState(false);
   const [jumpGroup, setJumpGroup] = useState('');
   const [roleLabel, setRoleLabel] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
   const isFullAdmin = !isClientMode && !isEditorMode;
   const ADMIN_ONLY = useMemo(
@@ -297,7 +298,12 @@ export default function GuestsPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+    }, [eventId, reloadKey]);
+      useEffect(() => {
+    const onFocus = () => setReloadKey((k) => k + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   useEffect(() => {
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
