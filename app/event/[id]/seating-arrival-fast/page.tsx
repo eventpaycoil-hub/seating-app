@@ -8,6 +8,7 @@ import { Search, RefreshCw, Printer, ArrowLeft, UserPlus, QrCode } from 'lucide-
 import { loadGuests, updateGuestInSupabase } from '../../../../lib/guests';
 import { saveSeating } from '../../../../lib/seating';
 import { enqueueGuestUpdate, flushSyncQueue, getPendingCount } from '../../../../lib/offlineSync';
+
 export default function SeatingArrivalFastPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -26,11 +27,14 @@ export default function SeatingArrivalFastPage() {
 
   const [selectedTableId, setSelectedTableId] = useState<string | number>('');
   const [availableTables, setAvailableTables] = useState<any[]>([]);
+  const [filterTableNum, setFilterTableNum] = useState<number | null>(null);
 
   const tableMap = useMemo(() => {
     const map = new Map<string, number>();
     try {
-      const saved = localStorage.getItem('seatingTables');
+      const saved =
+        localStorage.getItem(`seatingTables_${eventId}`) ||
+        localStorage.getItem('seatingTables');
       if (!saved) return map;
       const seatingData = JSON.parse(saved);
       if (Array.isArray(seatingData)) {
@@ -48,15 +52,18 @@ export default function SeatingArrivalFastPage() {
       console.error('Error loading seating data', e);
     }
     return map;
-  }, [tableMapVersion]);
+  }, [tableMapVersion, eventId]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'seatingTables') setTableMapVersion((prev) => prev + 1);
+      if (e.key === 'seatingTables' || e.key === `seatingTables_${eventId}`) {
+        setTableMapVersion((prev) => prev + 1);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [eventId]);
+
   useEffect(() => {
     const onOnline = () => {
       flushSyncQueue(updateGuestInSupabase).then((res) => {
@@ -66,6 +73,7 @@ export default function SeatingArrivalFastPage() {
     window.addEventListener('online', onOnline);
     return () => window.removeEventListener('online', onOnline);
   }, []);
+
   useEffect(() => {
     if (searchTerm.trim().length < 2) return;
     if (forceEmptyList) return;
@@ -145,18 +153,44 @@ export default function SeatingArrivalFastPage() {
   const stillNotArrived = Math.max(0, confirmedPeople - arrivedCount);
 
   const filteredGuests = useMemo(() => {
+    let list = allGuests;
+
+    if (filterTableNum != null) {
+      const namesOnTable = new Set<string>();
+      try {
+        const raw =
+          localStorage.getItem(`seatingTables_${eventId}`) ||
+          localStorage.getItem('seatingTables') ||
+          '[]';
+        const seatingData = JSON.parse(raw);
+        const table = (Array.isArray(seatingData) ? seatingData : []).find(
+          (t: any) => Number(t.tableNumber) === Number(filterTableNum)
+        );
+        if (table && Array.isArray(table.assignedGuests)) {
+          table.assignedGuests.forEach((n: string) => {
+            if (n) namesOnTable.add(String(n).trim().toLowerCase());
+          });
+        }
+      } catch {}
+      return list.filter((g: any) =>
+        namesOnTable.has(String(g.name || '').trim().toLowerCase())
+      );
+    }
+
     if (forceEmptyList) return [];
     if (!searchTerm.trim()) return allGuests;
+
     const term = searchTerm.toLowerCase().trim();
-    return allGuests.filter(
+    return list.filter(
       (g: any) =>
         g.name?.toLowerCase().includes(term) || g.phone?.includes(searchTerm.trim())
     );
-  }, [allGuests, searchTerm, forceEmptyList]);
+  }, [allGuests, searchTerm, forceEmptyList, filterTableNum, tableMapVersion, eventId]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setForceEmptyList(false);
+    if (term.trim().length >= 2) setFilterTableNum(null);
   };
 
   const startVoiceSearch = () => {
@@ -189,9 +223,31 @@ export default function SeatingArrivalFastPage() {
   };
 
   const markArrival = async (id: number, count: number) => {
-    const updated = allGuests.map((guest) =>
-      guest.id === id ? { ...guest, arrivedCount: count } : guest
-    );
+    const updated = allGuests.map((guest) => {
+      if (guest.id !== id) return guest;
+
+      const status = String(guest.confirmed ?? '').trim();
+      const wasNotConfirmed =
+        status === 'לא מגיע' ||
+        status === 'לא ידוע' ||
+        status === 'ממתין' ||
+        status === '' ||
+        !(Number(status) > 0);
+
+      if (count > 0 && wasNotConfirmed) {
+        return {
+          ...guest,
+          arrivedCount: count,
+          confirmed: String(count),
+          confirmedCount: count,
+          count: count,
+          confirmedSource: guest.confirmedSource || 'arrival',
+          confirmedAt: new Date().toISOString(),
+        };
+      }
+
+      return { ...guest, arrivedCount: count };
+    });
     setAllGuests(updated);
 
     const arrivedOnly = updated
@@ -205,7 +261,7 @@ export default function SeatingArrivalFastPage() {
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
     const guest = updated.find((g) => g.id === id);
-            if (guest) {
+    if (guest) {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueGuestUpdate(String(eventId), guest);
       } else {
@@ -217,14 +273,59 @@ export default function SeatingArrivalFastPage() {
         }
       }
     }
-    setSearchTerm('');
-    setForceEmptyList(true);
-    setTimeout(() => searchInputRef.current?.focus(), 80);
+
+    if (filterTableNum == null) {
+      setSearchTerm('');
+      setForceEmptyList(true);
+      setTimeout(() => searchInputRef.current?.focus(), 80);
+    }
+  };
+
+  const removeFromTable = async (guestName: string, tableNum: number) => {
+    if (!confirm(`להוציא את ${guestName} משולחן ${tableNum}?`)) return;
+    try {
+      const keyEvent = `seatingTables_${eventId}`;
+      const raw =
+        localStorage.getItem(keyEvent) ||
+        localStorage.getItem('seatingTables') ||
+        '[]';
+      const tables: any[] = JSON.parse(raw);
+      const idx = tables.findIndex((t) => Number(t.tableNumber) === Number(tableNum));
+      if (idx < 0) {
+        alert('השולחן לא נמצא');
+        return;
+      }
+      const table = { ...tables[idx] };
+      const nameKey = String(guestName).trim().toLowerCase();
+      table.assignedGuests = (table.assignedGuests || []).filter(
+        (n: string) => String(n).trim().toLowerCase() !== nameKey
+      );
+      if (table.guestSeats) {
+        const gs = { ...table.guestSeats };
+        Object.keys(gs).forEach((k) => {
+          if (String(k).trim().toLowerCase() === nameKey) delete gs[k];
+        });
+        table.guestSeats = gs;
+      }
+      tables[idx] = table;
+      localStorage.setItem(keyEvent, JSON.stringify(tables));
+      localStorage.setItem('seatingTables', JSON.stringify(tables));
+      try {
+        await saveSeating(eventId, tables);
+      } catch (e) {
+        console.warn('saveSeating failed', e);
+      }
+      setTableMapVersion((v) => v + 1);
+    } catch (e) {
+      console.error(e);
+      alert('לא הצלחתי להוציא מהשולחן');
+    }
   };
 
   const clearSearch = () => {
     setSearchTerm('');
     setForceEmptyList(false);
+    setFilterTableNum(null);
   };
 
   const refresh = () => {
@@ -279,7 +380,7 @@ export default function SeatingArrivalFastPage() {
     setAllGuests(updated);
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-        try {
+    try {
       await updateGuestInSupabase(newGuest, String(eventId));
     } catch (e) {
       console.warn('add live guest sync failed', e);
@@ -357,7 +458,11 @@ export default function SeatingArrivalFastPage() {
   const printPage = () => {
     let seatingData: any[] = [];
     try {
-      seatingData = JSON.parse(localStorage.getItem('seatingTables') || '[]');
+      seatingData = JSON.parse(
+        localStorage.getItem(`seatingTables_${eventId}`) ||
+          localStorage.getItem('seatingTables') ||
+          '[]'
+      );
     } catch {
       seatingData = [];
     }
@@ -436,8 +541,7 @@ export default function SeatingArrivalFastPage() {
 </html>`);
     w.document.close();
   };
-
-  const renderGuestActions = (guest: any) => {
+    const renderGuestActions = (guest: any) => {
     const confirmed =
       getConfirmedQty(guest) || guest.confirmedCount || guest.quantity || 1;
     const isAlreadyArrived = guest.arrivedCount > 0;
@@ -451,9 +555,14 @@ export default function SeatingArrivalFastPage() {
     return { confirmed, isAlreadyArrived, isNotComing, isPending, tableNum };
   };
 
-  const emptyHint = forceEmptyList
-    ? 'הרשימה נוקתה. חפש מוזמן חדש...'
-    : 'לא נמצאו תוצאות';
+  const emptyHint =
+    filterTableNum != null
+      ? filteredGuests.length === 0
+        ? `אין מוזמנים בשולחן ${filterTableNum}`
+        : ''
+      : forceEmptyList
+      ? 'הרשימה נוקתה. חפש מוזמן חדש...'
+      : 'לא נמצאו תוצאות';
 
   return (
     <div className="min-h-screen bg-[#f5e8c7] p-4 sm:p-6 md:p-8 overflow-x-hidden" dir="rtl">
@@ -471,22 +580,23 @@ export default function SeatingArrivalFastPage() {
           הושבה מהירה {eventTitle && `• ${eventTitle}`}
         </h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-10">
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">אישרו</div>
-            <div className="text-3xl sm:text-5xl font-bold text-blue-600">{confirmedPeople}</div>
+        {/* סטטיסטיקות — מספרים קטנים כמו ברגיל */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">אישרו</div>
+            <div className="text-lg sm:text-2xl font-bold text-blue-600 tabular-nums">{confirmedPeople}</div>
           </div>
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">הגיעו</div>
-            <div className="text-3xl sm:text-5xl font-bold text-green-600">{arrivedCount}</div>
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">הגיעו</div>
+            <div className="text-lg sm:text-2xl font-bold text-green-600 tabular-nums">{arrivedCount}</div>
           </div>
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
-            <div className="text-3xl sm:text-5xl font-bold text-orange-500">{stillNotArrived}</div>
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">עדיין לא הגיעו</div>
+            <div className="text-lg sm:text-2xl font-bold text-orange-500 tabular-nums">{stillNotArrived}</div>
           </div>
         </div>
 
-        {/* חיפוש + כפתורים בשורה מטאבלט */}
+        {/* חיפוש + כפתורים */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-10 sm:justify-center">
           <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[280px] sm:max-w-xl lg:max-w-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={22} />
@@ -524,7 +634,7 @@ export default function SeatingArrivalFastPage() {
           >
             <RefreshCw size={18} /> רענן שולחנות
           </button>
-                    <button
+          <button
             type="button"
             onClick={async () => {
               const res = await flushSyncQueue(updateGuestInSupabase);
@@ -563,6 +673,21 @@ export default function SeatingArrivalFastPage() {
           </Link>
         </div>
 
+        {filterTableNum != null && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+            <div className="font-bold text-amber-900">
+              שולחן {filterTableNum} · {filteredGuests.length} מוזמנים
+            </div>
+            <button
+              type="button"
+              onClick={() => setFilterTableNum(null)}
+              className="text-sm font-medium text-blue-600 hover:underline"
+            >
+              הצג הכל
+            </button>
+          </div>
+        )}
+
         {/* מובייל: כרטיסים */}
         <div className="md:hidden space-y-3">
           {filteredGuests.length > 0 ? (
@@ -587,8 +712,27 @@ export default function SeatingArrivalFastPage() {
                         {guest.phone || '—'}
                       </div>
                     </div>
-                    <div className="text-amber-700 font-bold text-sm whitespace-nowrap">
-                      {tableNum ? `שולחן ${tableNum}` : 'לא הושב'}
+                    <div className="flex flex-col items-end gap-1">
+                      {tableNum ? (
+                        <button
+                          type="button"
+                          onClick={() => setFilterTableNum(Number(tableNum))}
+                          className="text-amber-700 font-bold text-sm whitespace-nowrap underline underline-offset-2"
+                        >
+                          שולחן {tableNum}
+                        </button>
+                      ) : (
+                        <div className="text-gray-400 text-sm whitespace-nowrap">לא הושב</div>
+                      )}
+                      {filterTableNum != null && tableNum && (
+                        <button
+                          type="button"
+                          onClick={() => removeFromTable(guest.name, Number(tableNum))}
+                          className="text-xs text-red-600 border border-red-300 rounded-full px-2 py-0.5 hover:bg-red-50"
+                        >
+                          ✕ הוצא מהשולחן
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -678,7 +822,28 @@ export default function SeatingArrivalFastPage() {
                         <div className="text-gray-600 font-mono">{guest.phone}</div>
                       </td>
                       <td className="py-6 px-8 text-center font-bold text-xl text-amber-700">
-                        {tableNum ? `שולחן ${tableNum}` : 'אורח לא הושב'}
+                        {tableNum ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setFilterTableNum(Number(tableNum))}
+                              className="underline underline-offset-2 hover:text-amber-900"
+                            >
+                              שולחן {tableNum}
+                            </button>
+                            {filterTableNum != null && (
+                              <button
+                                type="button"
+                                onClick={() => removeFromTable(guest.name, Number(tableNum))}
+                                className="text-xs text-red-600 border border-red-300 rounded-full px-2 py-0.5 hover:bg-red-50 font-medium"
+                              >
+                                ✕ הוצא
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          'אורח לא הושב'
+                        )}
                       </td>
                       <td className="py-6 px-8 text-center">
                         {isNotComing ? (
