@@ -206,10 +206,34 @@ export default function SeatingArrivalPage() {
     recognition.start();
   };
 
-  const markArrival = async (id: number, count: number) => {
-    const updated = allGuests.map((guest) =>
-      guest.id === id ? { ...guest, arrivedCount: count } : guest
-    );
+    const markArrival = async (id: number, count: number) => {
+    const updated = allGuests.map((guest) => {
+      if (guest.id !== id) return guest;
+
+      const status = String(guest.confirmed ?? '').trim();
+      const wasNotConfirmed =
+        status === 'לא מגיע' ||
+        status === 'לא ידוע' ||
+        status === 'ממתין' ||
+        status === '' ||
+        !(Number(status) > 0);
+
+      // מי שהיה X / לא מאושר ומגיע עכשיו — מעדכנים גם אישור
+      if (count > 0 && wasNotConfirmed) {
+        return {
+          ...guest,
+          arrivedCount: count,
+          confirmed: String(count),
+          confirmedCount: count,
+          count: count,
+          confirmedSource: guest.confirmedSource || 'arrival',
+          confirmedAt: new Date().toISOString(),
+        };
+      }
+
+      return { ...guest, arrivedCount: count };
+    });
+
     setAllGuests(updated);
 
     const arrivedOnly = updated
@@ -222,8 +246,8 @@ export default function SeatingArrivalPage() {
     localStorage.setItem(`arrived_event_${eventId}`, JSON.stringify(arrivedOnly));
     localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
 
-    const guest = updated.find((g) => g.id === id);
-            if (guest) {
+           const guest = updated.find((g) => g.id === id);
+    if (guest) {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueGuestUpdate(String(eventId), guest);
       } else {
@@ -241,6 +265,7 @@ export default function SeatingArrivalPage() {
     setForceEmptyList(true);
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
+   
 
   const clearSearch = () => {
     setSearchTerm('');
@@ -523,19 +548,19 @@ export default function SeatingArrivalPage() {
           הושבת מוזמנים {eventTitle && `• ${eventTitle}`}
         </h1>
 
-        {/* סטטיסטיקות */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-10">
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">אישרו באירוע הזה</div>
-            <div className="text-3xl sm:text-5xl font-bold text-blue-600">{confirmedPeople}</div>
+                {/* סטטיסטיקות */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">אישרו באירוע הזה</div>
+            <div className="text-lg sm:text-2xl font-bold text-blue-600 tabular-nums">{confirmedPeople}</div>
           </div>
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">כבר הגיעו</div>
-            <div className="text-3xl sm:text-5xl font-bold text-green-600">{arrivedCount}</div>
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">כבר הגיעו</div>
+            <div className="text-lg sm:text-2xl font-bold text-green-600 tabular-nums">{arrivedCount}</div>
           </div>
-          <div className="bg-white px-4 py-4 sm:px-8 sm:py-6 rounded-2xl sm:rounded-3xl shadow text-center">
-            <div className="text-xs sm:text-sm text-gray-500 mb-1">עדיין לא הגיעו</div>
-            <div className="text-3xl sm:text-5xl font-bold text-orange-500">{stillNotArrived}</div>
+          <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
+            <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">עדיין לא הגיעו</div>
+            <div className="text-lg sm:text-2xl font-bold text-orange-500 tabular-nums">{stillNotArrived}</div>
           </div>
         </div>
 
