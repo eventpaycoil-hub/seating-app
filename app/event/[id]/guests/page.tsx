@@ -239,7 +239,9 @@ export default function GuestsPage() {
   const [roleLabel, setRoleLabel] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
 
-  const isFullAdmin = !isClientMode && !isEditorMode;
+    const roleNow = (typeof window !== 'undefined' ? localStorage.getItem('userRole') : '') || '';
+  const isVendor = roleNow.toLowerCase() === 'vendor';
+  const isFullAdmin = !isClientMode && !isEditorMode && !isVendor;
   const ADMIN_ONLY = useMemo(
     () =>
       new Set([
@@ -719,12 +721,17 @@ export default function GuestsPage() {
               { id: 'create-event', href: '/create-event', label: 'פתח אירוע חדש', icon: PlusSquare },
             ]
               .filter((item) => {
-                if (isFullAdmin) return true;
-                if (isEditorMode)
-                  return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
-                if (ADMIN_ONLY.has(item.id)) return false;
-                return visibleActions.includes(item.id);
-              })
+  if (isFullAdmin) return true;
+  if (isEditorMode) return (EDITOR_ALLOWED as readonly string[]).includes(item.id);
+  if (isVendor) {
+    return [
+      'home', 'photo', 'video', 'groups', 'guests-arrived', 'gifts',
+      'add-guests', 'duplicate-phones', 'transport', 'seating',
+      'seating-sketch', 'seating-view', 'edit-event',
+    ].includes(item.id);
+  }
+  return visibleActions.includes(item.id);
+})
               .map((item) =>
                 item.id === 'backup' ? (
                   <button
