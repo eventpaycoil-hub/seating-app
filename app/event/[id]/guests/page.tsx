@@ -35,6 +35,9 @@ import {
   Globe,
   Bus,
   LayoutGrid,
+   
+  Settings,
+
 } from 'lucide-react';
 
 /** סמלים שמותרים לטלפנית (EDITOR) בלבד */
@@ -684,6 +687,7 @@ export default function GuestsPage() {
               { id: 'landing', href: `/landing?eventId=${eventId}`, label: 'דף נחיתה', icon: Globe },
               { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: Bus },
               { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: LayoutGrid },
+              { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: Settings },
             ]
               .filter((item) => {
                 if (isFullAdmin) return true;
