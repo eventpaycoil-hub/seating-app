@@ -64,6 +64,20 @@ export default function EditEventPage() {
 
   const [showDeleteZone, setShowDeleteZone] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isLimitedEdit, setIsLimitedEdit] = useState(false);
+  const [publicLink, setPublicLink] = useState('');
+
+  useEffect(() => {
+    const role = (localStorage.getItem('userRole') || '').toLowerCase();
+    const clientMode = localStorage.getItem('clientMode') === 'true';
+    setIsLimitedEdit(role === 'client' || role === 'vendor' || clientMode);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPublicLink(`${window.location.origin}/landing?eventId=${eventId}`);
+    }
+  }, [eventId]);
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -344,17 +358,6 @@ export default function EditEventPage() {
     router.push('/events');
   };
 
-  const eventTypes = [
-    'חתונה',
-    'בר מצוה',
-    'בת מצוה',
-    'בר ובת מצוה',
-    'ברית',
-    'בריתה',
-    'כנס',
-    'אחר',
-  ];
-
   const serviceTypes = [
     'אישורי הגעה בלבד',
     'אישורי הגעה וסידורי הושבה',
@@ -362,12 +365,9 @@ export default function EditEventPage() {
     'ניהול אירוע מלא',
   ];
 
-  const publicLink =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/landing?eventId=${eventId}`
-      : `https://www.eventpay1.co.il/landing?eventId=${eventId}`;
-
-  const publicLinkNoTransport = `${publicLink}${publicLink.includes('?') ? '&' : '?'}noTransport=1`;
+  const publicLinkNoTransport = publicLink
+    ? `${publicLink}${publicLink.includes('?') ? '&' : '?'}noTransport=1`
+    : '';
 
   const copyText = (text: string, msg: string) => {
     navigator.clipboard.writeText(text);
@@ -385,7 +385,9 @@ export default function EditEventPage() {
             ← חזרה לרשימת מוזמנים
           </Link>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-10">
+          {/* לינקים להפצה — לכולם */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-2xl space-y-5">
             <div>
               <div className="font-bold text-xl text-blue-800">לינקים להפצה לאנשים שלא ברשימה</div>
@@ -401,11 +403,14 @@ export default function EditEventPage() {
                   type="button"
                   onClick={() => copyText(publicLink, '✅ לינק עם הסעות הועתק')}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
+                  disabled={!publicLink}
                 >
                   📋 העתק
                 </button>
               </div>
-              <div className="text-sm text-gray-700 break-all">{publicLink}</div>
+              {publicLink && (
+                <div className="text-sm text-gray-700 break-all">{publicLink}</div>
+              )}
             </div>
 
             <div className="bg-white border rounded-2xl p-4">
@@ -415,94 +420,106 @@ export default function EditEventPage() {
                   type="button"
                   onClick={() => copyText(publicLinkNoTransport, '✅ לינק בלי הסעות הועתק')}
                   className="bg-slate-600 hover:bg-slate-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
+                  disabled={!publicLinkNoTransport}
                 >
                   📋 העתק
                 </button>
               </div>
-              <div className="text-sm text-gray-700 break-all">{publicLinkNoTransport}</div>
+              {publicLinkNoTransport && (
+                <div className="text-sm text-gray-700 break-all">{publicLinkNoTransport}</div>
+              )}
             </div>
           </div>
 
-          <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-bold text-xl">סטטוס אירוע</div>
-                <div
-                  className={`text-lg mt-1 ${formData.isActive ? 'text-green-600' : 'text-red-600'}`}
-                >
-                  {formData.isActive ? '✅ האירוע פעיל' : '⏳ האירוע לא פעיל'}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={toggleActivate}
-                className={`px-10 py-4 rounded-2xl text-xl font-bold transition-all ${
-                  formData.isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-                } text-white`}
-              >
-                {formData.isActive ? '⚠️ השבת את האירוע' : '🚀 הפעל את האירוע'}
-              </button>
-            </div>
-
-            {(formData.username || formData.password) && (
-              <div className="mt-4 p-4 rounded-2xl bg-white border border-amber-200 text-sm space-y-1">
-                <div className="font-bold text-slate-700 mb-1">פרטי כניסה ללקוח</div>
+          {/* ===== רק מנהל ===== */}
+          {!isLimitedEdit && (
+            <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
+              <div className="flex items-center justify-between">
                 <div>
-                  שם משתמש:{' '}
-                  <span className="font-mono font-semibold">{formData.username || '—'}</span>
-                </div>
-                <div>
-                  סיסמה: <span className="font-mono font-semibold">{formData.password || '—'}</span>
+                  <div className="font-bold text-xl">סטטוס אירוע</div>
+                  <div
+                    className={`text-lg mt-1 ${formData.isActive ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {formData.isActive ? '✅ האירוע פעיל' : '⏳ האירוע לא פעיל'}
+                  </div>
                 </div>
                 <button
                   type="button"
-                  className="mt-2 text-blue-600 underline"
-                  onClick={() => {
-                    const text = `שם משתמש: ${formData.username || ''}\nסיסמה: ${formData.password || ''}`;
-                    navigator.clipboard.writeText(text);
-                    alert('הועתק');
-                  }}
+                  onClick={toggleActivate}
+                  className={`px-10 py-4 rounded-2xl text-xl font-bold transition-all ${
+                    formData.isActive
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white`}
                 >
-                  העתק פרטי כניסה
+                  {formData.isActive ? '⚠️ השבת את האירוע' : '🚀 הפעל את האירוע'}
                 </button>
               </div>
-            )}
-          </div>
 
-          {/* ===== שיוך Vendor ===== */}
-          <div className="bg-violet-50 border-2 border-violet-200 p-6 rounded-2xl">
-            <label className="block text-sm font-medium mb-2 text-violet-900">
-              שיוך ל־Vendor:
-            </label>
-            <select
-              name="vendorId"
-              value={formData.vendorId || ''}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg bg-white"
-            >
-              <option value="">ללא (אירוע שלי – מנהל)</option>
-              <option value="Vn2026">Vn2026 (Vendor)</option>
-            </select>
-            <p className="text-xs text-violet-700 mt-2">
-              אם נבחר Vendor — האירוע יופיע רק אצלו ברשימת האירועים, ולא אצל המנהל.
-            </p>
-          </div>
+              {(formData.username || formData.password) && (
+                <div className="mt-4 p-4 rounded-2xl bg-white border border-amber-200 text-sm space-y-1">
+                  <div className="font-bold text-slate-700 mb-1">פרטי כניסה ללקוח</div>
+                  <div>
+                    שם משתמש:{' '}
+                    <span className="font-mono font-semibold">{formData.username || '—'}</span>
+                  </div>
+                  <div>
+                    סיסמה:{' '}
+                    <span className="font-mono font-semibold">{formData.password || '—'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-2 text-blue-600 underline"
+                    onClick={() => {
+                      const text = `שם משתמש: ${formData.username || ''}\nסיסמה: ${formData.password || ''}`;
+                      navigator.clipboard.writeText(text);
+                      alert('הועתק');
+                    }}
+                  >
+                    העתק פרטי כניסה
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">מצב אישור הגעה (דף נחיתה):</label>
-            <select
-              name="rsvpMode"
-              value={formData.rsvpMode || 'רגיל'}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg"
-            >
-              <option value="רגיל">רגיל (1–5 וכו׳)</option>
-              <option value="2 כפתורים">2 כפתורים — מגיע / לא מגיע</option>
-              <option value="3 כפתורים">3 כפתורים — 1 / 2 / לא מגיע</option>
-            </select>
-          </div>
+          {!isLimitedEdit && (
+            <div className="bg-violet-50 border-2 border-violet-200 p-6 rounded-2xl">
+              <label className="block text-sm font-medium mb-2 text-violet-900">
+                שיוך ל־Vendor:
+              </label>
+              <select
+                name="vendorId"
+                value={formData.vendorId || ''}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl text-lg bg-white"
+              >
+                <option value="">ללא (אירוע שלי – מנהל)</option>
+                <option value="Vn2026">Vn2026 (Vendor)</option>
+              </select>
+              <p className="text-xs text-violet-700 mt-2">
+                אם נבחר Vendor — האירוע יופיע רק אצלו ברשימת האירועים, ולא אצל המנהל.
+              </p>
+            </div>
+          )}
 
-          {isBarBatType && (
+          {!isLimitedEdit && (
+            <div>
+              <label className="block text-sm font-medium mb-2">מצב אישור הגעה (דף נחיתה):</label>
+              <select
+                name="rsvpMode"
+                value={formData.rsvpMode || 'רגיל'}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl text-lg"
+              >
+                <option value="רגיל">רגיל (1–5 וכו׳)</option>
+                <option value="2 כפתורים">2 כפתורים — מגיע / לא מגיע</option>
+                <option value="3 כפתורים">3 כפתורים — 1 / 2 / לא מגיע</option>
+              </select>
+            </div>
+          )}
+
+          {!isLimitedEdit && isBarBatType && (
             <div>
               <label className="block text-sm font-medium mb-2">נשמח לראותכם ________</label>
               <input
@@ -513,24 +530,25 @@ export default function EditEventPage() {
                 className="w-full p-4 border rounded-2xl text-lg"
                 placeholder="משפחת כהן / הורי רון"
               />
-              <p className="text-xs text-gray-500 mt-1">יופיע בהודעות במקום הורי חתן/כלה</p>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">דף נחיתה:</label>
-            <select
-              name="useExternalLanding"
-              value={formData.useExternalLanding || 'לא'}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl text-lg"
-            >
-              <option value="לא">שלנו (EventPay)</option>
-              <option value="כן">חיצוני (של הלקוח)</option>
-            </select>
-          </div>
+          {!isLimitedEdit && (
+            <div>
+              <label className="block text-sm font-medium mb-2">דף נחיתה:</label>
+              <select
+                name="useExternalLanding"
+                value={formData.useExternalLanding || 'לא'}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl text-lg"
+              >
+                <option value="לא">שלנו (EventPay)</option>
+                <option value="כן">חיצוני (של הלקוח)</option>
+              </select>
+            </div>
+          )}
 
-          {formData.useExternalLanding === 'כן' && (
+          {!isLimitedEdit && formData.useExternalLanding === 'כן' && (
             <div>
               <label className="block text-sm font-medium mb-2">קישור לדף הנחיתה של הלקוח:</label>
               <input
@@ -545,6 +563,7 @@ export default function EditEventPage() {
             </div>
           )}
 
+          {/* ===== לכולם (מנהל + לקוח + Vendor) ===== */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium mb-2">שם האולם:</label>
@@ -615,12 +634,7 @@ export default function EditEventPage() {
                 />
               </div>
             </div>
-          ) : (
-            <div className="text-sm text-gray-600 bg-amber-50 border border-amber-100 rounded-2xl p-4">
-              באירוע מסוג <b>{formData.eventType}</b> משתמשים בשדה &quot;נשמח לראותכם&quot;
-              (לא חובה למלא הורי חתן/כלה).
-            </div>
-          )}
+          ) : null}
 
           <div>
             <label className="block text-sm font-medium mb-2">קישור לאשראי (מתנה):</label>
@@ -646,74 +660,81 @@ export default function EditEventPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">מחיר האירוע (₪)</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                className="w-full p-4 border rounded-2xl"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">מקדמה ששולמה (₪)</label>
-              <input
-                type="number"
-                name="deposit"
-                value={formData.deposit}
-                onChange={handleChange}
-                className="w-full p-4 border rounded-2xl"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">סוג השירות:</label>
-            <select
-              name="serviceType"
-              value={formData.serviceType}
-              onChange={handleChange}
-              className="w-full p-4 border rounded-2xl"
-            >
-              {serviceTypes.map((type, i) => (
-                <option key={i} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            {[
-              { label: 'סידורי הושבה', name: 'seatingArrangement' },
-              { label: 'QR Code', name: 'qrCode' },
-              { label: 'הערות מוזמן', name: 'guestNotes' },
-              { label: 'אירוע באנגלית', name: 'englishEvent' },
-              { label: 'אירוע של נופר', name: 'nufarEvent' },
-              { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
-              { label: 'שליחת SMS', name: 'smsService' },
-              { label: 'שירות דיילות', name: 'stewardService' },
-              { label: 'הסעות', name: 'hasTransport' },
-              { label: 'סריקה – נוכחות בלבד (בלי שולחן)', name: 'presenceOnly' },
-              { label: 'אירוע בהפרדה', name: 'hasSeparation' },
-            ].map((field) => (
-              <label key={field.name} className="flex items-center gap-3 text-lg">
+          {/* ===== רק מנהל ===== */}
+          {!isLimitedEdit && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">מחיר האירוע (₪)</label>
                 <input
-                  type="checkbox"
-                  checked={formData[field.name] === 'כן'}
-                  onChange={() =>
-                    setFormData({
-                      ...formData,
-                      [field.name]: formData[field.name] === 'כן' ? 'לא' : 'כן',
-                    })
-                  }
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  className="w-full p-4 border rounded-2xl"
                 />
-                {field.label}
-              </label>
-            ))}
-          </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">מקדמה ששולמה (₪)</label>
+                <input
+                  type="number"
+                  name="deposit"
+                  value={formData.deposit}
+                  onChange={handleChange}
+                  className="w-full p-4 border rounded-2xl"
+                />
+              </div>
+            </div>
+          )}
+
+          {!isLimitedEdit && (
+            <div>
+              <label className="block text-sm font-medium mb-2">סוג השירות:</label>
+              <select
+                name="serviceType"
+                value={formData.serviceType}
+                onChange={handleChange}
+                className="w-full p-4 border rounded-2xl"
+              >
+                {serviceTypes.map((type, i) => (
+                  <option key={i} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!isLimitedEdit && (
+            <div className="grid grid-cols-2 gap-6">
+              {[
+                { label: 'סידורי הושבה', name: 'seatingArrangement' },
+                { label: 'QR Code', name: 'qrCode' },
+                { label: 'הערות מוזמן', name: 'guestNotes' },
+                { label: 'אירוע באנגלית', name: 'englishEvent' },
+                { label: 'אירוע של נופר', name: 'nufarEvent' },
+                { label: 'הצג קישור הושבה', name: 'showSeatingLink' },
+                { label: 'שליחת SMS', name: 'smsService' },
+                { label: 'שירות דיילות', name: 'stewardService' },
+                { label: 'הסעות', name: 'hasTransport' },
+                { label: 'סריקה – נוכחות בלבד (בלי שולחן)', name: 'presenceOnly' },
+                { label: 'אירוע בהפרדה', name: 'hasSeparation' },
+              ].map((field) => (
+                <label key={field.name} className="flex items-center gap-3 text-lg">
+                  <input
+                    type="checkbox"
+                    checked={formData[field.name] === 'כן'}
+                    onChange={() =>
+                      setFormData({
+                        ...formData,
+                        [field.name]: formData[field.name] === 'כן' ? 'לא' : 'כן',
+                      })
+                    }
+                  />
+                  {field.label}
+                </label>
+              ))}
+            </div>
+          )}
 
           <div className="flex justify-center pt-8">
             <button
@@ -725,62 +746,65 @@ export default function EditEventPage() {
           </div>
         </form>
 
-        <div className="mt-16 border-t-2 border-rose-200 pt-10">
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h3 className="text-xl font-bold text-rose-800">אזור מסוכן</h3>
-                <p className="text-sm text-rose-700 mt-1">
-                  מחיקת אירוע מוחקת גם את כל המוזמנים. לא ניתן לשחזר.
-                </p>
+        {/* אזור מסוכן — רק מנהל */}
+        {!isLimitedEdit && (
+          <div className="mt-16 border-t-2 border-rose-200 pt-10">
+            <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-xl font-bold text-rose-800">אזור מסוכן</h3>
+                  <p className="text-sm text-rose-700 mt-1">
+                    מחיקת אירוע מוחקת גם את כל המוזמנים. לא ניתן לשחזר.
+                  </p>
+                </div>
+                {!showDeleteZone ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteZone(true)}
+                    className="bg-white border-2 border-rose-400 text-rose-700 hover:bg-rose-100 px-6 py-3 rounded-2xl font-bold"
+                  >
+                    מחק אירוע…
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteZone(false);
+                      setDeleteConfirmText('');
+                    }}
+                    className="text-slate-500 underline text-sm"
+                  >
+                    ביטול
+                  </button>
+                )}
               </div>
-              {!showDeleteZone ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteZone(true)}
-                  className="bg-white border-2 border-rose-400 text-rose-700 hover:bg-rose-100 px-6 py-3 rounded-2xl font-bold"
-                >
-                  מחק אירוע…
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeleteZone(false);
-                    setDeleteConfirmText('');
-                  }}
-                  className="text-slate-500 underline text-sm"
-                >
-                  ביטול
-                </button>
+
+              {showDeleteZone && (
+                <div className="mt-6 space-y-4">
+                  <p className="text-sm text-rose-800">
+                    להמשך הקלד בדיוק את שם בעלי השמחה:{' '}
+                    <strong className="select-all">{formData.owners}</strong>
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="הקלד את שם בעלי השמחה"
+                    className="w-full p-4 border-2 border-rose-300 rounded-2xl bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={deleteEventPermanently}
+                    disabled={deleteConfirmText.trim() !== (formData.owners || '').trim()}
+                    className="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg"
+                  >
+                    מחק אירוע לצמיתות
+                  </button>
+                </div>
               )}
             </div>
-
-            {showDeleteZone && (
-              <div className="mt-6 space-y-4">
-                <p className="text-sm text-rose-800">
-                  להמשך הקלד בדיוק את שם בעלי השמחה:{' '}
-                  <strong className="select-all">{formData.owners}</strong>
-                </p>
-                <input
-                  type="text"
-                  value={deleteConfirmText}
-                  onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  placeholder="הקלד את שם בעלי השמחה"
-                  className="w-full p-4 border-2 border-rose-300 rounded-2xl bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={deleteEventPermanently}
-                  disabled={deleteConfirmText.trim() !== (formData.owners || '').trim()}
-                  className="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg"
-                >
-                  מחק אירוע לצמיתות
-                </button>
-              </div>
-            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
