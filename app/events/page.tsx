@@ -3,15 +3,31 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { fetchAllEvents } from '../../lib/events';
 
+const VENDOR_ID = 'Vn2026';
+
 export default function EventsPage() {
+  const router = useRouter();
   const [events, setEvents] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('הכל');
   const [ready, setReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [role, setRole] = useState('admin'); // admin | vendor | client | editor
 
   const months = ['הכל', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+  useEffect(() => {
+    const r = localStorage.getItem('userRole') || 'admin';
+    setRole(r);
+
+    // לקוח לא אמור להיות כאן
+    if (r === 'client') {
+      const last = localStorage.getItem('lastEventId');
+      if (last) router.replace(`/event/${last}/guests`);
+    }
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,9 +38,27 @@ export default function EventsPage() {
         console.log('fetchAllEvents result:', list);
 
         if (!cancelled) {
-          if (list && list.length > 0) {
-            setEvents(list);
-            localStorage.setItem('myEvents', JSON.stringify(list));
+                    if (list && list.length > 0) {
+            // שומרים vendorId (ושדות מקומיים) שלא חוזרים מהענן
+            const local = JSON.parse(localStorage.getItem('myEvents') || '[]');
+            const localById = new Map(
+              (local || []).map((e: any) => [String(e.id), e])
+            );
+
+            const merged = list.map((ev: any) => {
+              const prev = localById.get(String(ev.id));
+              if (!prev) return ev;
+              return {
+                ...ev,
+                vendorId: prev.vendorId || ev.vendorId || '',
+                nufarEvent: prev.nufarEvent || ev.nufarEvent,
+                seatingArrangement: prev.seatingArrangement || ev.seatingArrangement,
+                showSeatingLink: prev.showSeatingLink || ev.showSeatingLink,
+              };
+            });
+
+            setEvents(merged);
+            localStorage.setItem('myEvents', JSON.stringify(merged));
           } else {
             const local = JSON.parse(localStorage.getItem('myEvents') || '[]');
             setEvents(local);
@@ -94,7 +128,20 @@ export default function EventsPage() {
     event.nufar === 'כן' ||
     event.nufar === true;
 
-  const filteredEvents = events
+  const isVendorEvent = (event) => {
+    const v = event.vendorId || event.vendor || '';
+    return String(v).trim() === VENDOR_ID;
+  };
+
+  // מנהל = רק אירועים בלי VENDOR
+  // VENDOR = רק אירועים שלו
+  const roleFiltered = events.filter((event) => {
+    if (role === 'vendor') return isVendorEvent(event);
+    // admin / editor / אחר
+    return !isVendorEvent(event);
+  });
+
+  const filteredEvents = roleFiltered
     .filter((event) => selectedMonth === 'הכל' || getMonthName(event) === selectedMonth)
     .sort((a, b) => {
       const da = formatShortDate(a);
@@ -117,14 +164,21 @@ export default function EventsPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold">רשימת האירועים</h1>
-            <p className="text-sm text-slate-500 mt-1">סה״כ בענן/מקומי: {events.length}</p>
+            <h1 className="text-4xl font-bold">
+              {role === 'vendor' ? 'האירועים שלי (Vendor)' : 'רשימת האירועים'}
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              סה״כ מוצגים: {filteredEvents.length}
+              {role === 'vendor' ? ' · מצב Vendor' : ''}
+            </p>
           </div>
-          <Link href="/create-event">
-            <button className="bg-green-600 text-white px-8 py-4 rounded-3xl font-bold flex items-center gap-3">
-              🆕 פתח אירוע חדש
-            </button>
-          </Link>
+          {role !== 'vendor' && (
+            <Link href="/create-event">
+              <button className="bg-green-600 text-white px-8 py-4 rounded-3xl font-bold flex items-center gap-3">
+                🆕 פתח אירוע חדש
+              </button>
+            </Link>
+          )}
         </div>
 
         {errorMsg && (

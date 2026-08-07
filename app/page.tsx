@@ -56,7 +56,17 @@ export default function HomePage() {
       window.location.href = '/events';
       return;
     }
-
+        // ===== VENDOR =====
+    if (username === 'vn2026' && (password === 'epv2026!' || password === 'epv2026')) {
+      localStorage.setItem('userRole', 'vendor');
+      localStorage.setItem('loggedInUser', 'VENDOR');
+      localStorage.setItem('vendorId', 'Vn2026');
+      localStorage.removeItem('clientMode');
+      localStorage.removeItem('clientEventId');
+      setShowLogin(false);
+      window.location.href = '/events';
+      return;
+    }
     // ===== לקוח =====
     const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
     const matchedEvent = events.find(

@@ -52,13 +52,16 @@ const EDITOR_ALLOWED = [
 
 /** ברירת מחדל ללקוח — אם לא הוגדר בהגדרות מנהל */
 const DEFAULT_CLIENT_ACTIONS = [
-  'seating-sketch',
-  'seating',
-  'fast-seating',
-  'sms',
+  'home',
   'photo',
   'video',
+  'groups',
   'guests-arrived',
+  'gifts',
+  'add-guests',
+  'duplicate-phones',
+  'transport',
+  'edit-event',
 ] as const;
 function normalizePhone(raw: string): string {
   if (!raw) return '';
@@ -339,18 +342,42 @@ export default function GuestsPage() {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
     const clientMode = localStorage.getItem('clientMode') === 'true';
     const isClient = role === 'client' || clientMode;
     const isEditor = role === 'editor';
+    const isVendor = role === 'vendor';
 
     setIsEditorMode(isEditor);
     setIsClientMode(isClient);
 
     if (isEditor) setRoleLabel('📞 מצב טלפנית');
+    else if (isVendor) setRoleLabel('🏢 מצב Vendor');
     else if (isClient) setRoleLabel('👤 מצב לקוח');
     else setRoleLabel('🔑 מצב מנהל');
+
+    // Vendor = ברירת לקוח + הושבה + סקיצה + תצוגת אולם
+    const DEFAULT_VENDOR_ACTIONS = [
+      'home',
+      'photo',
+      'video',
+      'groups',
+      'guests-arrived',
+      'gifts',
+      'add-guests',
+      'duplicate-phones',
+      'transport',
+      'seating',
+      'seating-sketch',
+      'seating-view',
+      'edit-event',
+    ];
+
+    if (isVendor) {
+      setVisibleActions([...DEFAULT_VENDOR_ACTIONS]);
+      return;
+    }
 
     const saved = localStorage.getItem(`visibleActions_${eventId}`);
     if (saved) {
@@ -367,7 +394,8 @@ export default function GuestsPage() {
         'guests-arrived', 'tables-status', 'waze', 'add-guests', 'seating',
         'fast-seating', 'duplicate-phones', 'add-tables', 'pricing',
         'pricing-view', 'events-list', 'edit-event', 'sms', 'whatsapp',
-        'landing', 'transport', 'seating-sketch', 'new-event', 'admin-settings',
+        'landing', 'transport', 'seating-sketch', 'seating-view', 'gifts',
+        'new-event', 'admin-settings',
       ]);
     }
   }, [eventId]);
@@ -688,6 +716,7 @@ export default function GuestsPage() {
               { id: 'transport', href: `/transport?eventId=${eventId}`, label: 'הסעות', icon: Bus },
               { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: LayoutGrid },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: Settings },
+              { id: 'create-event', href: '/create-event', label: 'פתח אירוע חדש', icon: PlusSquare },
             ]
               .filter((item) => {
                 if (isFullAdmin) return true;

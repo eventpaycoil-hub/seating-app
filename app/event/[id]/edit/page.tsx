@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabase.js';
+
 export default function EditEventPage() {
   const params = useParams();
   const router = useRouter();
@@ -52,14 +53,16 @@ export default function EditEventPage() {
     isActive: false,
     activatedAt: null,
     creditLink: '',
+    bitGiftLink: '',
     fullDate: '',
     hasTransport: 'לא',
     hasSeparation: 'לא',
     presenceOnly: 'לא',
     clientPhone: '',
+    vendorId: '',
   });
 
-    const [showDeleteZone, setShowDeleteZone] = useState(false);
+  const [showDeleteZone, setShowDeleteZone] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
@@ -95,6 +98,9 @@ export default function EditEventPage() {
         clientPhone: currentEvent.clientPhone || '',
         username: currentEvent.username || '',
         password: currentEvent.password || '',
+        creditLink: currentEvent.creditLink || '',
+        bitGiftLink: currentEvent.bitGiftLink || '',
+        vendorId: currentEvent.vendorId || '',
       }));
     }
 
@@ -261,6 +267,8 @@ export default function EditEventPage() {
       ...formData,
       id: parseInt(eventId),
       creditLink: formData.creditLink || '',
+      bitGiftLink: formData.bitGiftLink || '',
+      vendorId: formData.vendorId || '',
       rsvpMode: formData.rsvpMode || 'רגיל',
       welcomeLine: formData.welcomeLine || '',
       useExternalLanding: formData.useExternalLanding || 'לא',
@@ -281,7 +289,7 @@ export default function EditEventPage() {
     try {
       await supabase
         .from('events')
-                .update({
+        .update({
           rsvp_mode: formData.rsvpMode || 'רגיל',
           welcome_line: formData.welcomeLine || '',
           use_external_landing: formData.useExternalLanding || 'לא',
@@ -354,7 +362,7 @@ export default function EditEventPage() {
     'ניהול אירוע מלא',
   ];
 
-    const publicLink =
+  const publicLink =
     typeof window !== 'undefined'
       ? `${window.location.origin}/landing?eventId=${eventId}`
       : `https://www.eventpay1.co.il/landing?eventId=${eventId}`;
@@ -386,15 +394,12 @@ export default function EditEventPage() {
               </div>
             </div>
 
-            {/* עם הסעות */}
             <div className="bg-white border rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-bold text-emerald-700">🚌 עם הסעות (אם מסומן באירוע)</div>
                 <button
                   type="button"
-                  onClick={() =>
-                    copyText(publicLink, '✅ לינק עם הסעות הועתק')
-                  }
+                  onClick={() => copyText(publicLink, '✅ לינק עם הסעות הועתק')}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
                 >
                   📋 העתק
@@ -403,15 +408,12 @@ export default function EditEventPage() {
               <div className="text-sm text-gray-700 break-all">{publicLink}</div>
             </div>
 
-            {/* בלי הסעות */}
             <div className="bg-white border rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-bold text-slate-700">🚫 בלי הסעות</div>
                 <button
                   type="button"
-                  onClick={() =>
-                    copyText(publicLinkNoTransport, '✅ לינק בלי הסעות הועתק')
-                  }
+                  onClick={() => copyText(publicLinkNoTransport, '✅ לינק בלי הסעות הועתק')}
                   className="bg-slate-600 hover:bg-slate-700 text-white px-5 py-2 rounded-xl font-bold text-sm whitespace-nowrap"
                 >
                   📋 העתק
@@ -420,7 +422,8 @@ export default function EditEventPage() {
               <div className="text-sm text-gray-700 break-all">{publicLinkNoTransport}</div>
             </div>
           </div>
-                    <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
+
+          <div className="bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-bold text-xl">סטטוס אירוע</div>
@@ -465,10 +468,28 @@ export default function EditEventPage() {
               </div>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              מצב אישור הגעה (דף נחיתה):
+
+          {/* ===== שיוך Vendor ===== */}
+          <div className="bg-violet-50 border-2 border-violet-200 p-6 rounded-2xl">
+            <label className="block text-sm font-medium mb-2 text-violet-900">
+              שיוך ל־Vendor:
             </label>
+            <select
+              name="vendorId"
+              value={formData.vendorId || ''}
+              onChange={handleChange}
+              className="w-full p-4 border rounded-2xl text-lg bg-white"
+            >
+              <option value="">ללא (אירוע שלי – מנהל)</option>
+              <option value="Vn2026">Vn2026 (Vendor)</option>
+            </select>
+            <p className="text-xs text-violet-700 mt-2">
+              אם נבחר Vendor — האירוע יופיע רק אצלו ברשימת האירועים, ולא אצל המנהל.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">מצב אישור הגעה (דף נחיתה):</label>
             <select
               name="rsvpMode"
               value={formData.rsvpMode || 'רגיל'}
@@ -483,9 +504,7 @@ export default function EditEventPage() {
 
           {isBarBatType && (
             <div>
-              <label className="block text-sm font-medium mb-2">
-                נשמח לראותכם ________
-              </label>
+              <label className="block text-sm font-medium mb-2">נשמח לראותכם ________</label>
               <input
                 type="text"
                 name="welcomeLine"
@@ -494,9 +513,7 @@ export default function EditEventPage() {
                 className="w-full p-4 border rounded-2xl text-lg"
                 placeholder="משפחת כהן / הורי רון"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                יופיע בהודעות במקום הורי חתן/כלה
-              </p>
+              <p className="text-xs text-gray-500 mt-1">יופיע בהודעות במקום הורי חתן/כלה</p>
             </div>
           )}
 
@@ -515,9 +532,7 @@ export default function EditEventPage() {
 
           {formData.useExternalLanding === 'כן' && (
             <div>
-              <label className="block text-sm font-medium mb-2">
-                קישור לדף הנחיתה של הלקוח:
-              </label>
+              <label className="block text-sm font-medium mb-2">קישור לדף הנחיתה של הלקוח:</label>
               <input
                 type="url"
                 name="externalLandingUrl"
@@ -616,6 +631,18 @@ export default function EditEventPage() {
               onChange={handleChange}
               className="w-full p-4 border rounded-2xl text-lg"
               placeholder="https://pay.example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">קישור להענקת מתנה בביט:</label>
+            <input
+              type="url"
+              name="bitGiftLink"
+              value={formData.bitGiftLink || ''}
+              onChange={handleChange}
+              className="w-full p-4 border rounded-2xl text-lg"
+              placeholder="https://www.bitpay.co.il/..."
             />
           </div>
 

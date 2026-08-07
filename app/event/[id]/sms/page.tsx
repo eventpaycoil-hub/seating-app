@@ -292,7 +292,15 @@ export default function SMSPage() {
       } else {
         message = message.replace(/\n?\*CREDIT_LINK\*/g, '');
       }
-
+      const bitGiftLink = (currentEvent?.bitGiftLink || '').trim();
+      if (bitGiftLink) {
+        const bitBlock = en
+          ? `\n\nTo send a gift via Bit:\n${bitGiftLink}`
+          : `\n\nלהענקת מתנה בביט לחצו על הקישור:\n${bitGiftLink}`;
+        message = message.replace(/\*BIT_GIFT_LINK\*/g, bitBlock);
+      } else {
+        message = message.replace(/\n?\*BIT_GIFT_LINK\*/g, '');
+      }
       const hall = currentEvent?.hallName || '';
       const city = currentEvent?.city || '';
       const wazeQuery = encodeURIComponent(`${hall} ${city}`.trim());
@@ -340,7 +348,7 @@ export default function SMSPage() {
         {
           id: 2,
           title: 'Message 2 – Reminder',
-          content: `Hi *name*,\n\nTonight we celebrate the ${noun} of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK*\n*CREDIT_LINK*`,
+          content: `Hi *name*,\n\nTonight we celebrate the ${noun} of ${owners} at "${hall}" in ${city} at ${time}.\n\n*SEATING_DETAIL*\n\nLooking forward to seeing you!\n\nDirections:\n*WAZE_LINK*\n*CREDIT_LINK*\n*BIT_GIFT_LINK*`,
         },
         {
           id: 3,
@@ -374,7 +382,7 @@ export default function SMSPage() {
       {
         id: 2,
         title: 'הודעה מס 2 תזכורת',
-        content: `שלום *שם*,\n\nהערב נפגשים ב${noun} של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK*\n*CREDIT_LINK*`,
+        content: `שלום *שם*,\n\nהערב נפגשים ב${noun} של ${owners} ב"${hall}" ב${city} בשעה ${time}.\n\n*פירוט מקום הישיבה*\n\nמצפים ומתרגשים!\n\nלניווט לחצו כאן:\n*WAZE_LINK*\n*CREDIT_LINK*\n*BIT_GIFT_LINK*`,
       },
       {
         id: 3,
