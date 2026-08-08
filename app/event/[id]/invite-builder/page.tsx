@@ -14,6 +14,7 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+
 const TEMPLATES = [
   { id: 'classic-cream', name: 'קלאסי שמנת', bg: '#f7f3eb', text: '#1c1917', muted: '#57534e', line: '#d6d3d1', frame: 'simple' },
   { id: 'double-frame', name: 'מסגרת כפולה', bg: '#faf8f4', text: '#1c1917', muted: '#57534e', line: '#a8a29e', frame: 'double' },
@@ -38,7 +39,6 @@ const TEMPLATES = [
   { id: 'brit-sky', name: 'ברית שמיים', bg: '#f0f9ff', text: '#0c4a6e', muted: '#0369a1', line: '#7dd3fc', frame: 'simple' },
   { id: 'brit-cream', name: 'ברית שמנת', bg: '#fffbeb', text: '#78350f', muted: '#a16207', line: '#fde68a', frame: 'double' },
   { id: 'birthday-fun', name: 'יום הולדת שמח', bg: '#fdf4ff', text: '#86198f', muted: '#c026d3', line: '#f0abfc', frame: 'simple' },
-    // --- סגנונות עשירים לפי הדוגמאות ---
   { id: 'ornate-cream', name: 'מסגרת זהב אורנמנט', bg: '#fbf8f1', text: '#6b5c3e', muted: '#9a8b6e', line: '#c4a574', frame: 'ornate' },
   { id: 'wildflower-white', name: 'פרחים פזורים', bg: '#fffcf9', text: '#3d3d3d', muted: '#7a7a7a', line: '#e8e0d8', frame: 'simple' },
   { id: 'mono-clean', name: 'מונוגרם נקי', bg: '#ffffff', text: '#1a1a1a', muted: '#6b6b6b', line: '#d4d4d4', frame: 'simple' },
@@ -53,13 +53,40 @@ const TEMPLATES = [
   { id: 'bat-mint', name: 'בת מצווה מנטה', bg: '#f5faf7', text: '#3d5c4a', muted: '#6b9a7a', line: '#c5e0d0', frame: 'simple' },
 ];
 
+const BACKGROUNDS = [
+  { id: 'none', label: 'ללא (צבע בלבד)', src: '' },
+  { id: 'blush-gold', label: 'ורוד זהב', src: '/invite-backgrounds/bg-blush-gold.png' },
+  { id: 'navy-moon', label: 'לילה וירח', src: '/invite-backgrounds/bg-navy-moon.png' },
+  { id: 'sage-leaves', label: 'אקליפטוס', src: '/invite-backgrounds/bg-sage-leaves.png' },
+  { id: 'cream-silk', label: 'שמנת ומשי', src: '/invite-backgrounds/bg-cream-silk.png' },
+  { id: 'pink-circle', label: 'ורוד עיגול', src: '/invite-backgrounds/bg-pink-circle.png' },
+  { id: 'navy-stars', label: 'נייבי כוכבים', src: '/invite-backgrounds/bg-navy-stars.png' },
+];
+
+const FRAMES = [
+  { id: 'none', label: 'ללא מסגרת', src: '' },
+  { id: 'rose-gold', label: 'ורדים זהב', src: '/invite-frames/frame-rose-gold.png' },
+  { id: 'green-wreath', label: 'זר ירוק', src: '/invite-frames/frame-green-wreath.png' },
+  { id: 'purple-wash', label: 'סגול מים', src: '/invite-frames/frame-purple-wash.png' },
+  { id: 'eucalyptus', label: 'אקליפטוס', src: '/invite-frames/frame-eucalyptus.png' },
+  { id: 'pink-arch', label: 'קשת ורודה', src: '/invite-frames/frame-pink-arch.png' },
+  { id: 'navy-stars', label: 'כחול כוכבים', src: '/invite-frames/frame-navy-stars.png' },
+  { id: 'gold-classic', label: 'זהב קלאסי', src: '/invite-frames/frame-gold-classic.png' },
+  { id: 'peach-floral', label: 'אפרסק פרחוני', src: '/invite-frames/frame-peach-floral.png' },
+  { id: 'purple-wreath', label: 'זר סגול', src: '/invite-frames/frame-purple-wreath.png' },
+];
+
 const OBJECTS = [
   { id: 'rings', label: 'טבעות זהב', src: '/invite-objects/rings.png', types: ['חתונה', 'חינה'] },
   { id: 'rings-engraved', label: 'טבעות עם חריטה', src: '/invite-objects/rings-engraved.png', types: ['חתונה'] },
+  { id: 'rings-thin', label: 'טבעות דקות', src: '/invite-objects/rings-thin.png', types: ['חתונה'] },
   { id: 'champagne', label: 'כוסות שמפניה', src: '/invite-objects/champagne.png', types: ['חתונה', 'חינה', 'מסיבת רווקים', 'מסיבת רווקות'] },
   { id: 'dancers', label: 'רקדנים', src: '/invite-objects/dancers.png', types: ['חתונה'] },
   { id: 'flowers', label: 'פרחים', src: '/invite-objects/flowers.png', types: ['חתונה', 'חינה', 'בת מצווה', 'בריתה'] },
+  { id: 'flowers-soft', label: 'פרחים רכים', src: '/invite-objects/flowers-soft.png', types: ['חתונה', 'בת מצווה', 'חינה'] },
   { id: 'leaves', label: 'עלים ירוקים', src: '/invite-objects/leaves.png', types: ['חתונה', 'בת מצווה', 'בר מצווה'] },
+  { id: 'leaves-gold', label: 'עלים זהב', src: '/invite-objects/leaves-gold.png', types: ['חתונה', 'בר מצווה'] },
+  { id: 'wreath-pink', label: 'זר ורוד', src: '/invite-objects/wreath-pink.png', types: ['בת מצווה', 'חתונה'] },
   { id: 'doves', label: 'יונים', src: '/invite-objects/doves.png', types: ['חתונה'] },
   { id: 'candles', label: 'נרות', src: '/invite-objects/candles.png', types: ['חתונה', 'בר מצווה', 'בת מצווה'] },
   { id: 'mask', label: 'מסכה', src: '/invite-objects/mask.png', types: ['מסיבת רווקים', 'מסיבת רווקות'] },
@@ -67,23 +94,17 @@ const OBJECTS = [
   { id: 'soccer', label: 'כדורגל', src: '/invite-objects/soccer.png', types: ['בר מצווה', 'יום הולדת'] },
   { id: 'surfboard', label: 'גלשן', src: '/invite-objects/surfboard.png', types: ['בר מצווה', 'יום הולדת'] },
   { id: 'piano', label: 'פסנתר', src: '/invite-objects/piano.png', types: ['בר מצווה', 'בת מצווה', 'חתונה'] },
-  { id: 'teddy', label: 'דובי חמוד', src: '/invite-objects/teddy.png', types: ['ברית', 'בריתה'] },
-  { id: 'baby-bottle', label: 'בקבוק תינוק', src: '/invite-objects/baby-bottle.png', types: ['ברית', 'בריתה'] },
-  { id: 'stars', label: 'כוכבים', src: '/invite-objects/stars.png', types: ['ברית', 'בריתה', 'יום הולדת', 'בת מצווה'] },
-    { id: 'teddy', label: 'דובי', src: '/invite-objects/teddy.png', types: ['ברית', 'בריתה'] },
+  { id: 'teddy', label: 'דובי', src: '/invite-objects/teddy.png', types: ['ברית', 'בריתה'] },
   { id: 'bunny', label: 'ארנב', src: '/invite-objects/bunny.png', types: ['ברית', 'בריתה'] },
   { id: 'cradle', label: 'עריסה', src: '/invite-objects/cradle.png', types: ['ברית', 'בריתה'] },
   { id: 'balloon', label: 'בלון', src: '/invite-objects/balloon.png', types: ['ברית', 'בריתה', 'יום הולדת'] },
-  { id: 'wreath-pink', label: 'זר ורוד', src: '/invite-objects/wreath-pink.png', types: ['בת מצווה', 'חתונה'] },
-  { id: 'flowers-soft', label: 'פרחים רכים', src: '/invite-objects/flowers-soft.png', types: ['חתונה', 'בת מצווה', 'חינה'] },
-  { id: 'leaves-gold', label: 'עלים זהב', src: '/invite-objects/leaves-gold.png', types: ['חתונה', 'בר מצווה'] },
-  { id: 'rings-thin', label: 'טבעות דקות', src: '/invite-objects/rings-thin.png', types: ['חתונה'] },
+  { id: 'baby-bottle', label: 'בקבוק תינוק', src: '/invite-objects/baby-bottle.png', types: ['ברית', 'בריתה'] },
+  { id: 'stars', label: 'כוכבים', src: '/invite-objects/stars.png', types: ['ברית', 'בריתה', 'יום הולדת', 'בת מצווה'] },
   { id: 'jerusalem', label: 'ירושלים', src: '/invite-objects/jerusalem.png', types: ['בר מצווה'] },
   { id: 'tallit', label: 'טלית', src: '/invite-objects/tallit.png', types: ['בר מצווה'] },
 ];
 
 const PRESETS = [
-  // ===== חתונה (12) =====
   { id: 'w01', name: 'מסגרת זהב אורנמנט', desc: 'קרם · מסגרת מעוטרת', eventType: 'חתונה', templateId: 'ornate-cream', selectedObjects: [{ id: 'rings-thin', position: 'top' }] },
   { id: 'w02', name: 'פרחים פזורים', desc: 'לבן מינימלי · פרחים', eventType: 'חתונה', templateId: 'wildflower-white', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'w03', name: 'מונוגרם נקי', desc: 'לבן · ראשי תיבות', eventType: 'חתונה', templateId: 'mono-clean', selectedObjects: [] },
@@ -96,8 +117,6 @@ const PRESETS = [
   { id: 'w10', name: 'רשמי שנהב', desc: 'מסורתי', eventType: 'חתונה', templateId: 'formal-ivory', selectedObjects: [] },
   { id: 'w11', name: 'זר ורוד', desc: 'פרחוני עדין', eventType: 'חתונה', templateId: 'bat-blush', selectedObjects: [{ id: 'wreath-pink', position: 'top' }] },
   { id: 'w12', name: 'קלאסי שמנת', desc: 'פשוט וחם', eventType: 'חתונה', templateId: 'classic-cream', selectedObjects: [{ id: 'rings-thin', position: 'top' }] },
-
-  // ===== בר מצווה (10) =====
   { id: 'br01', name: 'נייבי פורמלי', desc: 'כחול-לבן מכובד', eventType: 'בר מצווה', templateId: 'bar-navy-formal', selectedObjects: [{ id: 'tallit', position: 'top' }] },
   { id: 'br02', name: 'ירושלים', desc: 'איור עיר', eventType: 'בר מצווה', templateId: 'bar-stone', selectedObjects: [{ id: 'jerusalem', position: 'top' }] },
   { id: 'br03', name: 'אבן חמה', desc: 'בז׳ קלאסי', eventType: 'בר מצווה', templateId: 'bar-stone', selectedObjects: [{ id: 'bowtie', position: 'top' }] },
@@ -108,8 +127,6 @@ const PRESETS = [
   { id: 'br08', name: 'עלים זהב', desc: 'טבעי-מכובד', eventType: 'בר מצווה', templateId: 'botanical-sage', selectedObjects: [{ id: 'leaves-gold', position: 'top' }] },
   { id: 'br09', name: 'שמנת רשמית', desc: 'קלאסי', eventType: 'בר מצווה', templateId: 'classic-cream', selectedObjects: [{ id: 'tallit', position: 'top' }] },
   { id: 'br10', name: 'טלית + אבן', desc: 'מסורתי', eventType: 'בר מצווה', templateId: 'vellum-soft', selectedObjects: [{ id: 'tallit', position: 'top' }] },
-
-  // ===== בת מצווה (10) =====
   { id: 'bt01', name: 'זר ורוד זהב', desc: 'עיגול פרחוני', eventType: 'בת מצווה', templateId: 'bat-gold-floral', selectedObjects: [{ id: 'wreath-pink', position: 'top' }] },
   { id: 'bt02', name: 'סומק עדין', desc: 'ורוד רך', eventType: 'בת מצווה', templateId: 'bat-blush', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'bt03', name: 'מנטה רענן', desc: 'ירוק-פסטל', eventType: 'בת מצווה', templateId: 'bat-mint', selectedObjects: [{ id: 'leaves', position: 'top' }] },
@@ -120,8 +137,6 @@ const PRESETS = [
   { id: 'bt08', name: 'שמחה כחולה', desc: 'צעיר', eventType: 'בת מצווה', templateId: 'bar-party', selectedObjects: [{ id: 'stars', position: 'top' }] },
   { id: 'bt09', name: 'מונוגרם נקי', desc: 'אלגנטי', eventType: 'בת מצווה', templateId: 'mono-clean', selectedObjects: [] },
   { id: 'bt10', name: 'קלף עדין', desc: 'שמנת', eventType: 'בת מצווה', templateId: 'vellum-soft', selectedObjects: [{ id: 'wreath-pink', position: 'top' }] },
-
-  // ===== ברית (10) =====
   { id: 'bi01', name: 'עריסה חול', desc: 'קרם · עריסה', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }] },
   { id: 'bi02', name: 'דובי שמיים', desc: 'תכלת רך', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'teddy', position: 'top' }, { id: 'stars', position: 'bottom' }] },
   { id: 'bi03', name: 'דובי חם', desc: 'בז׳ משפחתי', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'teddy', position: 'top' }] },
@@ -132,8 +147,6 @@ const PRESETS = [
   { id: 'bi08', name: 'כוכבים', desc: 'עדין', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'stars', position: 'top' }] },
   { id: 'bi09', name: 'עריסה + כוכבים', desc: 'מלא', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }, { id: 'stars', position: 'top' }] },
   { id: 'bi10', name: 'מינימלי תינוק', desc: 'נקי', eventType: 'ברית', templateId: 'mono-clean', selectedObjects: [{ id: 'teddy', position: 'top' }] },
-
-  // ===== בריתה (10) =====
   { id: 'ba01', name: 'ארנב ורוד', desc: 'פסטל עדין', eventType: 'בריתה', templateId: 'bat-blush', selectedObjects: [{ id: 'bunny', position: 'top' }] },
   { id: 'ba02', name: 'דובי סומק', desc: 'חם', eventType: 'בריתה', templateId: 'romantic-peach', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'ba03', name: 'עריסה רכה', desc: 'קרם', eventType: 'בריתה', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }] },
@@ -144,8 +157,6 @@ const PRESETS = [
   { id: 'ba08', name: 'מנטה תינוקת', desc: 'רענן', eventType: 'בריתה', templateId: 'bat-mint', selectedObjects: [{ id: 'bunny', position: 'top' }] },
   { id: 'ba09', name: 'קלף עדין', desc: 'שמנת', eventType: 'בריתה', templateId: 'vellum-soft', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'ba10', name: 'מינימלי', desc: 'נקי', eventType: 'בריתה', templateId: 'mono-clean', selectedObjects: [{ id: 'bunny', position: 'top' }] },
-
-  // ===== חינה (8) =====
   { id: 'h01', name: 'אפרסק חגיגי', desc: 'פרחים חמים', eventType: 'חינה', templateId: 'romantic-peach', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'h02', name: 'זהב-פרח', desc: 'עשיר', eventType: 'חינה', templateId: 'bat-gold-floral', selectedObjects: [{ id: 'wreath-pink', position: 'top' }] },
   { id: 'h03', name: 'אורנמנט', desc: 'מסגרת זהב', eventType: 'חינה', templateId: 'ornate-cream', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
@@ -154,8 +165,6 @@ const PRESETS = [
   { id: 'h06', name: 'פרחים פזורים', desc: 'מינימלי', eventType: 'חינה', templateId: 'wildflower-white', selectedObjects: [{ id: 'flowers-soft', position: 'bottom' }] },
   { id: 'h07', name: 'כהה יוקרתי', desc: 'דרמטי', eventType: 'חינה', templateId: 'dark-luxury', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'h08', name: 'קלף', desc: 'שמנת', eventType: 'חינה', templateId: 'vellum-soft', selectedObjects: [{ id: 'leaves-gold', position: 'top' }] },
-
-  // ===== יום הולדת (8) =====
   { id: 'd01', name: 'סגול שמח', desc: 'חגיגי', eventType: 'יום הולדת', templateId: 'birthday-fun', selectedObjects: [{ id: 'stars', position: 'top' }, { id: 'balloon', position: 'top' }] },
   { id: 'd02', name: 'כחול שמח', desc: 'צעיר', eventType: 'יום הולדת', templateId: 'bar-party', selectedObjects: [{ id: 'balloon', position: 'top' }] },
   { id: 'd03', name: 'סומק', desc: 'עדין', eventType: 'יום הולדת', templateId: 'bat-blush', selectedObjects: [{ id: 'stars', position: 'top' }] },
@@ -195,6 +204,10 @@ const EMPTY = {
   monogram: '',
   photoUrl: '',
   selectedObjects: [],
+  bgId: 'none',
+  frameId: 'none',
+  frameScaleX: 1,
+frameScaleY: 1,
 };
 
 function ObjectsDisplay({ selected, position }) {
@@ -205,7 +218,9 @@ function ObjectsDisplay({ selected, position }) {
       {list.map((item) => {
         const obj = OBJECTS.find((o) => o.id === item.id);
         if (!obj) return null;
-        const size = ['rings', 'rings-engraved', 'champagne', 'dancers', 'teddy'].includes(obj.id) ? 110 : 80;
+        const size = ['rings', 'rings-engraved', 'rings-thin', 'champagne', 'dancers', 'teddy', 'cradle'].includes(obj.id)
+          ? 110
+          : 80;
         return (
           <img
             key={`${item.id}-${position}`}
@@ -231,12 +246,28 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
   const isBarBat = form.eventType === 'בר מצווה' || form.eventType === 'בת מצווה';
   const showPhoto = !compact && form.photoUrl && isBarBat;
 
+  const bgSrc =
+    form.bgId && form.bgId !== 'none'
+      ? BACKGROUNDS.find((b) => b.id === form.bgId)?.src
+      : '';
+  const frameSrc =
+    form.frameId && form.frameId !== 'none'
+      ? FRAMES.find((f) => f.id === form.frameId)?.src
+      : '';
+
   return (
-        <div
+    <div
       ref={cardRef}
       className="relative mx-auto w-full shadow-xl overflow-hidden print-card"
       style={{
-        background: customBg || template.bg,
+        backgroundColor: customBg && customBg.startsWith('#') ? customBg : template.bg,
+        backgroundImage: bgSrc
+          ? `url(${bgSrc})`
+          : customBg && !customBg.startsWith('#')
+          ? `url(${customBg})`
+          : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         color: template.text,
         maxWidth: compact ? 260 : 420,
         border:
@@ -251,94 +282,115 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
             : undefined,
       }}
     >
-      {template.frame === 'ornate' && (
+      {template.frame === 'ornate' && !frameSrc && (
         <>
-          <div className="absolute top-3 right-3 text-lg opacity-50" style={{ color: template.line }}>❖</div>
-          <div className="absolute top-3 left-3 text-lg opacity-50" style={{ color: template.line }}>❖</div>
-          <div className="absolute bottom-3 right-3 text-lg opacity-50" style={{ color: template.line }}>❖</div>
-          <div className="absolute bottom-3 left-3 text-lg opacity-50" style={{ color: template.line }}>❖</div>
+          <div className="absolute top-3 right-3 text-lg opacity-50 z-20" style={{ color: template.line }}>❖</div>
+          <div className="absolute top-3 left-3 text-lg opacity-50 z-20" style={{ color: template.line }}>❖</div>
+          <div className="absolute bottom-3 right-3 text-lg opacity-50 z-20" style={{ color: template.line }}>❖</div>
+          <div className="absolute bottom-3 left-3 text-lg opacity-50 z-20" style={{ color: template.line }}>❖</div>
         </>
       )}
-   
-      <div className={`absolute ${compact ? 'top-1.5 left-1.5 text-[8px]' : 'top-3 left-3 text-[11px]'} opacity-50`}>
-        בס״ד
-      </div>
-      <div className={`${pad} text-center`}>
-        {form.quote && !compact && (
-          <div className="text-sm mb-4 leading-relaxed opacity-80" style={{ color: template.muted }}>
-            "{form.quote}"
+
+      {frameSrc && (
+  <img
+    src={frameSrc}
+    alt=""
+    className="pointer-events-none absolute inset-0 w-full h-full"
+    style={{
+      zIndex: 5,
+      objectFit: 'contain',
+      transform: `scale(${form.frameScaleX || 1}, ${form.frameScaleY || 1})`,
+      transformOrigin: 'center center',
+    }}
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+    }}
+  />
+)}
+
+      <div className="relative" style={{ zIndex: 10 }}>
+        <div className={`absolute ${compact ? 'top-1.5 left-1.5 text-[8px]' : 'top-3 left-3 text-[11px]'} opacity-50`}>
+          בס״ד
+        </div>
+        <div className={`${pad} text-center`}>
+          {form.quote && !compact && (
+            <div className="text-sm mb-4 leading-relaxed opacity-80" style={{ color: template.muted }}>
+              "{form.quote}"
+            </div>
+          )}
+          <ObjectsDisplay selected={form.selectedObjects} position="top" />
+          {form.monogram && (
+            <div
+              className={`${compact ? 'text-2xl mb-2' : 'text-5xl mb-4'} tracking-[0.15em] font-serif`}
+              style={{ color: template.line !== '#e5e5e5' ? template.line : template.text }}
+            >
+              {form.monogram}
+            </div>
+          )}
+          {showPhoto && (
+            <div className="mb-5 flex justify-center">
+              <img
+                src={form.photoUrl}
+                alt=""
+                className="w-28 h-28 object-cover rounded-full border-2 shadow"
+                style={{ borderColor: template.line }}
+              />
+            </div>
+          )}
+          <div className={`${compact ? 'text-[8px]' : 'text-[11px]'} tracking-[0.25em] uppercase mb-2 opacity-60`}>
+            {form.eventType || 'אירוע'}
           </div>
-        )}
-        <ObjectsDisplay selected={form.selectedObjects} position="top" />
-        {form.monogram && (
-          <div
-            className={`${compact ? 'text-2xl mb-2' : 'text-5xl mb-4'} tracking-[0.15em] font-serif`}
-            style={{ color: template.line !== '#e5e5e5' ? template.line : template.text }}
-          >
-            {form.monogram}
+          <div className={`${titleSize} font-serif leading-snug mb-1`}>
+            {form.owners || 'שמות בעלי השמחה'}
           </div>
-        )}
-        {showPhoto && (
-          <div className="mb-5 flex justify-center">
-            <img
-              src={form.photoUrl}
-              alt=""
-              className="w-28 h-28 object-cover rounded-full border-2 shadow"
-              style={{ borderColor: template.line }}
-            />
+          <div className={`${compact ? 'w-8 my-2' : 'w-12 my-5'} h-px mx-auto`} style={{ background: template.line }} />
+          <div className={`${compact ? 'text-[10px]' : 'text-sm'} mb-3 opacity-80`}>
+            {form.inviteLine || 'הנכם מוזמנים לחגוג עמנו'}
           </div>
-        )}
-        <div className={`${compact ? 'text-[8px]' : 'text-[11px]'} tracking-[0.25em] uppercase mb-2 opacity-60`}>
-          {form.eventType || 'אירוע'}
-        </div>
-        <div className={`${titleSize} font-serif leading-snug mb-1`}>
-          {form.owners || 'שמות בעלי השמחה'}
-        </div>
-        <div className={`${compact ? 'w-8 my-2' : 'w-12 my-5'} h-px mx-auto`} style={{ background: template.line }} />
-        <div className={`${compact ? 'text-[10px]' : 'text-sm'} mb-3 opacity-80`}>
-          {form.inviteLine || 'הנכם מוזמנים לחגוג עמנו'}
-        </div>
-        <div className={`${dateSize} font-light tracking-wide mb-1`}>
-          {formatDate(form.date) || '00.00.0000'}
-        </div>
-        {form.hebrewDate && !compact && <div className="text-sm mb-3 opacity-70">{form.hebrewDate}</div>}
-        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>
-          {[form.hallName, form.city].filter(Boolean).join(' | ') || 'אולם | עיר'}
-        </div>
-        {isWedding ? (
-          <div className={`flex justify-center ${compact ? 'gap-3 text-[9px] mb-2' : 'gap-8 text-sm mb-5'}`}>
-            <div>
-              <div className="opacity-60 text-[0.85em] mb-0.5">קבלת פנים</div>
+          <div className={`${dateSize} font-light tracking-wide mb-1`}>
+            {formatDate(form.date) || '00.00.0000'}
+          </div>
+          {form.hebrewDate && !compact && (
+            <div className="text-sm mb-3 opacity-70">{form.hebrewDate}</div>
+          )}
+          <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>
+            {[form.hallName, form.city].filter(Boolean).join(' | ') || 'אולם | עיר'}
+          </div>
+          {isWedding ? (
+            <div className={`flex justify-center ${compact ? 'gap-3 text-[9px] mb-2' : 'gap-8 text-sm mb-5'}`}>
+              <div>
+                <div className="opacity-60 text-[0.85em] mb-0.5">קבלת פנים</div>
+                <div>{form.receptionTime || '19:30'}</div>
+              </div>
+              <div className="w-px self-stretch opacity-40" style={{ background: template.line }} />
+              <div>
+                <div className="opacity-60 text-[0.85em] mb-0.5">חופה</div>
+                <div>{form.chuppahTime || '20:30'}</div>
+              </div>
+            </div>
+          ) : (
+            <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>
+              <div className="opacity-60 text-[0.85em] mb-0.5">שעת התחלה</div>
               <div>{form.receptionTime || '19:30'}</div>
             </div>
-            <div className="w-px self-stretch opacity-40" style={{ background: template.line }} />
-            <div>
-              <div className="opacity-60 text-[0.85em] mb-0.5">חופה</div>
-              <div>{form.chuppahTime || '20:30'}</div>
+          )}
+          <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-6'} opacity-80`}>
+            {form.welcomeLine || 'נשמח לראותכם'}
+          </div>
+          <ObjectsDisplay selected={form.selectedObjects} position="bottom" />
+          {isWedding && (form.groomParents || form.brideParents) && (
+            <div className={`flex justify-between gap-3 ${compact ? 'text-[8px]' : 'text-xs'}`} style={{ color: template.muted }}>
+              <div className="flex-1 text-right">
+                <div className="mb-0.5 opacity-70">הורי החתן</div>
+                <div className="whitespace-pre-line">{form.groomParents || '—'}</div>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="mb-0.5 opacity-70">הורי הכלה</div>
+                <div className="whitespace-pre-line">{form.brideParents || '—'}</div>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-5'}`}>
-            <div className="opacity-60 text-[0.85em] mb-0.5">שעת התחלה</div>
-            <div>{form.receptionTime || '19:30'}</div>
-          </div>
-        )}
-        <div className={`${compact ? 'text-[10px] mb-2' : 'text-sm mb-6'} opacity-80`}>
-          {form.welcomeLine || 'נשמח לראותכם'}
+          )}
         </div>
-        <ObjectsDisplay selected={form.selectedObjects} position="bottom" />
-        {isWedding && (form.groomParents || form.brideParents) && (
-          <div className={`flex justify-between gap-3 ${compact ? 'text-[8px]' : 'text-xs'}`} style={{ color: template.muted }}>
-            <div className="flex-1 text-right">
-              <div className="mb-0.5 opacity-70">הורי החתן</div>
-              <div className="whitespace-pre-line">{form.groomParents || '—'}</div>
-            </div>
-            <div className="flex-1 text-left">
-              <div className="mb-0.5 opacity-70">הורי הכלה</div>
-              <div className="whitespace-pre-line">{form.brideParents || '—'}</div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -354,7 +406,7 @@ export default function InviteBuilderPage() {
   const [customBg, setCustomBg] = useState('');
   const [exporting, setExporting] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!eventId) return;
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
@@ -386,11 +438,13 @@ export default function InviteBuilderPage() {
         photoUrl: inv?.photoUrl || '',
         templateId: inv?.templateId || 'classic-cream',
         selectedObjects,
+        bgId: inv?.bgId || 'none',
+        frameId: inv?.frameId || 'none',
+        frameScaleX: inv?.frameScaleX || inv?.frameScale || 1,
+frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
       });
 
       if (inv?.customBg) setCustomBg(inv.customBg);
-
-      // תמיד מתחילים מבחירת סוג — לא מדלגים לעריכה
       setStep('type');
     } catch (e) {
       console.warn(e);
@@ -445,6 +499,9 @@ export default function InviteBuilderPage() {
       eventType: preset.eventType,
       templateId: preset.templateId,
       selectedObjects: preset.selectedObjects || [],
+      bgId: prev.bgId || 'none',
+      frameId: prev.frameId || 'none',
+      frameScale: prev.frameScale || 1,
     }));
     setCustomBg('');
     setStep('edit');
@@ -468,7 +525,7 @@ export default function InviteBuilderPage() {
     }));
   };
 
-      const exportJpeg = async () => {
+  const exportJpeg = async () => {
     if (!cardRef.current || exporting) return;
     setExporting(true);
     save();
@@ -491,10 +548,41 @@ export default function InviteBuilderPage() {
     }
   };
 
-  const exportPdf = () => {
+   const exportPdf = async () => {
+    if (!cardRef.current || exporting) return;
+    setExporting(true);
     save();
-    window.print();
+    try {
+      const { jsPDF } = await import('jspdf');
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+      });
+      const img = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a5',
+      });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+      const w = canvas.width * ratio;
+      const h = canvas.height * ratio;
+      const x = (pageW - w) / 2;
+      const y = (pageH - h) / 2;
+      pdf.addImage(img, 'JPEG', x, y, w, h);
+      pdf.save(`invite-${form.owners || eventId}.pdf`);
+    } catch (e) {
+      console.warn(e);
+      alert('שגיאה בייצוא PDF');
+    } finally {
+      setExporting(false);
+    }
   };
+
   const isWedding = form.eventType === 'חתונה';
   const isBarBat = form.eventType === 'בר מצווה' || form.eventType === 'בת מצווה';
 
@@ -520,7 +608,7 @@ export default function InviteBuilderPage() {
                 className="bg-white rounded-3xl border-2 border-slate-200 hover:border-amber-400 hover:shadow-lg p-6 text-center transition-all active:scale-[0.98]"
               >
                 <t.Icon className="w-10 h-10 mx-auto mb-3 text-amber-700" strokeWidth={1.5} />
-<div className="font-bold text-lg text-slate-800">{t.label}</div>
+                <div className="font-bold text-lg text-slate-800">{t.label}</div>
               </button>
             ))}
           </div>
@@ -536,7 +624,7 @@ export default function InviteBuilderPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
             <div>
               <h1 className="text-3xl font-bold">בחרו עיצוב · {form.eventType}</h1>
-              <p className="text-slate-500 text-sm mt-1">שלב 2 מתוך 3 · לחצו על דוגמה שנראית לכם מושלמת</p>
+              <p className="text-slate-500 text-sm mt-1">שלב 2 מתוך 3 · לחצו על דוגמה</p>
             </div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep('type')} className="text-sm text-slate-600 hover:underline">
@@ -563,6 +651,9 @@ export default function InviteBuilderPage() {
                   date: form.date || '2026-08-15',
                   hallName: form.hallName || 'אולם הדוגמה',
                   city: form.city || 'תל אביב',
+                  bgId: 'none',
+                  frameId: 'none',
+                  frameScale: 1,
                 };
                 return (
                   <button
@@ -641,6 +732,96 @@ export default function InviteBuilderPage() {
               )}
             </div>
 
+            {/* רקע */}
+            <div className="bg-white rounded-3xl border shadow-sm p-5">
+              <div className="font-bold mb-3">רקע להזמנה</div>
+              <div className="grid grid-cols-3 gap-3">
+                {BACKGROUNDS.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => {
+                      set('bgId', b.id);
+                      if (b.id !== 'none') setCustomBg('');
+                    }}
+                    className={`rounded-xl border-2 overflow-hidden aspect-square ${
+                      form.bgId === b.id ? 'border-amber-500 ring-2 ring-amber-200' : 'border-slate-200'
+                    }`}
+                  >
+                    {b.src ? (
+                      <img src={b.src} alt={b.label} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 bg-slate-50">
+                        צבע בלבד
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">קבצים ב־/public/invite-backgrounds/</p>
+            </div>
+
+            {/* מסגרת */}
+            <div className="bg-white rounded-3xl border shadow-sm p-5">
+              <div className="font-bold mb-3">מסגרת להזמנה</div>
+              <div className="grid grid-cols-3 gap-3">
+                {FRAMES.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => set('frameId', f.id)}
+                    className={`rounded-xl border-2 overflow-hidden aspect-square bg-white ${
+                      form.frameId === f.id ? 'border-amber-500 ring-2 ring-amber-200' : 'border-slate-200'
+                    }`}
+                  >
+                    {f.src ? (
+                      <img src={f.src} alt={f.label} className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+                        ללא
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">קבצים ב־/public/invite-frames/</p>
+
+             {form.frameId && form.frameId !== 'none' && (
+  <div className="mt-4 space-y-3">
+    <div>
+      <div className="flex items-center justify-between text-sm mb-1">
+        <span className="font-medium text-slate-600">רוחב מסגרת</span>
+        <span className="text-slate-500">{Math.round((form.frameScaleX || 1) * 100)}%</span>
+      </div>
+      <input
+        type="range"
+        min={0.5}
+        max={1.6}
+        step={0.05}
+        value={form.frameScaleX || 1}
+        onChange={(e) => set('frameScaleX', Number(e.target.value))}
+        className="w-full accent-amber-600"
+      />
+    </div>
+    <div>
+      <div className="flex items-center justify-between text-sm mb-1">
+        <span className="font-medium text-slate-600">גובה מסגרת</span>
+        <span className="text-slate-500">{Math.round((form.frameScaleY || 1) * 100)}%</span>
+      </div>
+                        <input
+                    type="range"
+                    min={0.5}
+                    max={1.6}
+                    step={0.05}
+                    value={form.frameScaleY || 1}
+                    onChange={(e) => set('frameScaleY', Number(e.target.value))}
+                    className="w-full accent-amber-600"
+                  />
+                </div>
+              </div>
+            )}
+            </div>
+
             <div className="bg-white rounded-3xl border shadow-sm p-5">
               <div className="font-bold mb-3">אובייקטים ל־{form.eventType}</div>
               <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -649,7 +830,9 @@ export default function InviteBuilderPage() {
                   return (
                     <div
                       key={obj.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl border ${selected ? 'bg-amber-50 border-amber-400' : 'border-slate-200'}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl border ${
+                        selected ? 'bg-amber-50 border-amber-400' : 'border-slate-200'
+                      }`}
                     >
                       <input type="checkbox" checked={!!selected} onChange={() => toggleObject(obj.id)} className="w-4 h-4" />
                       <img
@@ -676,18 +859,19 @@ export default function InviteBuilderPage() {
                   );
                 })}
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">
-                * אם תמונת אובייקט חסרה — הוסיפו קובץ ב־/public/invite-objects/
-              </p>
+              <p className="text-[11px] text-slate-400 mt-2">* /public/invite-objects/</p>
             </div>
 
             <div className="bg-white rounded-3xl border shadow-sm p-5">
-              <div className="font-bold mb-3">צבע רקע (אופציונלי)</div>
+              <div className="font-bold mb-3">צבע רקע (אם אין תמונת רקע)</div>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
                   value={customBg && customBg.startsWith('#') ? customBg : '#faf7f2'}
-                  onChange={(e) => setCustomBg(e.target.value)}
+                  onChange={(e) => {
+                    setCustomBg(e.target.value);
+                    set('bgId', 'none');
+                  }}
                   className="w-12 h-12 rounded-xl cursor-pointer border"
                 />
                 {customBg && (
@@ -702,7 +886,12 @@ export default function InviteBuilderPage() {
               <button type="button" onClick={save} className="bg-slate-800 text-white px-5 py-3 rounded-xl font-bold">
                 {saved ? '✅ נשמר' : 'שמירה'}
               </button>
-              <button type="button" onClick={exportJpeg} disabled={exporting} className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-3 rounded-xl font-bold">
+              <button
+                type="button"
+                onClick={exportJpeg}
+                disabled={exporting}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-3 rounded-xl font-bold"
+              >
                 {exporting ? '⏳...' : '📷 JPEG'}
               </button>
               <button type="button" onClick={exportPdf} className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-xl font-bold">
@@ -727,7 +916,6 @@ export default function InviteBuilderPage() {
         </div>
       </div>
 
-      {/* הדפסה נקייה */}
       <style jsx global>{`
         @media print {
           body * {
