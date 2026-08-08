@@ -28,6 +28,7 @@ export default function SeatingArrivalFastPage() {
   const [selectedTableId, setSelectedTableId] = useState<string | number>('');
   const [availableTables, setAvailableTables] = useState<any[]>([]);
   const [filterTableNum, setFilterTableNum] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
 
   const tableMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -190,7 +191,10 @@ export default function SeatingArrivalFastPage() {
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setForceEmptyList(false);
-    if (term.trim().length >= 2) setFilterTableNum(null);
+    if (term.trim().length >= 2) {
+      setFilterTableNum(null);
+      setSelectedIds([]);
+    }
   };
 
   const startVoiceSearch = () => {
@@ -281,6 +285,87 @@ export default function SeatingArrivalFastPage() {
     }
   };
 
+  const toggleSelect = (id: string | number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllOnTable = () => {
+    const ids = filteredGuests
+      .filter((g) => !(Number(g.arrivedCount) > 0))
+      .map((g) => g.id);
+    setSelectedIds(ids);
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const markSelectedArrived = async () => {
+    if (selectedIds.length === 0) return;
+
+    const updated = allGuests.map((guest) => {
+      if (!selectedIds.includes(guest.id)) return guest;
+      if (Number(guest.arrivedCount) > 0) return guest;
+
+      const status = String(guest.confirmed ?? '').trim();
+      const confirmedQty =
+        Number(guest.confirmedCount) ||
+        (Number(status) > 0 ? Number(status) : 0) ||
+        Number(guest.quantity) ||
+        1;
+
+      const wasNotConfirmed =
+        status === 'לא מגיע' ||
+        status === 'לא ידוע' ||
+        status === 'ממתין' ||
+        status === '' ||
+        !(Number(status) > 0);
+
+      if (wasNotConfirmed) {
+        return {
+          ...guest,
+          arrivedCount: confirmedQty,
+          confirmed: String(confirmedQty),
+          confirmedCount: confirmedQty,
+          count: confirmedQty,
+          confirmedSource: guest.confirmedSource || 'arrival',
+          confirmedAt: new Date().toISOString(),
+        };
+      }
+
+      return { ...guest, arrivedCount: confirmedQty };
+    });
+
+    setAllGuests(updated);
+
+    const arrivedOnly = updated
+      .filter((g) => Number(g.arrivedCount) > 0)
+      .map((g) => ({
+        id: g.id,
+        name: g.name,
+        arrivedCount: Number(g.arrivedCount) || 0,
+      }));
+    localStorage.setItem(`arrived_event_${eventId}`, JSON.stringify(arrivedOnly));
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+
+    for (const id of selectedIds) {
+      const guest = updated.find((g) => g.id === id);
+      if (!guest) continue;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        enqueueGuestUpdate(String(eventId), guest);
+      } else {
+        try {
+          await updateGuestInSupabase(guest, String(eventId));
+        } catch (e) {
+          console.warn('bulk arrival sync failed', e);
+          enqueueGuestUpdate(String(eventId), guest);
+        }
+      }
+    }
+
+    setSelectedIds([]);
+  };
+
   const removeFromTable = async (guestName: string, tableNum: number) => {
     if (!confirm(`להוציא את ${guestName} משולחן ${tableNum}?`)) return;
     try {
@@ -326,6 +411,7 @@ export default function SeatingArrivalFastPage() {
     setSearchTerm('');
     setForceEmptyList(false);
     setFilterTableNum(null);
+    setSelectedIds([]);
   };
 
   const refresh = () => {
@@ -580,7 +666,7 @@ export default function SeatingArrivalFastPage() {
           הושבה מהירה {eventTitle && `• ${eventTitle}`}
         </h1>
 
-        {/* סטטיסטיקות — מספרים קטנים כמו ברגיל */}
+        {/* סטטיסטיקות */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <div className="bg-white px-2 py-2 sm:px-3 sm:py-3 rounded-xl shadow text-center">
             <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">אישרו</div>
@@ -674,17 +760,47 @@ export default function SeatingArrivalFastPage() {
         </div>
 
         {filterTableNum != null && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-            <div className="font-bold text-amber-900">
-              שולחן {filterTableNum} · {filteredGuests.length} מוזמנים
+          <div className="mb-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <div className="font-bold text-amber-900">
+                שולחן {filterTableNum} · {filteredGuests.length} מוזמנים
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterTableNum(null);
+                  setSelectedIds([]);
+                }}
+                className="text-sm font-medium text-blue-600 hover:underline"
+              >
+                הצג הכל
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setFilterTableNum(null)}
-              className="text-sm font-medium text-blue-600 hover:underline"
-            >
-              הצג הכל
-            </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAllOnTable}
+                className="px-3 py-1.5 rounded-xl border border-amber-300 text-sm font-medium bg-white hover:bg-amber-50"
+              >
+                בחר את כולם
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="px-3 py-1.5 rounded-xl border border-gray-300 text-sm font-medium bg-white hover:bg-gray-50"
+              >
+                נקה בחירה
+              </button>
+              <button
+                type="button"
+                onClick={markSelectedArrived}
+                disabled={selectedIds.length === 0}
+                className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                אשר הגעה למסומנים ({selectedIds.length})
+              </button>
+            </div>
           </div>
         )}
 
@@ -706,10 +822,21 @@ export default function SeatingArrivalFastPage() {
                   className="bg-white rounded-2xl shadow border border-amber-100 p-4"
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <div className="font-bold text-lg text-slate-900">{guest.name}</div>
-                      <div className="text-gray-600 font-mono text-sm" dir="ltr">
-                        {guest.phone || '—'}
+                    <div className="flex items-start gap-2">
+                      {filterTableNum != null && (
+                        <input
+                          type="checkbox"
+                          className="mt-1 w-5 h-5 accent-emerald-600"
+                          checked={selectedIds.includes(guest.id)}
+                          onChange={() => toggleSelect(guest.id)}
+                          disabled={Number(guest.arrivedCount) > 0}
+                        />
+                      )}
+                      <div>
+                        <div className="font-bold text-lg text-slate-900">{guest.name}</div>
+                        <div className="text-gray-600 font-mono text-sm" dir="ltr">
+                          {guest.phone || '—'}
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -818,8 +945,21 @@ export default function SeatingArrivalFastPage() {
                   return (
                     <tr key={guest.id} className="border-b hover:bg-amber-50">
                       <td className="py-6 px-8">
-                        <div className="font-semibold text-xl">{guest.name}</div>
-                        <div className="text-gray-600 font-mono">{guest.phone}</div>
+                        <div className="flex items-start gap-3">
+                          {filterTableNum != null && (
+                            <input
+                              type="checkbox"
+                              className="mt-1 w-5 h-5 accent-emerald-600"
+                              checked={selectedIds.includes(guest.id)}
+                              onChange={() => toggleSelect(guest.id)}
+                              disabled={Number(guest.arrivedCount) > 0}
+                            />
+                          )}
+                          <div>
+                            <div className="font-semibold text-xl">{guest.name}</div>
+                            <div className="text-gray-600 font-mono">{guest.phone}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="py-6 px-8 text-center font-bold text-xl text-amber-700">
                         {tableNum ? (
