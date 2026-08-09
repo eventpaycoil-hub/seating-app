@@ -61,7 +61,7 @@ const BACKGROUNDS = [
   { id: 'cream-silk', label: 'שמנת ומשי', src: '/invite-backgrounds/bg-cream-silk.png' },
   { id: 'pink-circle', label: 'ורוד עיגול', src: '/invite-backgrounds/bg-pink-circle.png' },
   { id: 'navy-stars', label: 'נייבי כוכבים', src: '/invite-backgrounds/bg-navy-stars.png' },
-  { id: 'stars', label: ' כוכבים', src: '/invite-backgrounds/stars.png' },
+  { id: 'stars', label: 'כוכבים', src: '/invite-backgrounds/stars.png' },
 ];
 
 const FRAMES = [
@@ -75,10 +75,10 @@ const FRAMES = [
   { id: 'gold-classic', label: 'זהב קלאסי', src: '/invite-frames/frame-gold-classic.png' },
   { id: 'peach-floral', label: 'אפרסק פרחוני', src: '/invite-frames/frame-peach-floral.png' },
   { id: 'purple-wreath', label: 'זר סגול', src: '/invite-frames/frame-purple-wreath.png' },
-    { id: 'gold', label: 'מסגרת זהב', src: '/invite-frames/frame-gold.png' },
+  { id: 'gold', label: 'מסגרת זהב', src: '/invite-frames/frame-gold.png' },
   { id: 'blue-ornate', label: 'מסגרת כחול', src: '/invite-frames/frame-blue-ornate.png' },
   { id: 'navy-frame', label: 'מסגרת כהה', src: '/invite-frames/frame-navy.png' },
-    { id: 'black-ornate', label: 'מסגרת שחורה', src: '/invite-frames/frame-black-ornate.png' },
+  { id: 'black-ornate', label: 'מסגרת שחורה', src: '/invite-frames/frame-black-ornate.png' },
   { id: 'gold-simple', label: 'מסגרת זהב עדינה', src: '/invite-frames/frame-gold-simple.png' },
   { id: 'gold-ornate', label: 'מסגרת זהב מעוטרת', src: '/invite-frames/frame-gold-ornate.png' },
 ];
@@ -106,7 +106,6 @@ const OBJECTS = [
   { id: 'cradle', label: 'עריסה', src: '/invite-objects/cradle.png', types: ['ברית', 'בריתה'] },
   { id: 'balloon', label: 'בלון', src: '/invite-objects/balloon.png', types: ['ברית', 'בריתה', 'יום הולדת'] },
   { id: 'baby-bottle', label: 'בקבוק תינוק', src: '/invite-objects/baby-bottle.png', types: ['ברית', 'בריתה'] },
-  
   { id: 'jerusalem', label: 'ירושלים', src: '/invite-objects/jerusalem.png', types: ['בר מצווה'] },
   { id: 'tallit', label: 'טלית', src: '/invite-objects/tallit.png', types: ['בר מצווה'] },
 ];
@@ -141,24 +140,24 @@ const PRESETS = [
   { id: 'bt05', name: 'אפרסק רומנטי', desc: 'חם ועדין', eventType: 'בת מצווה', templateId: 'romantic-peach', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'bt06', name: 'יוקרה רכה', desc: 'לבן על לבן', eventType: 'בת מצווה', templateId: 'soft-emboss', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'bt07', name: 'פרחים פזורים', desc: 'מינימלי', eventType: 'בת מצווה', templateId: 'wildflower-white', selectedObjects: [{ id: 'flowers-soft', position: 'bottom' }] },
-  { id: 'bt08', name: 'שמחה כחולה', desc: 'צעיר', eventType: 'בת מצווה', templateId: 'bar-party', selectedObjects: [{ id: 'stars', position: 'top' }] },
+  { id: 'bt08', name: 'שמחה כחולה', desc: 'צעיר', eventType: 'בת מצווה', templateId: 'bar-party', selectedObjects: [] },
   { id: 'bt09', name: 'מונוגרם נקי', desc: 'אלגנטי', eventType: 'בת מצווה', templateId: 'mono-clean', selectedObjects: [] },
   { id: 'bt10', name: 'קלף עדין', desc: 'שמנת', eventType: 'בת מצווה', templateId: 'vellum-soft', selectedObjects: [{ id: 'wreath-pink', position: 'top' }] },
   { id: 'bi01', name: 'עריסה חול', desc: 'קרם · עריסה', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }] },
-  { id: 'bi02', name: 'דובי שמיים', desc: 'תכלת רך', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'teddy', position: 'top' }, { id: 'stars', position: 'bottom' }] },
+  { id: 'bi02', name: 'דובי שמיים', desc: 'תכלת רך', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'bi03', name: 'דובי חם', desc: 'בז׳ משפחתי', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'bi04', name: 'ארנב עדין', desc: 'פסטל', eventType: 'ברית', templateId: 'brit-check', selectedObjects: [{ id: 'bunny', position: 'top' }] },
   { id: 'bi05', name: 'בלון + דובי', desc: 'שמח', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'teddy', position: 'top' }, { id: 'balloon', position: 'top' }] },
   { id: 'bi06', name: 'שמיים קלאסי', desc: 'כחול', eventType: 'ברית', templateId: 'brit-sky', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'bi07', name: 'שמנת חגיגית', desc: 'חם', eventType: 'ברית', templateId: 'brit-cream', selectedObjects: [{ id: 'teddy', position: 'top' }] },
-  { id: 'bi08', name: 'כוכבים', desc: 'עדין', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'stars', position: 'top' }] },
-  { id: 'bi09', name: 'עריסה + כוכבים', desc: 'מלא', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }, { id: 'stars', position: 'top' }] },
+  { id: 'bi08', name: 'כוכבים', desc: 'עדין', eventType: 'ברית', templateId: 'brit-sky-soft', selectedObjects: [] },
+  { id: 'bi09', name: 'עריסה + כוכבים', desc: 'מלא', eventType: 'ברית', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }] },
   { id: 'bi10', name: 'מינימלי תינוק', desc: 'נקי', eventType: 'ברית', templateId: 'mono-clean', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'ba01', name: 'ארנב ורוד', desc: 'פסטל עדין', eventType: 'בריתה', templateId: 'bat-blush', selectedObjects: [{ id: 'bunny', position: 'top' }] },
   { id: 'ba02', name: 'דובי סומק', desc: 'חם', eventType: 'בריתה', templateId: 'romantic-peach', selectedObjects: [{ id: 'teddy', position: 'top' }] },
   { id: 'ba03', name: 'עריסה רכה', desc: 'קרם', eventType: 'בריתה', templateId: 'brit-sand', selectedObjects: [{ id: 'cradle', position: 'bottom' }] },
   { id: 'ba04', name: 'פרחים + דובי', desc: 'עדין', eventType: 'בריתה', templateId: 'bat-blush', selectedObjects: [{ id: 'teddy', position: 'top' }, { id: 'flowers-soft', position: 'bottom' }] },
-  { id: 'ba05', name: 'שמיים ורוד', desc: 'תכלת-ורוד', eventType: 'בריתה', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'bunny', position: 'top' }, { id: 'stars', position: 'top' }] },
+  { id: 'ba05', name: 'שמיים ורוד', desc: 'תכלת-ורוד', eventType: 'בריתה', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'bunny', position: 'top' }] },
   { id: 'ba06', name: 'בלון חמוד', desc: 'שמח', eventType: 'בריתה', templateId: 'brit-cream', selectedObjects: [{ id: 'balloon', position: 'top' }, { id: 'teddy', position: 'top' }] },
   { id: 'ba07', name: 'זר קטן', desc: 'פרחוני', eventType: 'בריתה', templateId: 'wildflower-white', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'ba08', name: 'מנטה תינוקת', desc: 'רענן', eventType: 'בריתה', templateId: 'bat-mint', selectedObjects: [{ id: 'bunny', position: 'top' }] },
@@ -172,13 +171,13 @@ const PRESETS = [
   { id: 'h06', name: 'פרחים פזורים', desc: 'מינימלי', eventType: 'חינה', templateId: 'wildflower-white', selectedObjects: [{ id: 'flowers-soft', position: 'bottom' }] },
   { id: 'h07', name: 'כהה יוקרתי', desc: 'דרמטי', eventType: 'חינה', templateId: 'dark-luxury', selectedObjects: [{ id: 'flowers-soft', position: 'top' }] },
   { id: 'h08', name: 'קלף', desc: 'שמנת', eventType: 'חינה', templateId: 'vellum-soft', selectedObjects: [{ id: 'leaves-gold', position: 'top' }] },
-  { id: 'd01', name: 'סגול שמח', desc: 'חגיגי', eventType: 'יום הולדת', templateId: 'birthday-fun', selectedObjects: [{ id: 'stars', position: 'top' }, { id: 'balloon', position: 'top' }] },
+  { id: 'd01', name: 'סגול שמח', desc: 'חגיגי', eventType: 'יום הולדת', templateId: 'birthday-fun', selectedObjects: [{ id: 'balloon', position: 'top' }] },
   { id: 'd02', name: 'כחול שמח', desc: 'צעיר', eventType: 'יום הולדת', templateId: 'bar-party', selectedObjects: [{ id: 'balloon', position: 'top' }] },
-  { id: 'd03', name: 'סומק', desc: 'עדין', eventType: 'יום הולדת', templateId: 'bat-blush', selectedObjects: [{ id: 'stars', position: 'top' }] },
+  { id: 'd03', name: 'סומק', desc: 'עדין', eventType: 'יום הולדת', templateId: 'bat-blush', selectedObjects: [] },
   { id: 'd04', name: 'מנטה', desc: 'רענן', eventType: 'יום הולדת', templateId: 'bat-mint', selectedObjects: [{ id: 'balloon', position: 'top' }] },
-  { id: 'd05', name: 'מינימלי', desc: 'נקי', eventType: 'יום הולדת', templateId: 'mono-clean', selectedObjects: [{ id: 'stars', position: 'top' }] },
+  { id: 'd05', name: 'מינימלי', desc: 'נקי', eventType: 'יום הולדת', templateId: 'mono-clean', selectedObjects: [] },
   { id: 'd06', name: 'אפרסק', desc: 'חם', eventType: 'יום הולדת', templateId: 'romantic-peach', selectedObjects: [{ id: 'balloon', position: 'top' }] },
-  { id: 'd07', name: 'כוכבים', desc: 'חגיגי', eventType: 'יום הולדת', templateId: 'brit-sky-soft', selectedObjects: [{ id: 'stars', position: 'top' }] },
+  { id: 'd07', name: 'כוכבים', desc: 'חגיגי', eventType: 'יום הולדת', templateId: 'brit-sky-soft', selectedObjects: [] },
   { id: 'd08', name: 'קלאסי', desc: 'פשוט', eventType: 'יום הולדת', templateId: 'classic-cream', selectedObjects: [{ id: 'balloon', position: 'top' }] },
 ];
 
@@ -209,12 +208,18 @@ const EMPTY = {
   groomParents: '',
   brideParents: '',
   monogram: '',
+  monogramColor: '',
+    monogram: '',
+  monogramColor: '',
+  textColor: '',
+  photoUrl: '',
   photoUrl: '',
   selectedObjects: [],
   bgId: 'none',
   frameId: 'none',
   frameScaleX: 1,
-frameScaleY: 1,
+  frameScaleY: 1,
+  includeMonogramCard: true,
 };
 
 function ObjectsDisplay({ selected, position }) {
@@ -246,9 +251,9 @@ function ObjectsDisplay({ selected, position }) {
 }
 
 function InviteCard({ form, template, formatDate, compact = false, customBg = '', cardRef = null }) {
-  const pad = compact ? 'px-4 pt-8 pb-5' : 'px-8 pt-12 pb-10';
+    const pad = compact ? 'px-3 pt-5 pb-6' : 'px-8 pt-12 pb-10';
   const titleSize = compact ? 'text-base' : 'text-3xl sm:text-4xl';
-  const dateSize = compact ? 'text-xl' : 'text-3xl';
+  const dateSize = compact ? 'text-lg' : 'text-3xl';
   const isWedding = form.eventType === 'חתונה';
   const isBarBat = form.eventType === 'בר מצווה' || form.eventType === 'בת מצווה';
   const showPhoto = !compact && form.photoUrl && isBarBat;
@@ -275,8 +280,10 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
           : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        color: template.text,
-        maxWidth: compact ? 260 : 420,
+                color: form.textColor || template.text,
+        maxWidth: compact ? '100%' : 420,
+                height: compact ? '100%' : undefined,
+        minHeight: compact ? '100%' : undefined,
         border:
           template.frame === 'double'
             ? `3px double ${template.line}`
@@ -299,21 +306,21 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
       )}
 
       {frameSrc && (
-  <img
-    src={frameSrc}
-    alt=""
-    className="pointer-events-none absolute inset-0 w-full h-full"
-    style={{
-      zIndex: 5,
-      objectFit: 'contain',
-      transform: `scale(${form.frameScaleX || 1}, ${form.frameScaleY || 1})`,
-      transformOrigin: 'center center',
-    }}
-    onError={(e) => {
-      e.currentTarget.style.display = 'none';
-    }}
-  />
-)}
+        <img
+          src={frameSrc}
+          alt=""
+          className="pointer-events-none absolute inset-0 w-full h-full"
+          style={{
+            zIndex: 5,
+            objectFit: 'contain',
+            transform: `scale(${form.frameScaleX || 1}, ${form.frameScaleY || 1})`,
+            transformOrigin: 'center center',
+          }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      )}
 
       <div className="relative" style={{ zIndex: 10 }}>
         <div className={`absolute ${compact ? 'top-1.5 left-1.5 text-[8px]' : 'top-3 left-3 text-[11px]'} opacity-50`}>
@@ -321,18 +328,22 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
         </div>
         <div className={`${pad} text-center`}>
           {form.quote && !compact && (
-  <div
-    className="text-[11px] mb-3 leading-snug opacity-90 px-3"
-    style={{ color: form.quoteDark ? '#111827' : template.muted }}
-  >
-    {form.quote}
-  </div>
-)}
+            <div
+              className="text-[11px] mb-3 leading-snug opacity-90 px-3"
+              style={{ color: form.quoteDark ? '#111827' : template.muted }}
+            >
+              {form.quote}
+            </div>
+          )}
           <ObjectsDisplay selected={form.selectedObjects} position="top" />
           {form.monogram && (
             <div
-              className={`${compact ? 'text-2xl mb-2' : 'text-5xl mb-4'} tracking-[0.15em] font-serif`}
-              style={{ color: template.line !== '#e5e5e5' ? template.line : template.text }}
+              className={`${compact ? 'text-xl mb-1' : 'text-5xl mb-4'} tracking-[0.15em] font-serif`}
+              style={{
+                color:
+                  form.monogramColor ||
+                  (template.line !== '#e5e5e5' ? template.line : template.text),
+              }}
             >
               {form.monogram}
             </div>
@@ -405,6 +416,7 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
     </div>
   );
 }
+
 export default function InviteBuilderPage() {
   const params = useParams();
   const eventId = String(params?.id || '');
@@ -443,6 +455,7 @@ export default function InviteBuilderPage() {
         groomParents: inv?.groomParents || ev?.groomParents || '',
         brideParents: inv?.brideParents || ev?.brideParents || '',
         monogram: inv?.monogram || '',
+        monogramColor: inv?.monogramColor || '',
         quote: inv?.quote || '',
         hebrewDate: inv?.hebrewDate || '',
         photoUrl: inv?.photoUrl || '',
@@ -451,7 +464,8 @@ export default function InviteBuilderPage() {
         bgId: inv?.bgId || 'none',
         frameId: inv?.frameId || 'none',
         frameScaleX: inv?.frameScaleX || inv?.frameScale || 1,
-frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
+        frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
+        includeMonogramCard: inv?.includeMonogramCard !== false,
       });
 
       if (inv?.customBg) setCustomBg(inv.customBg);
@@ -511,7 +525,6 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
       selectedObjects: preset.selectedObjects || [],
       bgId: prev.bgId || 'none',
       frameId: prev.frameId || 'none',
-      frameScale: prev.frameScale || 1,
     }));
     setCustomBg('');
     setStep('edit');
@@ -558,7 +571,7 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
     }
   };
 
-   const exportPdf = async () => {
+  const exportPdf = async () => {
     if (!cardRef.current || exporting) return;
     setExporting(true);
     save();
@@ -567,26 +580,18 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
       const canvas = await html2canvas(cardRef.current, {
         scale: 3,
         useCORS: true,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
         logging: false,
       });
-
       const img = canvas.toDataURL('image/jpeg', 0.95);
-
-      // גודל אמיתי במ״מ (לפי 96 DPI) — בלי שוליים ובלי ענק
-      const cssW = canvas.width / 3;
-      const cssH = canvas.height / 3;
-      const pxToMm = 25.4 / 96;
-      const mmW = cssW * pxToMm;
-      const mmH = cssH * pxToMm;
-
       const pdf = new jsPDF({
-        orientation: mmH >= mmW ? 'portrait' : 'landscape',
+        orientation: form.includeMonogramCard ? 'landscape' : 'portrait',
         unit: 'mm',
-        format: [mmW, mmH],
+        format: 'a5',
       });
-
-      pdf.addImage(img, 'JPEG', 0, 0, mmW, mmH);
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      pdf.addImage(img, 'JPEG', 0, 0, pageW, pageH);
       pdf.save(`invite-${form.owners || eventId}.pdf`);
     } catch (e) {
       console.warn(e);
@@ -595,8 +600,7 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
       setExporting(false);
     }
   };
-
-  const isWedding = form.eventType === 'חתונה';
+    const isWedding = form.eventType === 'חתונה';
   const isBarBat = form.eventType === 'בר מצווה' || form.eventType === 'בת מצווה';
 
   if (step === 'type') {
@@ -666,7 +670,6 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
                   city: form.city || 'תל אביב',
                   bgId: 'none',
                   frameId: 'none',
-                  frameScale: 1,
                 };
                 return (
                   <button
@@ -675,8 +678,13 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
                     onClick={() => choosePreset(p)}
                     className="group text-right bg-white rounded-3xl border-2 border-slate-200 hover:border-amber-400 hover:shadow-xl overflow-hidden transition-all"
                   >
-                    <div className="p-4 bg-slate-50 flex justify-center pointer-events-none">
-                      <InviteCard form={previewForm} template={tpl} formatDate={formatDate} compact />
+                                        <div
+                      className="p-4 bg-slate-50 flex justify-center items-center pointer-events-none overflow-hidden"
+                      style={{ height: 340 }}
+                    >
+                      <div className="w-full h-full max-w-[220px]">
+                        <InviteCard form={previewForm} template={tpl} formatDate={formatDate} compact />
+                      </div>
                     </div>
                     <div className="px-5 py-4 border-t">
                       <div className="font-bold text-lg group-hover:text-amber-700">{p.name}</div>
@@ -717,36 +725,140 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
           <div className="space-y-5">
             <div className="bg-white rounded-3xl border shadow-sm p-5 space-y-3">
               <div className="font-bold text-lg mb-1">פרטי ההזמנה</div>
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="שמות בעלי השמחה" value={form.owners} onChange={(e) => set('owners', e.target.value)} />
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="ראשי תיבות (למשל א&ש)" value={form.monogram} onChange={(e) => set('monogram', e.target.value)} />
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="משפט הזמנה" value={form.inviteLine} onChange={(e) => set('inviteLine', e.target.value)} />
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="ציטוט / פסוק (אופציונלי)" value={form.quote} onChange={(e) => set('quote', e.target.value)} />
-
-              <div className="grid grid-cols-2 gap-2">
-                <input className="w-full border rounded-xl px-3 py-2.5" type="date" value={String(form.date || '').slice(0, 10)} onChange={(e) => set('date', e.target.value)} />
-                <input className="w-full border rounded-xl px-3 py-2.5" placeholder="תאריך עברי" value={form.hebrewDate} onChange={(e) => set('hebrewDate', e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input className="w-full border rounded-xl px-3 py-2.5" placeholder={isWedding ? 'קבלת פנים' : 'שעת התחלה'} value={form.receptionTime} onChange={(e) => set('receptionTime', e.target.value)} />
-                {isWedding && (
-                  <input className="w-full border rounded-xl px-3 py-2.5" placeholder="חופה" value={form.chuppahTime} onChange={(e) => set('chuppahTime', e.target.value)} />
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="שמות בעלי השמחה"
+                value={form.owners}
+                onChange={(e) => set('owners', e.target.value)}
+              />
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="ראשי תיבות (למשל א&ש)"
+                value={form.monogram}
+                onChange={(e) => set('monogram', e.target.value)}
+              />
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-slate-600 whitespace-nowrap">צבע ראשי תיבות:</label>
+                <input
+                  type="color"
+                  value={form.monogramColor || template?.text || '#3f2a1e'}
+                  onChange={(e) => set('monogramColor', e.target.value)}
+                  className="w-10 h-10 rounded-lg cursor-pointer border"
+                />
+                {form.monogramColor && (
+                  <button
+                    type="button"
+                    onClick={() => set('monogramColor', '')}
+                    className="text-xs text-red-500 underline"
+                  >
+                    איפוס
+                  </button>
                 )}
               </div>
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="אולם" value={form.hallName} onChange={(e) => set('hallName', e.target.value)} />
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="עיר" value={form.city} onChange={(e) => set('city', e.target.value)} />
-              <input className="w-full border rounded-xl px-3 py-2.5" placeholder="משפט סיום" value={form.welcomeLine} onChange={(e) => set('welcomeLine', e.target.value)} />
+                            <div className="flex items-center gap-3">
+                <label className="text-sm text-slate-600 whitespace-nowrap">צבע טקסט כללי:</label>
+                <input
+                  type="color"
+                  value={form.textColor || template?.text || '#3f2a1e'}
+                  onChange={(e) => set('textColor', e.target.value)}
+                  className="w-10 h-10 rounded-lg cursor-pointer border"
+                />
+                {form.textColor && (
+                  <button
+                    type="button"
+                    onClick={() => set('textColor', '')}
+                    className="text-xs text-red-500 underline"
+                  >
+                    איפוס
+                  </button>
+                )}
+              </div>
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="משפט הזמנה"
+                value={form.inviteLine}
+                onChange={(e) => set('inviteLine', e.target.value)}
+              />
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="ציטוט / פסוק (אופציונלי)"
+                value={form.quote}
+                onChange={(e) => set('quote', e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="w-full border rounded-xl px-3 py-2.5"
+                  type="date"
+                  value={String(form.date || '').slice(0, 10)}
+                  onChange={(e) => set('date', e.target.value)}
+                />
+                <input
+                  className="w-full border rounded-xl px-3 py-2.5"
+                  placeholder="תאריך עברי"
+                  value={form.hebrewDate}
+                  onChange={(e) => set('hebrewDate', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="w-full border rounded-xl px-3 py-2.5"
+                  placeholder={isWedding ? 'קבלת פנים' : 'שעת התחלה'}
+                  value={form.receptionTime}
+                  onChange={(e) => set('receptionTime', e.target.value)}
+                />
+                {isWedding && (
+                  <input
+                    className="w-full border rounded-xl px-3 py-2.5"
+                    placeholder="חופה"
+                    value={form.chuppahTime}
+                    onChange={(e) => set('chuppahTime', e.target.value)}
+                  />
+                )}
+              </div>
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="אולם"
+                value={form.hallName}
+                onChange={(e) => set('hallName', e.target.value)}
+              />
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="עיר"
+                value={form.city}
+                onChange={(e) => set('city', e.target.value)}
+              />
+              <input
+                className="w-full border rounded-xl px-3 py-2.5"
+                placeholder="משפט סיום"
+                value={form.welcomeLine}
+                onChange={(e) => set('welcomeLine', e.target.value)}
+              />
               {isBarBat && (
-                <input className="w-full border rounded-xl px-3 py-2.5" placeholder="קישור לתמונה (בר/בת)" value={form.photoUrl || ''} onChange={(e) => set('photoUrl', e.target.value)} />
+                <input
+                  className="w-full border rounded-xl px-3 py-2.5"
+                  placeholder="קישור לתמונה (בר/בת)"
+                  value={form.photoUrl || ''}
+                  onChange={(e) => set('photoUrl', e.target.value)}
+                />
               )}
               {isWedding && (
                 <>
-                  <input className="w-full border rounded-xl px-3 py-2.5" placeholder="הורי החתן" value={form.groomParents} onChange={(e) => set('groomParents', e.target.value)} />
-                  <input className="w-full border rounded-xl px-3 py-2.5" placeholder="הורי הכלה" value={form.brideParents} onChange={(e) => set('brideParents', e.target.value)} />
+                  <input
+                    className="w-full border rounded-xl px-3 py-2.5"
+                    placeholder="הורי החתן"
+                    value={form.groomParents}
+                    onChange={(e) => set('groomParents', e.target.value)}
+                  />
+                  <input
+                    className="w-full border rounded-xl px-3 py-2.5"
+                    placeholder="הורי הכלה"
+                    value={form.brideParents}
+                    onChange={(e) => set('brideParents', e.target.value)}
+                  />
                 </>
               )}
             </div>
 
-            {/* רקע */}
             <div className="bg-white rounded-3xl border shadow-sm p-5">
               <div className="font-bold mb-3">רקע להזמנה</div>
               <div className="grid grid-cols-3 gap-3">
@@ -772,10 +884,8 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">קבצים ב־/public/invite-backgrounds/</p>
             </div>
 
-            {/* מסגרת */}
             <div className="bg-white rounded-3xl border shadow-sm p-5">
               <div className="font-bold mb-3">מסגרת להזמנה</div>
               <div className="grid grid-cols-3 gap-3">
@@ -791,49 +901,45 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
                     {f.src ? (
                       <img src={f.src} alt={f.label} className="w-full h-full object-contain p-1" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
-                        ללא
-                      </div>
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">ללא</div>
                     )}
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">קבצים ב־/public/invite-frames/</p>
-
-             {form.frameId && form.frameId !== 'none' && (
-  <div className="mt-4 space-y-3">
-    <div>
-      <div className="flex items-center justify-between text-sm mb-1">
-        <span className="font-medium text-slate-600">רוחב מסגרת</span>
-        <span className="text-slate-500">{Math.round((form.frameScaleX || 1) * 100)}%</span>
-      </div>
-      <input
-        type="range"
-        min={0.5}
-        max={1.6}
-        step={0.05}
-        value={form.frameScaleX || 1}
-        onChange={(e) => set('frameScaleX', Number(e.target.value))}
-        className="w-full accent-amber-600"
-      />
-    </div>
-    <div>
-      <div className="flex items-center justify-between text-sm mb-1">
-        <span className="font-medium text-slate-600">גובה מסגרת</span>
-        <span className="text-slate-500">{Math.round((form.frameScaleY || 1) * 100)}%</span>
-      </div>
-                        <input
-                    type="range"
-                    min={0.5}
-                    max={1.6}
-                    step={0.05}
-                    value={form.frameScaleY || 1}
-                    onChange={(e) => set('frameScaleY', Number(e.target.value))}
-                    className="w-full accent-amber-600"
-                  />
+              {form.frameId && form.frameId !== 'none' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-slate-600">רוחב מסגרת</span>
+                      <span className="text-slate-500">{Math.round((form.frameScaleX || 1) * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={1.6}
+                      step={0.05}
+                      value={form.frameScaleX || 1}
+                      onChange={(e) => set('frameScaleX', Number(e.target.value))}
+                      className="w-full accent-amber-600"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-slate-600">גובה מסגרת</span>
+                      <span className="text-slate-500">{Math.round((form.frameScaleY || 1) * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={1.6}
+                      step={0.05}
+                      value={form.frameScaleY || 1}
+                      onChange={(e) => set('frameScaleY', Number(e.target.value))}
+                      className="w-full accent-amber-600"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             </div>
 
             <div className="bg-white rounded-3xl border shadow-sm p-5">
@@ -873,7 +979,6 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
                   );
                 })}
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">* /public/invite-objects/</p>
             </div>
 
             <div className="bg-white rounded-3xl border shadow-sm p-5">
@@ -896,7 +1001,15 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!form.includeMonogramCard}
+                  onChange={(e) => set('includeMonogramCard', e.target.checked)}
+                />
+                כרטיס ראשי תיבות (מקופל)
+              </label>
               <button type="button" onClick={save} className="bg-slate-800 text-white px-5 py-3 rounded-xl font-bold">
                 {saved ? '✅ נשמר' : 'שמירה'}
               </button>
@@ -908,10 +1021,19 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
               >
                 {exporting ? '⏳...' : '📷 JPEG'}
               </button>
-              <button type="button" onClick={exportPdf} className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-xl font-bold">
+              <button
+                type="button"
+                onClick={exportPdf}
+                disabled={exporting}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-xl font-bold"
+              >
                 📄 PDF
               </button>
-              <Link href={`/invite/${eventId}`} target="_blank" className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold">
+              <Link
+                href={`/invite/${eventId}`}
+                target="_blank"
+                className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold"
+              >
                 תצוגה מלאה ↗
               </Link>
             </div>
@@ -919,62 +1041,127 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
 
           <div className="bg-white rounded-3xl border shadow-sm p-5 lg:sticky lg:top-4 h-fit">
             <div className="font-bold mb-4">תצוגה מקדימה</div>
-            <InviteCard
-              form={form}
-              template={template}
-              formatDate={formatDate}
-              customBg={customBg}
-              cardRef={cardRef}
-            />
+
+            {form.includeMonogramCard ? (
+              <div
+                ref={cardRef}
+                className="mx-auto shadow-xl overflow-hidden flex print-card"
+                style={{
+                  width: '100%',
+                  maxWidth: 640,
+                  aspectRatio: '2 / 1.55',
+                  backgroundColor:
+                    customBg && customBg.startsWith('#') ? customBg : template?.bg || '#faf8f5',
+                  backgroundImage:
+                    form.bgId && form.bgId !== 'none'
+                      ? `url(${BACKGROUNDS.find((b) => b.id === form.bgId)?.src || ''})`
+                      : customBg && !customBg.startsWith('#')
+                      ? `url(${customBg})`
+                      : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  color: template?.text || '#3f2a1e',
+                  fontFamily: 'Georgia, "Times New Roman", serif',
+                }}
+              >
+                <div
+                  className="w-1/2 flex flex-col items-center justify-center text-center relative"
+                  style={{ borderLeft: `1px solid ${template?.line || '#e8dfd0'}` }}
+                >
+                  <div
+                    className="text-4xl sm:text-5xl tracking-[0.15em] font-serif mb-2"
+                    style={{
+                      color:
+                        form.monogramColor ||
+                        (template?.line && template.line !== '#e5e5e5'
+                          ? template.line
+                          : template?.text || '#3f2a1e'),
+                    }}
+                  >
+                    {form.monogram || 'A&K'}
+                  </div>
+                  <div
+                    className="text-xs italic mb-4 tracking-wide"
+                    style={{
+                      color: form.monogramColor || template?.muted || '#6b6b6b',
+                      opacity: 0.85,
+                    }}
+                  >
+                    {form.eventType === 'חתונה' || !form.eventType ? 'The Wedding' : form.eventType}
+                  </div>
+                  <div
+                    className="w-8 h-px mb-3"
+                    style={{
+                      background: form.monogramColor || template?.line || '#c4a574',
+                      opacity: 0.5,
+                    }}
+                  />
+                  <div
+                    className="text-sm tracking-widest font-light"
+                    style={{ color: form.monogramColor || template?.text || '#3f2a1e' }}
+                  >
+                    {formatDate(form.date) || '00.00.0000'}
+                  </div>
+                </div>
+
+                <div className="w-1/2 overflow-hidden flex items-stretch">
+                  <div className="w-full h-full">
+                    <InviteCard
+                      form={form}
+                      template={template}
+                      formatDate={formatDate}
+                      customBg={customBg}
+                      compact
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <InviteCard
+                form={form}
+                template={template}
+                formatDate={formatDate}
+                customBg={customBg}
+                cardRef={cardRef}
+              />
+            )}
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-  @media print {
-    @page {
-      margin: 0 !important;
-      size: 105mm 148mm; /* A6 — מתאים להזמנה */
-    }
-
-    html,
-    body {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      background: white !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    body * {
-      visibility: hidden !important;
-    }
-
-    .print-card,
-    .print-card * {
-      visibility: visible !important;
-    }
-
-    .print-card {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100% !important;
-      max-width: none !important;
-      height: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      overflow: hidden !important;
-      background-size: cover !important;
-      background-position: center !important;
-      transform: none !important;
-    }
-  }
-`}</style>
+        @media print {
+          @page {
+            margin: 0 !important;
+            size: A5 landscape;
+          }
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-card,
+          .print-card * {
+            visibility: visible !important;
+          }
+          .print-card {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: 100% !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
