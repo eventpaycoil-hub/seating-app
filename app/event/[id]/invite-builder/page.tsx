@@ -61,6 +61,7 @@ const BACKGROUNDS = [
   { id: 'cream-silk', label: 'שמנת ומשי', src: '/invite-backgrounds/bg-cream-silk.png' },
   { id: 'pink-circle', label: 'ורוד עיגול', src: '/invite-backgrounds/bg-pink-circle.png' },
   { id: 'navy-stars', label: 'נייבי כוכבים', src: '/invite-backgrounds/bg-navy-stars.png' },
+  { id: 'stars', label: ' כוכבים', src: '/invite-backgrounds/stars.png' },
 ];
 
 const FRAMES = [
@@ -74,6 +75,12 @@ const FRAMES = [
   { id: 'gold-classic', label: 'זהב קלאסי', src: '/invite-frames/frame-gold-classic.png' },
   { id: 'peach-floral', label: 'אפרסק פרחוני', src: '/invite-frames/frame-peach-floral.png' },
   { id: 'purple-wreath', label: 'זר סגול', src: '/invite-frames/frame-purple-wreath.png' },
+    { id: 'gold', label: 'מסגרת זהב', src: '/invite-frames/frame-gold.png' },
+  { id: 'blue-ornate', label: 'מסגרת כחול', src: '/invite-frames/frame-blue-ornate.png' },
+  { id: 'navy-frame', label: 'מסגרת כהה', src: '/invite-frames/frame-navy.png' },
+    { id: 'black-ornate', label: 'מסגרת שחורה', src: '/invite-frames/frame-black-ornate.png' },
+  { id: 'gold-simple', label: 'מסגרת זהב עדינה', src: '/invite-frames/frame-gold-simple.png' },
+  { id: 'gold-ornate', label: 'מסגרת זהב מעוטרת', src: '/invite-frames/frame-gold-ornate.png' },
 ];
 
 const OBJECTS = [
@@ -99,7 +106,7 @@ const OBJECTS = [
   { id: 'cradle', label: 'עריסה', src: '/invite-objects/cradle.png', types: ['ברית', 'בריתה'] },
   { id: 'balloon', label: 'בלון', src: '/invite-objects/balloon.png', types: ['ברית', 'בריתה', 'יום הולדת'] },
   { id: 'baby-bottle', label: 'בקבוק תינוק', src: '/invite-objects/baby-bottle.png', types: ['ברית', 'בריתה'] },
-  { id: 'stars', label: 'כוכבים', src: '/invite-objects/stars.png', types: ['ברית', 'בריתה', 'יום הולדת', 'בת מצווה'] },
+  
   { id: 'jerusalem', label: 'ירושלים', src: '/invite-objects/jerusalem.png', types: ['בר מצווה'] },
   { id: 'tallit', label: 'טלית', src: '/invite-objects/tallit.png', types: ['בר מצווה'] },
 ];
@@ -314,10 +321,13 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
         </div>
         <div className={`${pad} text-center`}>
           {form.quote && !compact && (
-            <div className="text-sm mb-4 leading-relaxed opacity-80" style={{ color: template.muted }}>
-              "{form.quote}"
-            </div>
-          )}
+  <div
+    className="text-[11px] mb-3 leading-snug opacity-90 px-3"
+    style={{ color: form.quoteDark ? '#111827' : template.muted }}
+  >
+    {form.quote}
+  </div>
+)}
           <ObjectsDisplay selected={form.selectedObjects} position="top" />
           {form.monogram && (
             <div
@@ -711,6 +721,7 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
               <input className="w-full border rounded-xl px-3 py-2.5" placeholder="ראשי תיבות (למשל א&ש)" value={form.monogram} onChange={(e) => set('monogram', e.target.value)} />
               <input className="w-full border rounded-xl px-3 py-2.5" placeholder="משפט הזמנה" value={form.inviteLine} onChange={(e) => set('inviteLine', e.target.value)} />
               <input className="w-full border rounded-xl px-3 py-2.5" placeholder="ציטוט / פסוק (אופציונלי)" value={form.quote} onChange={(e) => set('quote', e.target.value)} />
+
               <div className="grid grid-cols-2 gap-2">
                 <input className="w-full border rounded-xl px-3 py-2.5" type="date" value={String(form.date || '').slice(0, 10)} onChange={(e) => set('date', e.target.value)} />
                 <input className="w-full border rounded-xl px-3 py-2.5" placeholder="תאריך עברי" value={form.hebrewDate} onChange={(e) => set('hebrewDate', e.target.value)} />
