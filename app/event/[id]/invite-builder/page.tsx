@@ -555,25 +555,28 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
     try {
       const { jsPDF } = await import('jspdf');
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         backgroundColor: null,
         logging: false,
       });
+
       const img = canvas.toDataURL('image/jpeg', 0.95);
+
+      // גודל אמיתי במ״מ (לפי 96 DPI) — בלי שוליים ובלי ענק
+      const cssW = canvas.width / 3;
+      const cssH = canvas.height / 3;
+      const pxToMm = 25.4 / 96;
+      const mmW = cssW * pxToMm;
+      const mmH = cssH * pxToMm;
+
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: mmH >= mmW ? 'portrait' : 'landscape',
         unit: 'mm',
-        format: 'a5',
+        format: [mmW, mmH],
       });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-      const w = canvas.width * ratio;
-      const h = canvas.height * ratio;
-      const x = (pageW - w) / 2;
-      const y = (pageH - h) / 2;
-      pdf.addImage(img, 'JPEG', x, y, w, h);
+
+      pdf.addImage(img, 'JPEG', 0, 0, mmW, mmH);
       pdf.save(`invite-${form.owners || eventId}.pdf`);
     } catch (e) {
       console.warn(e);
@@ -917,16 +920,50 @@ frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
       </div>
 
       <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-card,
-          .print-card * {
-            visibility: visible;
-          }
-        }
-      `}</style>
+  @media print {
+    @page {
+      margin: 0 !important;
+      size: 105mm 148mm; /* A6 — מתאים להזמנה */
+    }
+
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: white !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body * {
+      visibility: hidden !important;
+    }
+
+    .print-card,
+    .print-card * {
+      visibility: visible !important;
+    }
+
+    .print-card {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: hidden !important;
+      background-size: cover !important;
+      background-position: center !important;
+      transform: none !important;
+    }
+  }
+`}</style>
     </div>
   );
 }
