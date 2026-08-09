@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -81,6 +80,10 @@ const FRAMES = [
   { id: 'black-ornate', label: 'מסגרת שחורה', src: '/invite-frames/frame-black-ornate.png' },
   { id: 'gold-simple', label: 'מסגרת זהב עדינה', src: '/invite-frames/frame-gold-simple.png' },
   { id: 'gold-ornate', label: 'מסגרת זהב מעוטרת', src: '/invite-frames/frame-gold-ornate.png' },
+     { id: 'frame-roses-hearts', label: 'ורדים ולבבות', src: '/invite-frames/misgeret1.png' },
+  { id: 'frame-pink-flowers', label: 'פרחים ורודים', src: '/invite-frames/misgeret2.png' },
+  { id: 'frame-filigree', label: 'עיטור קלאסי', src: '/invite-frames/misgeret3.png' },
+  { id: 'frame-parchment', label: 'קלף עתיק', src: '/invite-frames/misgeret4.png' },
 ];
 
 const OBJECTS = [
@@ -181,6 +184,22 @@ const PRESETS = [
   { id: 'd08', name: 'קלאסי', desc: 'פשוט', eventType: 'יום הולדת', templateId: 'classic-cream', selectedObjects: [{ id: 'balloon', position: 'top' }] },
 ];
 
+const CUSTOM_PRESETS_KEY = 'invite_gallery_presets';
+
+function loadCustomPresets() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomPresetsList(list) {
+  localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(list));
+}
+
 const EVENT_TYPES = [
   { id: 'חתונה', label: 'חתונה', Icon: Gem },
   { id: 'בר מצווה', label: 'בר מצווה', Icon: Cake },
@@ -209,10 +228,8 @@ const EMPTY = {
   brideParents: '',
   monogram: '',
   monogramColor: '',
-    monogram: '',
-  monogramColor: '',
   textColor: '',
-  photoUrl: '',
+    parentsColor: '',
   photoUrl: '',
   selectedObjects: [],
   bgId: 'none',
@@ -251,7 +268,7 @@ function ObjectsDisplay({ selected, position }) {
 }
 
 function InviteCard({ form, template, formatDate, compact = false, customBg = '', cardRef = null }) {
-    const pad = compact ? 'px-3 pt-5 pb-6' : 'px-8 pt-12 pb-10';
+  const pad = compact ? 'px-3 pt-5 pb-6' : 'px-8 pt-12 pb-10';
   const titleSize = compact ? 'text-base' : 'text-3xl sm:text-4xl';
   const dateSize = compact ? 'text-lg' : 'text-3xl';
   const isWedding = form.eventType === 'חתונה';
@@ -280,9 +297,9 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
           : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-                color: form.textColor || template.text,
+        color: form.textColor || template.text,
         maxWidth: compact ? '100%' : 420,
-                height: compact ? '100%' : undefined,
+        height: compact ? '100%' : undefined,
         minHeight: compact ? '100%' : undefined,
         border:
           template.frame === 'double'
@@ -328,15 +345,12 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
         </div>
         <div className={`${pad} text-center`}>
           {form.quote && !compact && (
-            <div
-              className="text-[11px] mb-3 leading-snug opacity-90 px-3"
-              style={{ color: form.quoteDark ? '#111827' : template.muted }}
-            >
+            <div className="text-[11px] mb-3 leading-snug opacity-90 px-3" style={{ color: template.muted }}>
               {form.quote}
             </div>
           )}
           <ObjectsDisplay selected={form.selectedObjects} position="top" />
-          {form.monogram && (
+                    {form.monogram && (form.eventType === 'חתונה' || form.eventType === 'חינה') && (
             <div
               className={`${compact ? 'text-xl mb-1' : 'text-5xl mb-4'} tracking-[0.15em] font-serif`}
               style={{
@@ -399,15 +413,26 @@ function InviteCard({ form, template, formatDate, compact = false, customBg = ''
             {form.welcomeLine || 'נשמח לראותכם'}
           </div>
           <ObjectsDisplay selected={form.selectedObjects} position="bottom" />
-          {isWedding && (form.groomParents || form.brideParents) && (
-            <div className={`flex justify-between gap-3 ${compact ? 'text-[8px]' : 'text-xs'}`} style={{ color: template.muted }}>
+                    {isWedding && (form.groomParents || form.brideParents) && (
+            <div
+              className={`flex justify-between gap-3 ${compact ? 'text-[10px]' : 'text-sm'}`}
+              style={{ color: form.parentsColor || form.textColor || template.text }}
+            >
               <div className="flex-1 text-right">
-                <div className="mb-0.5 opacity-70">הורי החתן</div>
-                <div className="whitespace-pre-line">{form.groomParents || '—'}</div>
+                <div className={`${compact ? 'text-[9px]' : 'text-xs'} mb-1 font-medium opacity-80`}>
+                  הורי החתן
+                </div>
+                <div className={`whitespace-pre-line ${compact ? 'text-[10px]' : 'text-base'} font-medium leading-snug`}>
+                  {form.groomParents || '—'}
+                </div>
               </div>
               <div className="flex-1 text-left">
-                <div className="mb-0.5 opacity-70">הורי הכלה</div>
-                <div className="whitespace-pre-line">{form.brideParents || '—'}</div>
+                <div className={`${compact ? 'text-[9px]' : 'text-xs'} mb-1 font-medium opacity-80`}>
+                  הורי הכלה
+                </div>
+                <div className={`whitespace-pre-line ${compact ? 'text-[10px]' : 'text-base'} font-medium leading-snug`}>
+                  {form.brideParents || '—'}
+                </div>
               </div>
             </div>
           )}
@@ -427,10 +452,14 @@ export default function InviteBuilderPage() {
   const [saved, setSaved] = useState(false);
   const [customBg, setCustomBg] = useState('');
   const [exporting, setExporting] = useState(false);
-
+  const [customPresets, setCustomPresets] = useState([]);
+    const [editingPresetId, setEditingPresetId] = useState(null);
+  const eventMetaRef = useRef({ owners: '', eventType: '' });
   useEffect(() => {
     if (!eventId) return;
     try {
+      setCustomPresets(loadCustomPresets());
+
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const ev = events.find((e) => String(e.id) === String(eventId));
       const inv = JSON.parse(localStorage.getItem(`invitation_${eventId}`) || 'null');
@@ -440,7 +469,7 @@ export default function InviteBuilderPage() {
         selectedObjects = selectedObjects.map((id) => ({ id, position: 'top' }));
       }
 
-      setForm({
+      const nextForm = {
         ...EMPTY,
         ...(inv || {}),
         owners: inv?.owners || ev?.owners || ev?.title || '',
@@ -456,6 +485,7 @@ export default function InviteBuilderPage() {
         brideParents: inv?.brideParents || ev?.brideParents || '',
         monogram: inv?.monogram || '',
         monogramColor: inv?.monogramColor || '',
+        textColor: inv?.textColor || '',
         quote: inv?.quote || '',
         hebrewDate: inv?.hebrewDate || '',
         photoUrl: inv?.photoUrl || '',
@@ -466,10 +496,20 @@ export default function InviteBuilderPage() {
         frameScaleX: inv?.frameScaleX || inv?.frameScale || 1,
         frameScaleY: inv?.frameScaleY || inv?.frameScale || 1,
         includeMonogramCard: inv?.includeMonogramCard !== false,
-      });
-
+      };
+      eventMetaRef.current = {
+        owners: inv?.owners || ev?.owners || ev?.title || '',
+        eventType: inv?.eventType || ev?.eventType || '',
+      };
+      setForm(nextForm);
       if (inv?.customBg) setCustomBg(inv.customBg);
-      setStep('type');
+
+      // אם יש הזמנה שמורה — ישר לעריכה (בלי לחזור לגלריה)
+      if (inv && inv.templateId) {
+        setStep('edit');
+      } else {
+        setStep('type');
+      }
     } catch (e) {
       console.warn(e);
       setStep('type');
@@ -481,11 +521,10 @@ export default function InviteBuilderPage() {
     [form.templateId]
   );
 
-  const galleryPresets = useMemo(() => {
+    const galleryPresets = useMemo(() => {
     if (!form.eventType) return [];
-    const list = PRESETS.filter((p) => p.eventType === form.eventType);
-    return list.length ? list : PRESETS.filter((p) => p.eventType === 'חתונה');
-  }, [form.eventType]);
+    return customPresets.filter((p) => p.eventType === form.eventType);
+  }, [form.eventType, customPresets]);
 
   const relevantObjects = useMemo(() => {
     if (!form.eventType) return OBJECTS;
@@ -503,11 +542,31 @@ export default function InviteBuilderPage() {
     }
     return d;
   };
+  const sampleOwners = (type) => {
+    if (type === 'חתונה' || type === 'חינה') return 'דני ונועה';
+    if (type === 'בר מצווה') return 'יואב כהן';
+    if (type === 'בת מצווה') return 'נועה לוי';
+    if (type === 'ברית') return 'התינוק יוסף';
+    if (type === 'בריתה') return 'התינוקת תמר';
+    if (type === 'יום הולדת') return 'אריאל';
+    return 'בעלי השמחה';
+  };
 
+  const sampleMonogram = (type) => {
+    if (type === 'חתונה' || type === 'חינה') return 'ד&נ';
+    if (type === 'בר מצווה') return 'י.כ';
+    if (type === 'בת מצווה') return 'נ.ל';
+    return '';
+  };
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const save = () => {
-    localStorage.setItem(`invitation_${eventId}`, JSON.stringify({ ...form, customBg }));
+    const save = (overrideForm?: any) => {
+    const base =
+      overrideForm && typeof overrideForm === 'object' && !overrideForm.nativeEvent
+        ? overrideForm
+        : form;
+    const data = { ...base, customBg };
+    localStorage.setItem(`invitation_${eventId}`, JSON.stringify(data));
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
@@ -517,35 +576,127 @@ export default function InviteBuilderPage() {
     setStep('gallery');
   };
 
-  const choosePreset = (preset) => {
+    const choosePreset = (preset) => {
+    const realType = eventMetaRef.current.eventType;
+    const sameEventType = preset.eventType === realType;
+
     setForm((prev) => ({
       ...prev,
       eventType: preset.eventType,
       templateId: preset.templateId,
       selectedObjects: preset.selectedObjects || [],
-      bgId: prev.bgId || 'none',
-      frameId: prev.frameId || 'none',
+      bgId: preset.bgId || 'none',
+      frameId: preset.frameId || 'none',
+      frameScaleX: preset.frameScaleX || 1,
+      frameScaleY: preset.frameScaleY || 1,
+      monogramColor: preset.monogramColor || prev.monogramColor || '',
+      textColor: preset.textColor || prev.textColor || '',
+      parentsColor: preset.parentsColor || prev.parentsColor || '',
+            owners: sameEventType
+        ? eventMetaRef.current.owners || prev.owners
+        : preset.owners || sampleOwners(preset.eventType),
+      monogram: sameEventType
+        ? prev.monogram
+        : preset.monogram || sampleMonogram(preset.eventType),
+      groomParents: preset.eventType === 'חתונה' ? prev.groomParents : '',
+      brideParents: preset.eventType === 'חתונה' ? prev.brideParents : '',
     }));
     setCustomBg('');
     setStep('edit');
   };
 
+  const saveAsPreset = () => {
+    const name = window.prompt('שם לדוגמה בגלריה:', form.owners || form.eventType || 'דוגמה שלי');
+    if (!name || !name.trim()) return;
+
+    const preset = {
+      id: 'custom-' + Date.now(),
+            name: name.trim(),
+      desc: 'דוגמה שמורה',
+      eventType: form.eventType || 'חתונה',
+      templateId: form.templateId,
+      selectedObjects: form.selectedObjects || [],
+      owners: form.owners || name.trim(),
+      monogram: form.monogram || '',
+      bgId: form.bgId || 'none',
+      frameId: form.frameId || 'none',
+      frameScaleX: form.frameScaleX || 1,
+      frameScaleY: form.frameScaleY || 1,
+      monogramColor: form.monogramColor || '',
+      textColor: form.textColor || '',
+      custom: true,
+    };
+
+    const next = [...loadCustomPresets(), preset];
+    saveCustomPresetsList(next);
+    setCustomPresets(next);
+    alert('✅ הדוגמה נשמרה בגלריה');
+  };
+
+  const deleteCustomPreset = (id) => {
+    if (!window.confirm('למחוק את הדוגמה מהגלריה?')) return;
+    const next = loadCustomPresets().filter((p) => p.id !== id);
+    saveCustomPresetsList(next);
+    setCustomPresets(next);
+  };
+  const editCustomPreset = (preset) => {
+    setEditingPresetId(preset.id);
+    setForm((prev) => ({
+      ...prev,
+      eventType: preset.eventType,
+      templateId: preset.templateId,
+      selectedObjects: preset.selectedObjects || [],
+      owners: preset.owners || preset.name || prev.owners,
+      monogram: preset.monogram || '',
+      bgId: preset.bgId || 'none',
+      frameId: preset.frameId || 'none',
+      frameScaleX: preset.frameScaleX || 1,
+      frameScaleY: preset.frameScaleY || 1,
+      monogramColor: preset.monogramColor || '',
+      textColor: preset.textColor || '',
+      parentsColor: preset.parentsColor || '',
+      groomParents: preset.eventType === 'חתונה' ? prev.groomParents : '',
+      brideParents: preset.eventType === 'חתונה' ? prev.brideParents : '',
+    }));
+    setCustomBg('');
+    setStep('edit');
+  };
   const toggleObject = (id) => {
     setForm((prev) => {
       const current = prev.selectedObjects || [];
       const exists = current.find((o) => o.id === id);
-      if (exists) return { ...prev, selectedObjects: current.filter((o) => o.id !== id) };
-      return { ...prev, selectedObjects: [...current, { id, position: 'top' }] };
+      const next = {
+        ...prev,
+        selectedObjects: exists
+          ? current.filter((o) => o.id !== id)
+          : [...current, { id, position: 'top' }],
+      };
+      try {
+        localStorage.setItem(
+          `invitation_${eventId}`,
+          JSON.stringify({ ...next, customBg })
+        );
+      } catch {}
+      return next;
     });
   };
 
   const setObjectPosition = (id, position) => {
-    setForm((prev) => ({
-      ...prev,
-      selectedObjects: (prev.selectedObjects || []).map((o) =>
-        o.id === id ? { ...o, position } : o
-      ),
-    }));
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        selectedObjects: (prev.selectedObjects || []).map((o) =>
+          o.id === id ? { ...o, position } : o
+        ),
+      };
+      try {
+        localStorage.setItem(
+          `invitation_${eventId}`,
+          JSON.stringify({ ...next, customBg })
+        );
+      } catch {}
+      return next;
+    });
   };
 
   const exportJpeg = async () => {
@@ -600,7 +751,8 @@ export default function InviteBuilderPage() {
       setExporting(false);
     }
   };
-    const isWedding = form.eventType === 'חתונה';
+
+  const isWedding = form.eventType === 'חתונה';
   const isBarBat = form.eventType === 'בר מצווה' || form.eventType === 'בת מצווה';
 
   if (step === 'type') {
@@ -633,8 +785,7 @@ export default function InviteBuilderPage() {
       </div>
     );
   }
-
-  if (step === 'gallery') {
+    if (step === 'gallery') {
     return (
       <div className="min-h-screen bg-zinc-100" dir="rtl">
         <div className="max-w-6xl mx-auto p-4 md:p-8">
@@ -653,45 +804,103 @@ export default function InviteBuilderPage() {
             </div>
           </div>
 
-          {galleryPresets.length === 0 ? (
-            <div className="text-center text-slate-500 py-20">אין עדיין דוגמאות לסוג זה</div>
+                    {galleryPresets.length === 0 ? (
+            <div className="text-center py-20 space-y-4">
+              <div className="text-slate-500">אין עדיין דוגמאות ל־{form.eventType}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    templateId: 'classic-cream',
+                    selectedObjects: [],
+                    bgId: 'none',
+                    frameId: 'none',
+                  }));
+                  setCustomBg('');
+                  setStep('edit');
+                }}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-2xl font-bold"
+              >
+                + התחל עיצוב חדש ל־{form.eventType}
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {galleryPresets.map((p) => {
                 const tpl = TEMPLATES.find((t) => t.id === p.templateId) || TEMPLATES[0];
-                const previewForm = {
-                  ...form,
+                                const previewForm = {
+                  ...EMPTY,
                   eventType: p.eventType,
                   templateId: p.templateId,
-                  selectedObjects: p.selectedObjects,
-                  owners: form.owners || 'שמות בעלי השמחה',
-                  date: form.date || '2026-08-15',
-                  hallName: form.hallName || 'אולם הדוגמה',
-                  city: form.city || 'תל אביב',
-                  bgId: 'none',
-                  frameId: 'none',
+                  selectedObjects: p.selectedObjects || [],
+                  owners: p.owners || sampleOwners(p.eventType),
+                                    monogram:
+                    p.eventType === 'חתונה' || p.eventType === 'חינה'
+                      ? p.monogram || sampleMonogram(p.eventType)
+                      : '',
+                  date: '2026-08-15',
+                  hallName: 'אולם הדוגמה',
+                  city: 'תל אביב',
+                  receptionTime: '19:30',
+                  chuppahTime: '20:30',
+                  inviteLine: 'הנכם מוזמנים לחגוג עמנו',
+                  welcomeLine: 'נשמח לראותכם',
+                  bgId: p.bgId || 'none',
+                  frameId: p.frameId || 'none',
+                  frameScaleX: p.frameScaleX || 1,
+                  frameScaleY: p.frameScaleY || 1,
+                  monogramColor: p.monogramColor || '',
+                  textColor: p.textColor || '',
+                  parentsColor: p.parentsColor || '',
+                  includeMonogramCard: false,
                 };
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    type="button"
-                    onClick={() => choosePreset(p)}
                     className="group text-right bg-white rounded-3xl border-2 border-slate-200 hover:border-amber-400 hover:shadow-xl overflow-hidden transition-all"
                   >
-                                        <div
-                      className="p-4 bg-slate-50 flex justify-center items-center pointer-events-none overflow-hidden"
-                      style={{ height: 340 }}
+                    <button
+                      type="button"
+                      onClick={() => choosePreset(p)}
+                      className="w-full text-right"
                     >
-                      <div className="w-full h-full max-w-[220px]">
-                        <InviteCard form={previewForm} template={tpl} formatDate={formatDate} compact />
+                      <div
+                        className="p-4 bg-slate-50 flex justify-center items-center pointer-events-none overflow-hidden"
+                        style={{ height: 340 }}
+                      >
+                        <div className="w-full h-full max-w-[220px]">
+                          <InviteCard form={previewForm} template={tpl} formatDate={formatDate} compact />
+                        </div>
                       </div>
-                    </div>
-                    <div className="px-5 py-4 border-t">
-                      <div className="font-bold text-lg group-hover:text-amber-700">{p.name}</div>
-                      <div className="text-sm text-slate-500 mt-0.5">{p.desc}</div>
-                      <div className="mt-3 text-amber-600 text-sm font-medium">בחרו עיצוב זה ←</div>
-                    </div>
-                  </button>
+                      <div className="px-5 py-4 border-t">
+                        <div className="font-bold text-lg group-hover:text-amber-700">
+                          {p.name}
+                          {p.custom ? ' ⭐' : ''}
+                        </div>
+                        <div className="text-sm text-slate-500 mt-0.5">{p.desc}</div>
+                        <div className="mt-3 text-amber-600 text-sm font-medium">בחרו עיצוב זה ←</div>
+                      </div>
+                    </button>
+                                        {p.custom && (
+                      <div className="px-5 pb-4 flex gap-4">
+                        <button
+                          type="button"
+                          onClick={() => editCustomPreset(p)}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          ✏️ ערוך דוגמה
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteCustomPreset(p.id)}
+                          className="text-xs text-red-500 hover:underline"
+                        >
+                          🗑 מחק דוגמה
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -731,31 +940,35 @@ export default function InviteBuilderPage() {
                 value={form.owners}
                 onChange={(e) => set('owners', e.target.value)}
               />
-              <input
-                className="w-full border rounded-xl px-3 py-2.5"
-                placeholder="ראשי תיבות (למשל א&ש)"
-                value={form.monogram}
-                onChange={(e) => set('monogram', e.target.value)}
-              />
+                            {(form.eventType === 'חתונה' || form.eventType === 'חינה') && (
+                <>
+                  <input
+                    className="w-full border rounded-xl px-3 py-2.5"
+                    placeholder="ראשי תיבות (למשל א&ש)"
+                    value={form.monogram}
+                    onChange={(e) => set('monogram', e.target.value)}
+                  />
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-slate-600 whitespace-nowrap">צבע ראשי תיבות:</label>
+                    <input
+                      type="color"
+                      value={form.monogramColor || template?.text || '#3f2a1e'}
+                      onChange={(e) => set('monogramColor', e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border"
+                    />
+                    {form.monogramColor && (
+                      <button
+                        type="button"
+                        onClick={() => set('monogramColor', '')}
+                        className="text-xs text-red-500 underline"
+                      >
+                        איפוס
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-3">
-                <label className="text-sm text-slate-600 whitespace-nowrap">צבע ראשי תיבות:</label>
-                <input
-                  type="color"
-                  value={form.monogramColor || template?.text || '#3f2a1e'}
-                  onChange={(e) => set('monogramColor', e.target.value)}
-                  className="w-10 h-10 rounded-lg cursor-pointer border"
-                />
-                {form.monogramColor && (
-                  <button
-                    type="button"
-                    onClick={() => set('monogramColor', '')}
-                    className="text-xs text-red-500 underline"
-                  >
-                    איפוס
-                  </button>
-                )}
-              </div>
-                            <div className="flex items-center gap-3">
                 <label className="text-sm text-slate-600 whitespace-nowrap">צבע טקסט כללי:</label>
                 <input
                   type="color"
@@ -841,7 +1054,7 @@ export default function InviteBuilderPage() {
                   onChange={(e) => set('photoUrl', e.target.value)}
                 />
               )}
-              {isWedding && (
+                            {isWedding && (
                 <>
                   <input
                     className="w-full border rounded-xl px-3 py-2.5"
@@ -855,6 +1068,24 @@ export default function InviteBuilderPage() {
                     value={form.brideParents}
                     onChange={(e) => set('brideParents', e.target.value)}
                   />
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-slate-600 whitespace-nowrap">צבע הורי החתן/כלה:</label>
+                    <input
+                      type="color"
+                      value={form.parentsColor || form.textColor || template?.text || '#3f2a1e'}
+                      onChange={(e) => set('parentsColor', e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border"
+                    />
+                    {form.parentsColor && (
+                      <button
+                        type="button"
+                        onClick={() => set('parentsColor', '')}
+                        className="text-xs text-red-500 underline"
+                      >
+                        איפוס
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -1010,8 +1241,15 @@ export default function InviteBuilderPage() {
                 />
                 כרטיס ראשי תיבות (מקופל)
               </label>
-              <button type="button" onClick={save} className="bg-slate-800 text-white px-5 py-3 rounded-xl font-bold">
+              <button type="button" onClick={() => save()} className="bg-slate-800 text-white px-5 py-3 rounded-xl font-bold">
                 {saved ? '✅ נשמר' : 'שמירה'}
+              </button>
+              <button
+                type="button"
+                onClick={saveAsPreset}
+                className="bg-violet-600 hover:bg-violet-700 text-white px-5 py-3 rounded-xl font-bold"
+              >
+                ⭐ שמור כדוגמה
               </button>
               <button
                 type="button"
@@ -1060,7 +1298,7 @@ export default function InviteBuilderPage() {
                       : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  color: template?.text || '#3f2a1e',
+                  color: form.textColor || template?.text || '#3f2a1e',
                   fontFamily: 'Georgia, "Times New Roman", serif',
                 }}
               >
