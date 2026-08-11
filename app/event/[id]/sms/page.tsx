@@ -90,7 +90,7 @@ function getShortEventNoun(event: any, en = false) {
 
 export default function SMSPage() {
   const params = useParams();
-  const eventId = params.id || '1';
+  const eventId = String(params?.id || '1');
 
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [guests, setGuests] = useState<any[]>([]);
@@ -165,7 +165,7 @@ export default function SMSPage() {
     return guests.filter(
       (g) =>
         selectedGuestIds.includes(g.id) ||
-        selectedGuestIds.includes(String(g.id)) ||
+        selectedGuestIds.includes(String(g.id) as any) ||
         selectedGuestIds.includes(Number(g.id))
     );
   }, [guests, selectedGuestIds]);
@@ -173,7 +173,7 @@ export default function SMSPage() {
   const activeGuest = useMemo(() => {
     if (selectedGuestsList.length > 0) return selectedGuestsList[0];
     return null;
-  }, [guests, selectedGuestsList]);
+  }, [selectedGuestsList]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -197,36 +197,56 @@ export default function SMSPage() {
     return 'https://www.eventpay1.co.il';
   };
 
+  const getSavedEdit = (templateId: any) => {
+    try {
+      if (templateId == null) return '';
+      return localStorage.getItem(`sms_edit_${eventId}_${templateId}`) || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const persistEdit = (templateId: any, text: string) => {
+    try {
+      if (templateId == null) return;
+      localStorage.setItem(`sms_edit_${eventId}_${templateId}`, text);
+    } catch {}
+  };
+
   const buildDynamicMessage = (template: any, guestOverride?: any, contentOverride?: string) => {
     if (!template && !contentOverride) return '';
     let message = contentOverride ?? template?.content ?? '';
-  const guest = guestOverride || activeGuest;
-  const en = isEnglishEvent;
+    const guest = guestOverride || activeGuest;
+    const en = isEnglishEvent;
 
-  if (template?.id === 4) {
-    const eventIdForLink = currentEvent?.id || eventId || '1';
-    const guestCode = guest?.inviteCode || guest?.id || '';
-    const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
-    message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
-  }
+    if (template?.id === 4) {
+      const eventIdForLink = currentEvent?.id || eventId || '1';
+      const guestCode = guest?.inviteCode || guest?.id || '';
+      const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
+      message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
+    }
 
-        if (template && [1, 2, 6].includes(template.id)) {
+    if (template && [1, 2, 6].includes(template.id)) {
       if (useGuestName && guest?.name) {
         message = message.replace(/\*שם\*/g, guest.name);
         message = message.replace(/\*name\*/g, guest.name);
+        message = message.replace(/משפחה וחברים יקרים/g, guest.name);
+        message = message.replace(/Dear family and friends/gi, guest.name);
       } else if (useGuestName && !guest?.name) {
         message = message.replace(/\*שם\*/g, '____');
         message = message.replace(/\*name\*/g, '____');
-      } else if (en) {
-        message = message.replace(/Hi \*name\*,?\s*/gi, 'Dear family and friends,\n\n');
-        message = message.replace(/\*name\*/g, 'family and friends');
-      } else {
-        message = message.replace(/שלום \*שם\*,?\s*/g, 'משפחה וחברים יקרים,\n\n');
-        message = message.replace(/\*שם\*/g, 'משפחה וחברים יקרים');
+      } else if (!contentOverride) {
+        if (en) {
+          message = message.replace(/Hi \*name\*,?\s*/gi, 'Dear family and friends,\n\n');
+          message = message.replace(/\*name\*/g, 'family and friends');
+        } else {
+          message = message.replace(/שלום \*שם\*,?\s*/g, 'משפחה וחברים יקרים,\n\n');
+          message = message.replace(/\*שם\*/g, 'משפחה וחברים יקרים');
+        }
       }
     }
 
-    if (template.id === 1 || template.id === 6) {
+    if (template?.id === 1 || template?.id === 6) {
       const eventIdForLink = currentEvent?.id || eventId || '1';
       const guestCode = guest?.inviteCode || guest?.code || guest?.id || '';
 
@@ -243,9 +263,19 @@ export default function SMSPage() {
       message = message.replace(/\*guestId\*/g, String(guestCode));
       message = message.replace(/\*RSVP_LINK\*/g, rsvplink);
       message = message.replace(/ref=\*guestId\*/g, `ref=${guestCode}`);
+
+      // אם נשמר לינק ישן — מחליפים ללינק של האורח הנוכחי
+      try {
+        const origin = getBaseUrl().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(
+          origin + '/landing\\?eventId=' + String(eventIdForLink) + '\\S*',
+          'g'
+        );
+        message = message.replace(re, rsvplink);
+      } catch {}
     }
 
-    if (template.id === 2) {
+    if (template?.id === 2) {
       const isSeatingEnabled = currentEvent?.seatingArrangement === 'כן';
 
       if (isSeatingEnabled && guest?.name) {
@@ -308,7 +338,7 @@ export default function SMSPage() {
       message = message.replace(/\*WAZE_LINK\*/g, wazeLink);
     }
 
-    if (template.id === 5) {
+    if (template?.id === 5) {
       const guestCode = guest?.id || guest?.inviteCode || '';
       const phone = String(guest?.phone || '').replace(/\D/g, '');
       const name = guest?.name || '';
@@ -319,6 +349,20 @@ export default function SMSPage() {
     }
 
     return message;
+  };
+
+  /** בונה הודעה לשליחה — תמיד מהעריכה השמורה אם יש */
+  const buildMessageForSend = (template: any, guest?: any) => {
+    const live =
+      (messageRef.current && messageRef.current.value) ||
+      editedMessage ||
+      getSavedEdit(template?.id) ||
+      '';
+
+    if (live.trim()) {
+      return buildDynamicMessage(template, guest, live);
+    }
+    return buildDynamicMessage(template, guest);
   };
 
   const templates = useMemo(() => {
@@ -413,33 +457,27 @@ export default function SMSPage() {
     setIsEditing(false);
   }, [isEnglishEvent, currentEvent?.eventType, currentEvent?.welcomeLine]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!selectedTemplate) return;
     if (![1, 2, 6].includes(selectedTemplate.id)) return;
     if (isEditing) return;
 
-    const saved =
-      eventId && selectedTemplate.id != null
-        ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
-        : null;
-
+    const saved = getSavedEdit(selectedTemplate.id);
     setEditedMessage(
       buildDynamicMessage(selectedTemplate, activeGuest, saved || undefined)
     );
   }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage, eventId, isEditing]);
 
-    const handleSelectTemplate = (t: any) => {
+  const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
     setIsEditing(false);
     setShowEmojiPicker(false);
     setBulkResult(null);
 
-    const saved =
-      eventId && t?.id != null
-        ? localStorage.getItem(`sms_edit_${eventId}_${t.id}`)
-        : null;
-
-    setEditedMessage(saved || buildDynamicMessage(t));
+    const saved = getSavedEdit(t?.id);
+    setEditedMessage(
+      buildDynamicMessage(t, activeGuest, saved || undefined)
+    );
   };
 
   const addEmoji = (emoji: string) => {
@@ -473,7 +511,6 @@ export default function SMSPage() {
     localStorage.setItem('sms_custom_emojis', JSON.stringify(updated));
     setNewEmoji('');
   };
-
     const sendRealSMS = async (phone: string) => {
     if (isClientMode) return;
     if (!selectedTemplate) return alert(isEnglishEvent ? 'Select a template first' : 'בחר תבנית קודם');
@@ -484,34 +521,9 @@ export default function SMSPage() {
       selectedGuestsList[0] ||
       null;
 
-                         const saved =
-      eventId && selectedTemplate?.id != null
-        ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
-        : null;
-
-    let message =
-      (messageRef.current && messageRef.current.value) ||
-      saved ||
-      editedMessage ||
-      '';
-
-    if (!message.trim()) {
-      message = buildDynamicMessage(selectedTemplate, guestForPhone);
-    } else {
-      const guest = guestForPhone;
-      if (useGuestName && guest?.name) {
-        message = message
-          .replace(/\*שם\*/g, guest.name)
-          .replace(/\*name\*/g, guest.name)
-          .replace(/משפחה וחברים יקרים/g, guest.name);
-      }
-      const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = guest?.inviteCode || guest?.id || '';
-      const rsvpLink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${encodeURIComponent(String(guestCode))}&img=${landingImage || 1}`;
-      message = message.replace(/\*RSVP_LINK\*/g, rsvpLink);
-    }
-
+    const message = buildMessageForSend(selectedTemplate, guestForPhone);
     console.log('SMS TO SEND:', message);
+
     if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
 
     if (!guestForPhone) {
@@ -560,9 +572,9 @@ export default function SMSPage() {
     setBulkResult(null);
 
     const items = withPhone.map((g) => ({
-  phone: String(g.phone).trim(),
-  message: buildDynamicMessage(selectedTemplate, g),
-}));
+      phone: String(g.phone).trim(),
+      message: buildMessageForSend(selectedTemplate, g),
+    }));
 
     try {
       const res = await fetch('/api/send-sms', {
@@ -691,7 +703,14 @@ export default function SMSPage() {
                       {showEmojiPicker ? 'סגור' : '😊'}
                     </button>
                     <button
-                      onClick={() => setIsEditing(!isEditing)}
+                      onClick={() => {
+                        if (isEditing) {
+                          const text = messageRef.current?.value ?? editedMessage;
+                          setEditedMessage(text);
+                          persistEdit(selectedTemplate?.id, text);
+                        }
+                        setIsEditing(!isEditing);
+                      }}
                       className="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-xl font-medium"
                     >
                       {isEditing ? 'סגור עריכה' : '✏️ ערוך'}
@@ -805,37 +824,32 @@ export default function SMSPage() {
                   </div>
                 )}
 
-                          {isEditing ? (
-              <div className="space-y-3 mb-8">
-                <textarea
-                  ref={messageRef}
-                  value={editedMessage}
-                  onChange={(e) => {
-                    setIsEditing(true);
-                    setEditedMessage(e.target.value);
-                  }}
-                  className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y"
-                  dir={isEnglishEvent ? 'ltr' : 'rtl'}
-                  style={{ caretColor: '#000' }}
-                />
-                <button
-                  type="button"
-                                    onClick={() => {
-                    const text = messageRef.current?.value ?? editedMessage;
-                    setEditedMessage(text);
-                    setIsEditing(false);
-                    if (selectedTemplate?.id != null && eventId) {
-                      localStorage.setItem(
-                        `sms_edit_${eventId}_${selectedTemplate.id}`,
-                        text
-                      );
-                    }
-                  }}
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl font-bold text-lg"
-                >
-                  💾 שמור עריכה
-                </button>
-              </div>
+                {isEditing ? (
+                  <div className="space-y-3 mb-8">
+                    <textarea
+                      ref={messageRef}
+                      value={editedMessage}
+                      onChange={(e) => {
+                        setIsEditing(true);
+                        setEditedMessage(e.target.value);
+                      }}
+                      className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y"
+                      dir={isEnglishEvent ? 'ltr' : 'rtl'}
+                      style={{ caretColor: '#000' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = messageRef.current?.value ?? editedMessage;
+                        setEditedMessage(text);
+                        setIsEditing(false);
+                        persistEdit(selectedTemplate?.id, text);
+                      }}
+                      className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl font-bold text-lg"
+                    >
+                      💾 שמור עריכה
+                    </button>
+                  </div>
                 ) : (
                   <div
                     className="bg-gray-50 p-8 rounded-2xl text-gray-700 whitespace-pre-wrap mb-8 text-lg min-h-[400px] border overflow-hidden break-words"
