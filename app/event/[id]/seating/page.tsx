@@ -1221,7 +1221,11 @@ if (remaining > 0) {
                 </div>
                 {can('deleteTable') && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteTable(table.id); }}
+                    onClick={(e) => {
+  e.stopPropagation();
+  if (!confirm('למחוק את השולחן? הפעולה לא ניתנת לביטול.')) return;
+  deleteTable(table.id);
+}}
                     className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow z-30"
                   >
                     ✕
