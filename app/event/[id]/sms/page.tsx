@@ -413,20 +413,36 @@ export default function SMSPage() {
     setIsEditing(false);
   }, [isEnglishEvent, currentEvent?.eventType, currentEvent?.welcomeLine]);
 
-  useEffect(() => {
-    if (!selectedTemplate) return;
-    if (![1, 2, 6].includes(selectedTemplate.id)) return;
-    if (isEditing) return;
-    setEditedMessage(buildDynamicMessage(selectedTemplate));
-  }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage]);
+ useEffect(() => {
+  if (!selectedTemplate) return;
+  if (![1, 2, 6].includes(selectedTemplate.id)) return;
+  if (isEditing) return;
 
-  const handleSelectTemplate = (t: any) => {
+  const saved =
+    eventId && selectedTemplate.id != null
+      ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
+      : null;
+
+  if (saved) {
+    setEditedMessage(saved);
+    return;
+  }
+
+  setEditedMessage(buildDynamicMessage(selectedTemplate));
+}, [useGuestName, activeGuest, selectedTemplate?.id, landingImage, eventId, isEditing]);
+
+    const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
-    const built = buildDynamicMessage(t);
-    setEditedMessage(built);
     setIsEditing(false);
     setShowEmojiPicker(false);
     setBulkResult(null);
+
+    const saved =
+      eventId && t?.id != null
+        ? localStorage.getItem(`sms_edit_${eventId}_${t.id}`)
+        : null;
+
+    setEditedMessage(saved || buildDynamicMessage(t));
   };
 
   const addEmoji = (emoji: string) => {
@@ -471,15 +487,22 @@ export default function SMSPage() {
       selectedGuestsList[0] ||
       null;
 
-                     const liveText =
-        (messageRef.current && messageRef.current.value) ||
-        editedMessage ||
-        '';
-      const message = buildDynamicMessage(
-        selectedTemplate,
-        guestForPhone,
-        liveText
-      );
+                        const saved =
+      eventId && selectedTemplate?.id != null
+        ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
+        : null;
+
+    const liveText =
+      (messageRef.current && messageRef.current.value) ||
+      saved ||
+      editedMessage ||
+      '';
+
+    const message = buildDynamicMessage(
+      selectedTemplate,
+      guestForPhone,
+      liveText
+    );
 
     if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
 
@@ -789,10 +812,16 @@ export default function SMSPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => {
+                                    onClick={() => {
                     const text = messageRef.current?.value ?? editedMessage;
                     setEditedMessage(text);
                     setIsEditing(false);
+                    if (selectedTemplate?.id != null && eventId) {
+                      localStorage.setItem(
+                        `sms_edit_${eventId}_${selectedTemplate.id}`,
+                        text
+                      );
+                    }
                   }}
                   className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl font-bold text-lg"
                 >
