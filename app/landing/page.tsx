@@ -679,11 +679,12 @@ function LandingPageContent() {
     );
   }
 
-  if (loading) {
+    if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f1e3]" dir="rtl">
-        <div className="text-2xl text-gray-600">{t.loading}</div>
-      </div>
+      <div
+        className="min-h-screen"
+        style={{ background: '#f8f1e3' }}
+      />
     );
   }
 
