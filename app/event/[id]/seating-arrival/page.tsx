@@ -715,7 +715,76 @@ const toggleSelect = (id: string | number) => {
   URL.revokeObjectURL(a.href);
 };
   
-  
+  const importOfflineArrivals = async (file: File) => {
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const rows = Array.isArray(parsed?.data) ? parsed.data : Array.isArray(parsed) ? parsed : [];
+
+    if (!rows.length) {
+      alert('לא נמצאו נתונים בקובץ');
+      return;
+    }
+
+    const byId = new Map<string, any>();
+    const byName = new Map<string, any>();
+    rows.forEach((r: any) => {
+      if (!r) return;
+      if (r.id != null) byId.set(String(r.id), r);
+      if (r.name) byName.set(String(r.name).trim().toLowerCase(), r);
+    });
+
+    let updatedCount = 0;
+    const updatedGuests = (allGuests || []).map((g: any) => {
+      const idKey = String(g?.id ?? '');
+      const nameKey = String(g?.name || '').trim().toLowerCase();
+      const row = byId.get(idKey) || byName.get(nameKey);
+      if (!row || !row.arrived) return g;
+
+      const qty =
+        Number(row.qty) ||
+        Number(g.confirmed) ||
+        Number(g.confirmedCount) ||
+        Number(g.count) ||
+        Number(g.quantity) ||
+        1;
+
+      updatedCount += 1;
+      return {
+        ...g,
+        arrivedCount: qty,
+        arrivedAt: new Date().toISOString(),
+      };
+    });
+
+    if (updatedCount === 0) {
+      alert('לא נמצאו התאמות לסימוני הגעה');
+      return;
+    }
+
+    setAllGuests(updatedGuests);
+    localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updatedGuests));
+
+    // סנכרון לענן (מיטבי, לא חוסם)
+    for (const g of updatedGuests) {
+      const idKey = String(g?.id ?? '');
+      const nameKey = String(g?.name || '').trim().toLowerCase();
+      const row = byId.get(idKey) || byName.get(nameKey);
+      if (!row || !row.arrived) continue;
+      try {
+        await updateGuestInSupabase(g, String(eventId));
+      } catch (e) {
+        console.warn('import sync failed', g?.name, e);
+      }
+    }
+
+    setTableMapVersion((prev) => prev + 1);
+    alert(`✅ יובאו ${updatedCount} סימוני הגעה`);
+  } catch (e) {
+    console.error(e);
+    alert('שגיאה בקריאת קובץ הייצוא');
+  }
+};
   
   const printPage = () => {
     let seatingData: any[] = [];
@@ -924,6 +993,19 @@ const toggleSelect = (id: string | number) => {
 >
   הורד גיבוי לטאבלט
 </button>
+<label className="bg-emerald-700 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-emerald-800 font-medium cursor-pointer">
+  ייבוא סימוני הגעה
+  <input
+    type="file"
+    accept="application/json,.json"
+    className="hidden"
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) importOfflineArrivals(file);
+      e.target.value = '';
+    }}
+  />
+</label>
           <button
             type="button"
             onClick={async () => {
