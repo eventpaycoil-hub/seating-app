@@ -996,7 +996,14 @@ function LandingPageContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">טוען...</div>}>
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ background: '#f5f0e6' }}
+        />
+      }
+    >
       <LandingPageContent />
     </Suspense>
   );
