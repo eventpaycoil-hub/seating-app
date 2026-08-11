@@ -576,6 +576,147 @@ const toggleSelect = (id: string | number) => {
     setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
+  const downloadOfflineBackup = () => {
+  let seatingData: any[] = [];
+  try {
+    seatingData = JSON.parse(
+  localStorage.getItem(`seatingTables_${eventId}`) ||
+    localStorage.getItem('seatingTables') ||
+    '[]'
+);
+  } catch {
+    seatingData = [];
+  }
+
+  const tableByGuest: Record<string, string | number> = {};
+  (Array.isArray(seatingData) ? seatingData : []).forEach((t: any) => {
+    const num = t?.tableNumber ?? '';
+    (Array.isArray(t?.assignedGuests) ? t.assignedGuests : []).forEach((name: string) => {
+      const key = String(name || '').trim();
+      if (key) tableByGuest[key] = num;
+    });
+  });
+
+  const rows = (allGuests || [])
+    .filter((g: any) => g?.name && String(g.name).trim())
+    .map((g: any) => {
+      const name = String(g.name).trim();
+      const qty =
+        Number(g.confirmed) ||
+        Number(g.confirmedCount) ||
+        Number(g.count) ||
+        Number(g.quantity) ||
+        1;
+      return {
+        id: String(g.id ?? name),
+        name,
+        table: tableByGuest[name] ?? '',
+        qty: Number.isFinite(qty) && qty > 0 ? qty : 1,
+      };
+    })
+    .sort((a: any, b: any) => a.name.localeCompare(b.name, 'he'));
+
+  const title = eventTitle || `אירוע ${eventId}`;
+  const payload = JSON.stringify(rows).replace(/</g, '\\u003c');
+
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>גיבוי הגעה - ${title.replace(/</g, '')}</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#f5f0e6;margin:0;padding:12px;color:#1c1917}
+  h1{font-size:20px;margin:0 0 8px}
+  .meta{font-size:13px;color:#57534e;margin-bottom:12px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;position:sticky;top:0;background:#f5f0e6;padding:8px 0;z-index:5}
+  input{flex:1;min-width:160px;padding:12px;border:1px solid #d6d3d1;border-radius:12px;font-size:16px}
+  button{border:0;border-radius:12px;padding:12px 14px;font-weight:700;cursor:pointer}
+  .stats{background:#fff;border-radius:14px;padding:10px 12px;margin-bottom:10px}
+  .card{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .name{font-size:18px;font-weight:700}
+  .sub{font-size:13px;color:#57534e;margin-top:2px}
+  .arr{background:#16a34a;color:#fff}
+  .arr.off{background:#e7e5e4;color:#1c1917}
+  .top{background:#1c1917;color:#fff}
+  .exp{background:#2563eb;color:#fff}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <h1>גיבוי הגעה (אופליין)</h1>
+  <div class="meta">${title.replace(/</g, '')}</div>
+  <div class="bar">
+    <input id="q" placeholder="חיפוש שם..." />
+    <button class="exp" id="exportBtn">ייצוא סימונים</button>
+  </div>
+  <div class="stats" id="stats">טוען...</div>
+  <div id="list"></div>
+<script>
+  const EVENT_ID = ${JSON.stringify(String(eventId))};
+  const KEY = 'offline_arrival_' + EVENT_ID;
+  const guests = ${payload};
+  const arrived = JSON.parse(localStorage.getItem(KEY) || '{}');
+
+  function save(){ localStorage.setItem(KEY, JSON.stringify(arrived)); render(); }
+
+  function render(){
+    const q = (document.getElementById('q').value || '').trim().toLowerCase();
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    let shown = 0, arrivedCount = 0, people = 0, arrivedPeople = 0;
+    guests.forEach(g => {
+      people += g.qty;
+      const isArr = !!arrived[g.id];
+      if (isArr) { arrivedCount++; arrivedPeople += g.qty; }
+      if (q && !String(g.name).toLowerCase().includes(q)) return;
+      shown++;
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = '<div><div class="name"></div><div class="sub"></div></div>';
+      div.querySelector('.name').textContent = g.name;
+      div.querySelector('.sub').textContent = (g.table ? ('שולחן ' + g.table + ' · ') : 'ללא שולחן · ') + g.qty + ' אורחים';
+      const btn = document.createElement('button');
+      btn.className = 'arr' + (isArr ? '' : ' off');
+      btn.textContent = isArr ? 'הגיע ✓' : 'הגיע';
+      btn.onclick = () => { if (arrived[g.id]) delete arrived[g.id]; else arrived[g.id] = true; save(); };
+      div.appendChild(btn);
+      list.appendChild(div);
+    });
+    document.getElementById('stats').textContent =
+      'מוצגים: ' + shown + ' | הגיעו: ' + arrivedCount + ' רשומות / ' + arrivedPeople + ' אורחים | סה"כ ברשימה: ' + people;
+  }
+
+  document.getElementById('q').addEventListener('input', render);
+  document.getElementById('exportBtn').onclick = () => {
+    const data = guests.map(g => ({
+      id: g.id,
+      name: g.name,
+      table: g.table,
+      qty: g.qty,
+      arrived: !!arrived[g.id]
+    }));
+    const blob = new Blob([JSON.stringify({ eventId: EVENT_ID, exportedAt: new Date().toISOString(), data }, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'arrival-export-' + EVENT_ID + '.json';
+    a.click();
+  };
+  render();
+</script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `offline-arrival-${eventId}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+  
+  
+  
   const printPage = () => {
     let seatingData: any[] = [];
     try {
@@ -776,6 +917,13 @@ const toggleSelect = (id: string | number) => {
           >
             <RefreshCw size={18} /> רענן
           </button>
+          <button
+  type="button"
+  onClick={downloadOfflineBackup}
+  className="bg-slate-800 text-white px-4 sm:px-6 py-3 sm:py-5 rounded-2xl sm:rounded-3xl shadow hover:bg-slate-900 font-medium"
+>
+  הורד גיבוי לטאבלט
+</button>
           <button
             type="button"
             onClick={async () => {
