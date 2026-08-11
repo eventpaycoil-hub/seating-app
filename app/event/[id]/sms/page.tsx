@@ -774,18 +774,31 @@ export default function SMSPage() {
                   </div>
                 )}
 
-                {isEditing ? (
-                  <textarea
-                    ref={messageRef}
-                    value={editedMessage}
-                   onChange={(e) => {
-  setIsEditing(true);
-  setEditedMessage(e.target.value);
-}}
-                    className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y focus:outline-none focus:border-amber-500"
-                    dir={isEnglishEvent ? 'ltr' : 'rtl'}
-                    style={{ caretColor: '#000' }}
-                  />
+                          {isEditing ? (
+              <div className="space-y-3 mb-8">
+                <textarea
+                  ref={messageRef}
+                  value={editedMessage}
+                  onChange={(e) => {
+                    setIsEditing(true);
+                    setEditedMessage(e.target.value);
+                  }}
+                  className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y"
+                  dir={isEnglishEvent ? 'ltr' : 'rtl'}
+                  style={{ caretColor: '#000' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = messageRef.current?.value ?? editedMessage;
+                    setEditedMessage(text);
+                    setIsEditing(false);
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl font-bold text-lg"
+                >
+                  💾 שמור עריכה
+                </button>
+              </div>
                 ) : (
                   <div
                     className="bg-gray-50 p-8 rounded-2xl text-gray-700 whitespace-pre-wrap mb-8 text-lg min-h-[400px] border overflow-hidden break-words"
