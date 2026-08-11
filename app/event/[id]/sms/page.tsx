@@ -413,23 +413,20 @@ export default function SMSPage() {
     setIsEditing(false);
   }, [isEnglishEvent, currentEvent?.eventType, currentEvent?.welcomeLine]);
 
- useEffect(() => {
-  if (!selectedTemplate) return;
-  if (![1, 2, 6].includes(selectedTemplate.id)) return;
-  if (isEditing) return;
+   useEffect(() => {
+    if (!selectedTemplate) return;
+    if (![1, 2, 6].includes(selectedTemplate.id)) return;
+    if (isEditing) return;
 
-  const saved =
-    eventId && selectedTemplate.id != null
-      ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
-      : null;
+    const saved =
+      eventId && selectedTemplate.id != null
+        ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
+        : null;
 
-  if (saved) {
-    setEditedMessage(saved);
-    return;
-  }
-
-  setEditedMessage(buildDynamicMessage(selectedTemplate));
-}, [useGuestName, activeGuest, selectedTemplate?.id, landingImage, eventId, isEditing]);
+    setEditedMessage(
+      buildDynamicMessage(selectedTemplate, activeGuest, saved || undefined)
+    );
+  }, [useGuestName, activeGuest, selectedTemplate?.id, landingImage, eventId, isEditing]);
 
     const handleSelectTemplate = (t: any) => {
     setSelectedTemplate(t);
@@ -487,23 +484,34 @@ export default function SMSPage() {
       selectedGuestsList[0] ||
       null;
 
-                        const saved =
+                         const saved =
       eventId && selectedTemplate?.id != null
         ? localStorage.getItem(`sms_edit_${eventId}_${selectedTemplate.id}`)
         : null;
 
-    const liveText =
+    let message =
       (messageRef.current && messageRef.current.value) ||
       saved ||
       editedMessage ||
       '';
 
-    const message = buildDynamicMessage(
-      selectedTemplate,
-      guestForPhone,
-      liveText
-    );
+    if (!message.trim()) {
+      message = buildDynamicMessage(selectedTemplate, guestForPhone);
+    } else {
+      const guest = guestForPhone;
+      if (useGuestName && guest?.name) {
+        message = message
+          .replace(/\*שם\*/g, guest.name)
+          .replace(/\*name\*/g, guest.name)
+          .replace(/משפחה וחברים יקרים/g, guest.name);
+      }
+      const eventIdForLink = currentEvent?.id || eventId || '1';
+      const guestCode = guest?.inviteCode || guest?.id || '';
+      const rsvpLink = `${getBaseUrl()}/landing?eventId=${eventIdForLink}&ref=${encodeURIComponent(String(guestCode))}&img=${landingImage || 1}`;
+      message = message.replace(/\*RSVP_LINK\*/g, rsvpLink);
+    }
 
+    console.log('SMS TO SEND:', message);
     if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
 
     if (!guestForPhone) {
