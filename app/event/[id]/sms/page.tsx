@@ -377,7 +377,7 @@ export default function SMSPage() {
       {
         id: 1,
         title: 'הודעה מס 1 אישור הגעה',
-        content: `שלום *שם*,\n\n${invite} "${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
+        content: `שלום *שם*,\n\n${invite}${hall ? ` ב"${hall}"` : ''}${city ? ` ב${city}` : ''} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
       },
       {
         id: 2,
@@ -471,10 +471,14 @@ export default function SMSPage() {
       selectedGuestsList[0] ||
       null;
 
-          const message = buildDynamicMessage(
+                     const liveText =
+        (messageRef.current && messageRef.current.value) ||
+        editedMessage ||
+        '';
+      const message = buildDynamicMessage(
         selectedTemplate,
         guestForPhone,
-        editedMessage
+        liveText
       );
 
     if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
@@ -774,7 +778,10 @@ export default function SMSPage() {
                   <textarea
                     ref={messageRef}
                     value={editedMessage}
-                    onChange={(e) => setEditedMessage(e.target.value)}
+                   onChange={(e) => {
+  setIsEditing(true);
+  setEditedMessage(e.target.value);
+}}
                     className="w-full h-96 p-6 border-2 border-amber-300 rounded-2xl text-lg leading-relaxed resize-y focus:outline-none focus:border-amber-500"
                     dir={isEnglishEvent ? 'ltr' : 'rtl'}
                     style={{ caretColor: '#000' }}
