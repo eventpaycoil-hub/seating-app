@@ -805,22 +805,29 @@ function LandingPageContent() {
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
                   <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-[#e8dfd0]">
-                    {heroMedia?.type === 'video' ? (
-                      <video
-                        src={heroMedia.url}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="absolute inset-0 w-full h-full object-cover object-center"
-                      />
-                    ) : (
-                      <img
-                        src={heroMedia?.url || '/chatan-kala.jpg'}
-                        alt="Invitation"
-                        className="absolute inset-0 w-full h-full object-cover object-center"
-                      />
-                    )}
+                                      {heroMedia?.type === 'video' ? (
+                    <video
+                      src={heroMedia.url}
+                      poster={
+                        event?.coverUrl ||
+                        event?.coverUrl2 ||
+                        event?.landingCover ||
+                        '/chatan-kala.jpg'
+                      }
+                      preload="metadata"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover object-center"
+                    />
+                  ) : (
+                    <img
+                      src={heroMedia?.url || '/chatan-kala.jpg'}
+                      alt="Invitation"
+                      className="absolute inset-0 w-full h-full object-cover object-center"
+                    />
+                  )}
                   </div>
                 </div>
               </div>
