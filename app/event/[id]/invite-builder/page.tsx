@@ -61,6 +61,9 @@ const BACKGROUNDS = [
   { id: 'pink-circle', label: 'ורוד עיגול', src: '/invite-backgrounds/bg-pink-circle.png' },
   { id: 'navy-stars', label: 'נייבי כוכבים', src: '/invite-backgrounds/bg-navy-stars.png' },
   { id: 'stars', label: 'כוכבים', src: '/invite-backgrounds/stars.png' },
+    { id: 'bg-black', label: 'שחור חלק', src: '/invite-bgs/bg-black.png' },
+  { id: 'bg-black-gold-floral', label: 'שחור זהב פרחוני', src: '/invite-bgs/bg-black-gold-floral.png' },
+  { id: 'bg-gold-damask', label: 'דמשק זהב', src: '/invite-bgs/bg-gold-damask.png' },
 ];
 
 const FRAMES = [
@@ -111,6 +114,8 @@ const OBJECTS = [
   { id: 'baby-bottle', label: 'בקבוק תינוק', src: '/invite-objects/baby-bottle.png', types: ['ברית', 'בריתה'] },
   { id: 'jerusalem', label: 'ירושלים', src: '/invite-objects/jerusalem.png', types: ['בר מצווה'] },
   { id: 'tallit', label: 'טלית', src: '/invite-objects/tallit.png', types: ['בר מצווה'] },
+    { id: 'boy-balloons', label: 'בלונים It\'s a Boy', src: '/invite-objects/boy-balloons.png', types: ['ברית'] },
+  { id: 'boy-star', label: 'כוכב Baby Boy', src: '/invite-objects/boy-star.png', types: ['ברית'] },
 ];
 
 const PRESETS = [

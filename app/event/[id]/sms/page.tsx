@@ -197,20 +197,20 @@ export default function SMSPage() {
     return 'https://www.eventpay1.co.il';
   };
 
-  const buildDynamicMessage = (template: any, guestOverride?: any) => {
-    if (!template) return '';
-    let message = template.content;
-    const guest = guestOverride || activeGuest;
-    const en = isEnglishEvent;
+  const buildDynamicMessage = (template: any, guestOverride?: any, contentOverride?: string) => {
+    if (!template && !contentOverride) return '';
+    let message = contentOverride ?? template?.content ?? '';
+  const guest = guestOverride || activeGuest;
+  const en = isEnglishEvent;
 
-    if (template.id === 4) {
-      const eventIdForLink = currentEvent?.id || eventId || '1';
-      const guestCode = guest?.inviteCode || guest?.id || '';
-      const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
-      message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
-    }
+  if (template?.id === 4) {
+    const eventIdForLink = currentEvent?.id || eventId || '1';
+    const guestCode = guest?.inviteCode || guest?.id || '';
+    const transportLink = `${getBaseUrl()}/transport?eventId=${eventIdForLink}&ref=${guestCode}`;
+    message = message.replace(/\*TRANSPORT_LINK\*/g, transportLink);
+  }
 
-    if ([1, 2, 6].includes(template.id)) {
+        if (template && [1, 2, 6].includes(template.id)) {
       if (useGuestName && guest?.name) {
         message = message.replace(/\*שם\*/g, guest.name);
         message = message.replace(/\*name\*/g, guest.name);
@@ -377,7 +377,7 @@ export default function SMSPage() {
       {
         id: 1,
         title: 'הודעה מס 1 אישור הגעה',
-        content: `שלום *שם*,\n\n${invite} ב"${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
+        content: `שלום *שם*,\n\n${invite} "${hall}" ב${city} בתאריך ${formattedDate} בשעה ${time}.${welcomeBlock}\n\n👇 נא לאשר הגעה או אי הגעה — לחצו על הקישור:\n*RSVP_LINK*`,
       },
       {
         id: 2,
@@ -471,9 +471,11 @@ export default function SMSPage() {
       selectedGuestsList[0] ||
       null;
 
-    const message = guestForPhone
-      ? buildDynamicMessage(selectedTemplate, guestForPhone)
-      : editedMessage;
+          const message = buildDynamicMessage(
+        selectedTemplate,
+        guestForPhone,
+        editedMessage
+      );
 
     if (!message.trim()) return alert(isEnglishEvent ? 'Message is empty' : 'ההודעה ריקה');
 
