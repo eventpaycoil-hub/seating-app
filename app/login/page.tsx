@@ -12,101 +12,59 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    const user = username.trim();
-    const pass = password.trim();
+  const user = username.trim();
+  const pass = password.trim();
 
-    try {
-      // 1) מנהל ראשי
-      if (user === 'admin' && pass === '123456') {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', 'admin');
-        localStorage.setItem('userRole', 'admin');
-        localStorage.setItem('clientMode', 'false');
-        localStorage.removeItem('clientEventId');
-        router.push('/events');
-        return;
-      }
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    const data = await res.json();
 
-      // 2) חיפוש מקומי (myEvents)
-      let matched: any = null;
-      try {
-        const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-        matched = (Array.isArray(events) ? events : []).find(
-          (ev: any) =>
-            String(ev.username || '').trim() === user &&
-            String(ev.password || '').trim() === pass
-        );
-      } catch {}
-
-      // 3) חיפוש בענן (Supabase) — חשוב למחשב אחר
-      if (!matched) {
-        const { data, error: sbError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('username', user)
-          .eq('password', pass)
-          .maybeSingle();
-
-        if (sbError) {
-          console.warn('supabase login error', sbError);
-        }
-
-        if (data) {
-          matched = {
-            id: data.id,
-            owners: data.owners || data.title || '',
-            title: data.title || data.owners || '',
-            username: data.username,
-            password: data.password,
-            isActive: data.is_active === true || data.is_active === 'כן',
-            hasTransport: data.has_transport || 'לא',
-            hasSeparation: data.has_separation || 'לא',
-            eventType: data.event_type || '',
-            eventDate: data.event_date || '',
-            time: data.time || '',
-            hallName: data.hall_name || '',
-            city: data.city || '',
-            rsvpMode: data.rsvp_mode || 'רגיל',
-            clientPhone: data.client_phone || '',
-          };
-
-          // לשמור גם מקומית כדי ששאר הדפים יעבדו
-          try {
-            const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-            const idx = events.findIndex(
-              (e: any) => String(e.id) === String(matched.id)
-            );
-            if (idx >= 0) events[idx] = { ...events[idx], ...matched };
-            else events.push(matched);
-            localStorage.setItem('myEvents', JSON.stringify(events));
-          } catch {}
-        }
-      }
-
-      if (!matched) {
-        setError('שם משתמש או סיסמה שגויים');
-        setLoading(false);
-        return;
-      }
-
-      // כניסת לקוח
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', user);
-      localStorage.setItem('userRole', 'client');
-      localStorage.setItem('clientMode', 'true');
-      localStorage.setItem('clientEventId', String(matched.id));
-
-      router.push(`/event/${matched.id}/guests`);
-    } catch (err: any) {
-      console.error(err);
-      setError('שגיאה בהתחברות');
+    if (!data.success) {
+      setError(data.error || 'שם משתמש או סיסמה שגויים');
       setLoading(false);
+      return;
     }
-  };
+
+    if (data.role === 'admin') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('username', 'admin');
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('clientMode', 'false');
+      localStorage.removeItem('clientEventId');
+      router.push('/events');
+      return;
+    }
+
+    const matched = data.event;
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const idx = events.findIndex((ev: any) => String(ev.id) === String(matched.id));
+      if (idx >= 0) events[idx] = { ...events[idx], ...matched };
+      else events.push(matched);
+      localStorage.setItem('myEvents', JSON.stringify(events));
+    } catch {}
+
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('username', user);
+    localStorage.setItem('userRole', 'client');
+    localStorage.setItem('clientMode', 'true');
+    localStorage.setItem('clientEventId', String(matched.id));
+
+    router.push(`/event/${matched.id}/guests`);
+  } catch (err: any) {
+    console.error(err);
+    setError('שגיאה בהתחברות');
+    setLoading(false);
+  }
+};
 
   return (
     <div
