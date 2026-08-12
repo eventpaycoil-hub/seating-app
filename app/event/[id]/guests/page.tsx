@@ -604,10 +604,17 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
 
-  const setNeedsTransportForSelected = (value: boolean) => {
-  if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+  const setNeedsTransportForSelected = async (value: boolean) => {
+  if (selectedGuests.length === 0) {
+    alert('לא בחרת מוזמנים');
+    return;
+  }
+
+  const selectedIds = new Set(selectedGuests.map((id: any) => String(id)));
+
   const updated = guests.map((g: any) => {
-    if (!selectedGuests.includes(g.id)) return g;
+    if (!selectedIds.has(String(g.id))) return g;
+
     if (value) {
       const current = (g.transportation || g.transport || '').toString().trim();
       return {
@@ -617,6 +624,7 @@ export default function GuestsPage() {
         transport: current || '*',
       };
     }
+
     return {
       ...g,
       needsTransport: false,
@@ -624,12 +632,19 @@ export default function GuestsPage() {
       transport: '',
     };
   });
-  saveGuests(eventId, updated);
+
+  // קודם מסך — ואז שמירה
   setGuests(updated);
   setSelectedGuests([]);
+
+  try {
+    await saveGuests(eventId, updated);
+  } catch (e) {
+    console.warn('saveGuests failed', e);
+  }
+
   alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
 };
-
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
     const safeTitle = (eventTitle || 'אירוע').replace(/[\\/:*?"<>|]/g, '-');
