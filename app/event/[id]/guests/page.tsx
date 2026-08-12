@@ -690,20 +690,23 @@ export default function GuestsPage() {
               {roleLabel || (isFullAdmin ? '🔑 מצב מנהל' : isEditorMode ? '📞 מצב טלפנית' : '👤 מצב לקוח')}
               {' · '}
               {eventTitle}
-              {isClientMode && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('userRole', 'admin');
-                    localStorage.removeItem('clientMode');
-                    window.location.reload();
-                  }}
-                  className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-full hover:bg-slate-900"
-                >
-                  🔑 חזרה למנהל
-                </button>
-              )}
+                            {isClientMode &&
+                typeof window !== 'undefined' &&
+                localStorage.getItem('loggedInUser') === 'ADMIN' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('userRole', 'admin');
+                      localStorage.removeItem('clientMode');
+                      window.location.reload();
+                    }}
+                    className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-full hover:bg-slate-900"
+                  >
+                    🔑 חזרה למנהל
+                  </button>
+                )}
             </div>
+            <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
             <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
           </div>
 
