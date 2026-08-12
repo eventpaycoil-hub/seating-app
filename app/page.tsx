@@ -24,69 +24,98 @@ export default function HomePage() {
     window.location.href = '/promo';
   };
 
-      const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+      const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const username = loginData.username.trim().toLowerCase();
-    const password = loginData.password.trim().toLowerCase();
+  const username = loginData.username.trim();
+  const password = loginData.password.trim();
 
-    if (!username || !password) {
-      alert('נא למלא שם משתמש וסיסמה');
+  if (!username || !password) {
+    alert('נא למלא שם משתמש וסיסמה');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      // גיבוי מקומי ל-admin/editor/vendor (אם ה-API לא מכיר אותם)
+      const u = username.toLowerCase();
+      const p = password.toLowerCase();
+
+      if (u === 'admin' && p === '123456') {
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('loggedInUser', 'ADMIN');
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.removeItem('clientMode');
+        localStorage.removeItem('clientEventId');
+        setShowLogin(false);
+        window.location.href = '/events';
+        return;
+      }
+      if (u === 'editor' && p === 'editor88') {
+        localStorage.setItem('userRole', 'editor');
+        localStorage.setItem('loggedInUser', 'EDITOR');
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.removeItem('clientMode');
+        localStorage.removeItem('clientEventId');
+        setShowLogin(false);
+        window.location.href = '/events';
+        return;
+      }
+      if (u === 'vn2026' && (p === 'epv2026!' || p === 'epv2026')) {
+        localStorage.setItem('userRole', 'vendor');
+        localStorage.setItem('loggedInUser', 'VENDOR');
+        localStorage.setItem('vendorId', 'Vn2026');
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.removeItem('clientMode');
+        localStorage.removeItem('clientEventId');
+        setShowLogin(false);
+        window.location.href = '/events';
+        return;
+      }
+
+      alert(data.error || 'שם משתמש או סיסמה שגויים');
       return;
     }
 
-    // ===== מנהל =====
-    if (username === 'admin' && password === '123456') {
+    if (data.role === 'admin') {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('loggedInUser', 'ADMIN');
-      localStorage.removeItem('clientMode');
-      localStorage.removeItem('clientEventId');
-      setShowLogin(false);
-      window.location.href = '/event/1/guests';
-      return;
-    }
-
-    // ===== טלפנית (EDITOR) =====
-    if (username === 'editor' && password === 'editor88') {
-      localStorage.setItem('userRole', 'editor');
-      localStorage.setItem('loggedInUser', 'EDITOR');
+      localStorage.setItem('isLoggedIn', 'true');
       localStorage.removeItem('clientMode');
       localStorage.removeItem('clientEventId');
       setShowLogin(false);
       window.location.href = '/events';
       return;
     }
-        // ===== VENDOR =====
-    if (username === 'vn2026' && (password === 'epv2026!' || password === 'epv2026')) {
-      localStorage.setItem('userRole', 'vendor');
-      localStorage.setItem('loggedInUser', 'VENDOR');
-      localStorage.setItem('vendorId', 'Vn2026');
-      localStorage.removeItem('clientMode');
-      localStorage.removeItem('clientEventId');
-      setShowLogin(false);
-      window.location.href = '/events';
-      return;
-    }
-    // ===== לקוח =====
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const matchedEvent = events.find(
-      (ev: any) =>
-        String(ev.username || '').toLowerCase() === username &&
-        String(ev.password || '').toLowerCase() === password
-    );
 
-    if (matchedEvent) {
-      localStorage.setItem('userRole', 'client');
-      localStorage.setItem('clientMode', 'true');
-      localStorage.setItem('loggedInUser', username);
-      localStorage.setItem('clientEventId', matchedEvent.id.toString());
-      setShowLogin(false);
-      window.location.href = `/event/${matchedEvent.id}/guests`;
-      return;
-    }
+    const matched = data.event;
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const idx = events.findIndex((ev: any) => String(ev.id) === String(matched.id));
+      if (idx >= 0) events[idx] = { ...events[idx], ...matched };
+      else events.push(matched);
+      localStorage.setItem('myEvents', JSON.stringify(events));
+    } catch {}
 
-    alert('שם משתמש או סיסמה שגויים');
-  };
+    localStorage.setItem('userRole', 'client');
+    localStorage.setItem('clientMode', 'true');
+    localStorage.setItem('loggedInUser', username);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('clientEventId', String(matched.id));
+    setShowLogin(false);
+    window.location.href = `/event/${matched.id}/guests`;
+  } catch (err) {
+    console.error(err);
+    alert('שגיאה בהתחברות');
+  }
+};
   return (
     <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', direction: 'rtl' }}>
       
