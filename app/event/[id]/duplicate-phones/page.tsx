@@ -73,7 +73,18 @@ export default function DuplicatePhonesPage() {
       return next;
     });
   };
+const handleDelete = (guestId: string | number, guestName: string) => {
+  if (!confirm(`למחוק את ${guestName || 'המוזמן'} מהרשימה?`)) return;
 
+  const updated = guests.filter((g) => String(g.id) !== String(guestId));
+  localStorage.setItem(`guests_event_${eventId}`, JSON.stringify(updated));
+  setGuests(updated);
+  setInputs((prev) => {
+    const next = { ...prev };
+    delete next[String(guestId)];
+    return next;
+  });
+};
   return (
     <div className="min-h-screen bg-zinc-100 p-6" dir="rtl">
       <div className="max-w-4xl mx-auto">
@@ -127,11 +138,17 @@ export default function DuplicatePhonesPage() {
                           dir="ltr"
                         />
                         <button
-                          onClick={() => handleUpdate(guest.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-medium whitespace-nowrap"
-                        >
-                          עדכן
-                        </button>
+  onClick={() => handleUpdate(guest.id)}
+  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-medium whitespace-nowrap"
+>
+  עדכן
+</button>
+<button
+  onClick={() => handleDelete(guest.id, guest.name)}
+  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-2xl font-medium whitespace-nowrap"
+>
+  🗑 מחק
+</button>
                       </div>
                     );
                   })}

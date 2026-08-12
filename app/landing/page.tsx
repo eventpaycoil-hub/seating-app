@@ -154,6 +154,13 @@ function getEventTitlePrefix(event: any, lang: 'he' | 'en') {
   if (type === 'כנס') return 'הכנס של';
   return 'החתונה של';
 }
+function guestNeedsTransport(guest: any) {
+  if (!guest) return false;
+  if (guest.needsTransport === true || guest.needsTransport === 'כן') return true;
+  const t = (guest.transportation || guest.transport || '').toString().trim();
+  if (!t) return false;
+  return true; // כל סימון הסעה (כולל *)
+}
 
 function LandingPageContent() {
   const searchParams = useSearchParams();
@@ -448,13 +455,13 @@ function LandingPageContent() {
         }, 1200);
         return;
       }
-      if (eventHasTransport && !noTransport) {
-        setTimeout(() => {
-          window.location.replace(
-            `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(ref))}`
-          );
-        }, 1200);
-      }
+      if (eventHasTransport && !noTransport && guestNeedsTransport(guest)) {
+  setTimeout(() => {
+    window.location.replace(
+      `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(ref))}`
+    );
+  }, 1200);
+}
       return;
     }
 
@@ -515,13 +522,13 @@ function LandingPageContent() {
       return;
     }
 
-    if (eventHasTransport) {
-      setTimeout(() => {
-        window.location.replace(
-          `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(guest.inviteCode || guest.id))}`
-        );
-      }, 1200);
-    }
+   if (eventHasTransport && !noTransport && guestNeedsTransport(guest)) {
+  setTimeout(() => {
+    window.location.replace(
+      `/transport?eventId=${eventId}&ref=${encodeURIComponent(String(guest.inviteCode || guest.id))}`
+    );
+  }, 1200);
+}
   };
 
   const handleNotComing = async () => {
@@ -729,12 +736,8 @@ function LandingPageContent() {
               </p>
               <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
               {event?.hasSeparation === 'כן' ? (
-                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
-              ) : event?.hasTransport === 'כן' || event?.hasTransport === true ? (
-                <p className="text-sm text-green-600 mt-4">
-                  {lang === 'en' ? 'Redirecting to transport selection...' : 'מעביר אותך לבחירת הסעה...'}
-                </p>
-              ) : null}
+  <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+) : null}
             </div>
           )}
           {rsvpStatus === 'notComing' && (

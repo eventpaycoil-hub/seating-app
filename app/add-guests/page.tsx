@@ -163,7 +163,7 @@ function AddGuestsContent() {
   const [columnMap, setColumnMap] = useState<Record<number, FieldKey | ''>>({});
   const [contactsSupported, setContactsSupported] = useState(false);
 
-  const groups = ['משפחה', 'חברים', 'עבודה', 'שכנים', 'חברי ילדות', 'לקוחות'];
+  const [groups, setGroups] = useState<string[]>([]);
 
   const columns: { key: keyof Guest; label: string }[] = [
     { key: 'name', label: 'שם האורח' },
@@ -189,17 +189,60 @@ function AddGuestsContent() {
   ];
 
   useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
-    const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
-    if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
+  const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+  const currentEvent = events.find((e: any) => e.id.toString() === eventId.toString());
+  if (currentEvent) setEventTitle(currentEvent.owners || currentEvent.title);
 
-    setContactsSupported(
-      typeof window !== 'undefined' &&
-        'contacts' in navigator &&
-        'ContactsManager' in window
-    );
-  }, [eventId]);
+  setContactsSupported(
+    typeof window !== 'undefined' &&
+      'contacts' in navigator &&
+      'ContactsManager' in window
+  );
 
+  let fromStorage: string[] = [];
+  try {
+    const saved = localStorage.getItem(`groups_event_${eventId}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      fromStorage = (Array.isArray(parsed) ? parsed : [])
+        .map((item: any) => {
+          if (typeof item === 'string') return item.trim();
+          if (item && typeof item === 'object') {
+            return (item.name || item.title || item.label || '').toString().trim();
+          }
+          return '';
+        })
+        .filter(Boolean);
+    }
+  } catch {}
+
+  let fromGuests: string[] = [];
+  try {
+    const existing = getGuests(eventId) || [];
+    fromGuests = existing
+      .map((g: any) => (g.group || '').toString().trim())
+      .filter(Boolean);
+
+    if (fromGuests.length === 0) {
+      const raw = localStorage.getItem(`guests_event_${eventId}`);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          fromGuests = list
+            .map((g: any) => (g.group || '').toString().trim())
+            .filter(Boolean);
+        }
+      }
+    }
+  } catch {}
+
+  const unique = Array.from(new Set([...fromStorage, ...fromGuests]))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'he'));
+
+  setGroups(unique);
+  console.log('add-guests groups loaded', unique);
+}, [eventId]);
   useEffect(() => {
     setGuests(Array.from({ length: 30 }, () => emptyGuest()));
   }, []);

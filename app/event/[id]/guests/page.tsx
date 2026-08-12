@@ -53,6 +53,7 @@ const EDITOR_ALLOWED = [
 /** ברירת מחדל ללקוח — אם לא הוגדר בהגדרות מנהל */
 const DEFAULT_CLIENT_ACTIONS = [
   'home',
+  'fix-phones',
   'photo',
   'video',
   'groups',
@@ -61,7 +62,6 @@ const DEFAULT_CLIENT_ACTIONS = [
   'add-guests',
   'duplicate-phones',
   'transport',
-  'edit-event',
 ] as const;
 function normalizePhone(raw: string): string {
   if (!raw) return '';
@@ -403,14 +403,19 @@ export default function GuestsPage() {
   }, [eventId]);
 
   const getTransportDisplay = (guest: any) => {
-    const value = (guest.transportation || guest.transport || '').toString().trim();
-    if (!value) return '-';
-    const markers = ['*', 'כן', 'הסעה', 'yes', '1', 'true'];
-    if (markers.includes(value.toLowerCase()) || value.length <= 3) {
+  const value = (guest.transportation || guest.transport || '').toString().trim();
+  if (!value) {
+    if (guest.needsTransport === true || guest.needsTransport === 'כן') {
       return 'לא השיב לשאלת ההסעה';
     }
-    return value;
-  };
+    return '-';
+  }
+  const markers = ['*', 'כן', 'הסעה', 'yes', '1', 'true'];
+  if (markers.includes(value.toLowerCase()) || value.length <= 3) {
+    return 'לא השיב לשאלת ההסעה';
+  }
+  return value;
+};
 
   const getGuestQty = (g: any) => {
     const n = Number(g.confirmed);
@@ -538,13 +543,15 @@ export default function GuestsPage() {
   }, [guests]);
 
   const scrollToGroup = (groupName: string) => {
-    setJumpGroup(groupName);
-    if (!groupName) return;
-    setTimeout(() => {
-      const el = document.getElementById(`group-header-${groupName}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
-  };
+  setJumpGroup(groupName);
+  if (!groupName) return;
+  setTimeout(() => {
+    const el = document.getElementById(`group-header-${groupName}`);
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 200;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, 50);
+};
 
   const isConfirmedGuest = (g: any) =>
     g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
@@ -598,15 +605,30 @@ export default function GuestsPage() {
   };
 
   const setNeedsTransportForSelected = (value: boolean) => {
-    if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
-    const updated = guests.map((g: any) =>
-      selectedGuests.includes(g.id) ? { ...g, needsTransport: value } : g
-    );
-    saveGuests(eventId, updated);
-    setGuests(updated);
-    setSelectedGuests([]);
-    alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
-  };
+  if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
+  const updated = guests.map((g: any) => {
+    if (!selectedGuests.includes(g.id)) return g;
+    if (value) {
+      const current = (g.transportation || g.transport || '').toString().trim();
+      return {
+        ...g,
+        needsTransport: true,
+        transportation: current || '*',
+        transport: current || '*',
+      };
+    }
+    return {
+      ...g,
+      needsTransport: false,
+      transportation: '',
+      transport: '',
+    };
+  });
+  saveGuests(eventId, updated);
+  setGuests(updated);
+  setSelectedGuests([]);
+  alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
+};
 
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
@@ -801,24 +823,28 @@ export default function GuestsPage() {
                 </button>
               </>
             )}
-            <button
-              onClick={sendSMS}
-              className="bg-blue-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
-            >
-              📩 SMS
-            </button>
-            <button
-              onClick={sendWhatsApp}
-              className="bg-green-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap text-sm"
-            >
-              💬 ווטסאפ
-            </button>
-            <button
-              onClick={deleteSelected}
-              className="bg-red-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap text-sm"
-            >
-              🗑 מחק
-            </button>
+            {isFullAdmin && (
+  <>
+    <button
+      onClick={sendSMS}
+      className="bg-blue-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
+    >
+      📩 SMS
+    </button>
+    <button
+      onClick={sendWhatsApp}
+      className="bg-green-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap text-sm"
+    >
+      💬 ווטסאפ
+    </button>
+    <button
+      onClick={deleteSelected}
+      className="bg-red-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap text-sm"
+    >
+      🗑 מחק
+    </button>
+  </>
+)}
           </div>
         </div>
 
@@ -1110,7 +1136,7 @@ export default function GuestsPage() {
 
                   return (
                     <Fragment key={`group-${groupName}`}>
-                      <tr id={`group-header-${groupName}`} style={{ scrollMarginTop: '140px' }}>
+                      <tr id={`group-header-${groupName}`} style={{ scrollMarginTop: '200px' }}>
                         {isFullAdmin && (
                           <td className="bg-amber-200 border border-amber-300 px-4 py-3 text-center">
                             <input
