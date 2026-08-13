@@ -144,22 +144,7 @@ export default function PromoPage() {
             ))}
           </div>
 
-          <button
-            onClick={() => (window.location.href = '/pricing')}
-            style={{
-              marginTop: '32px',
-              background: '#16a34a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '14px 28px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-            }}
-          >
-            לחצו לפרטים נוספים!
-          </button>
+          
         </div>
 
         <div>
