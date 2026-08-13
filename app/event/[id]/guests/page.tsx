@@ -772,6 +772,7 @@ export default function GuestsPage() {
               { id: 'seating-sketch', href: `/event/${eventId}/seating`, label: 'סקיצה אולם', icon: LayoutGrid },
               { id: 'admin-settings', href: `/event/${eventId}/admin-settings`, label: 'הגדרות מנהל', icon: Settings },
               { id: 'create-event', href: '/create-event', label: 'פתח אירוע חדש', icon: PlusSquare },
+                  { id: 'seating-view', href: `/event/${eventId}/seating-view`, label: 'תצוגת אולם', icon: Eye },    
             ]
               .filter((item) => {
   if (isFullAdmin) return true;
