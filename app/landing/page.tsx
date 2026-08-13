@@ -742,7 +742,7 @@ function LandingPageContent() {
         </div>
       )}
 
-      <div className="bg-[#3f2a1e] text-white py-6 text-center px-4">
+            <div className="bg-[#3f2a1e] text-white py-6 text-center px-4">
         <h1 className="text-3xl sm:text-5xl font-light tracking-wide">
           {event?.owners ? `${titlePrefix} ${event.owners}` : displayTitle}
         </h1>
@@ -760,8 +760,8 @@ function LandingPageContent() {
               </p>
               <p className="text-xl text-green-600 font-medium">{t.seeYou}</p>
               {event?.hasSeparation === 'כן' ? (
-  <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
-) : null}
+                <p className="text-sm text-green-600 mt-4">{t.redirectSeparation}</p>
+              ) : null}
             </div>
           )}
           {rsvpStatus === 'notComing' && (
@@ -832,7 +832,10 @@ function LandingPageContent() {
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
-                                    <div className="relative w-full rounded-2xl overflow-hidden bg-[#e8dfd0] flex items-center justify-center">
+                  <div className="text-center text-sm font-bold py-2 bg-yellow-300 text-black rounded-t-xl">
+                    coverFit = {String(coverFit)} | eventId = {String(eventId)}
+                  </div>
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-[#e8dfd0] flex items-center justify-center">
                     {heroMedia?.type === 'video' ? (
                       <video
                         src={heroMedia.url}
@@ -847,7 +850,7 @@ function LandingPageContent() {
                         muted
                         loop
                         playsInline
-                                                                        className={
+                        className={
                           coverFit === 'cover'
                             ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
                             : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
@@ -857,7 +860,7 @@ function LandingPageContent() {
                       <img
                         src={heroMedia?.url || '/chatan-kala.jpg'}
                         alt="Invitation"
-                                                                        className={
+                        className={
                           coverFit === 'cover'
                             ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
                             : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
@@ -865,11 +868,10 @@ function LandingPageContent() {
                       />
                     )}
                   </div>
-                  </div>
                 </div>
               </div>
             </div>
-          
+          </div>
 
           <div className="max-w-2xl mx-auto px-5 pt-5 pb-12 text-center">
             <div className="mb-6 text-[#3f2a1e]">
@@ -885,7 +887,6 @@ function LandingPageContent() {
 
             <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-[#3f2a1e]">{t.gladToSee}</h2>
 
-            {/* שדות לקישור ציבורי */}
             {!code && (
               <div className="mb-8 max-w-md mx-auto space-y-3 text-right">
                 <input
