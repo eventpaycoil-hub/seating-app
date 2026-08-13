@@ -203,12 +203,27 @@ function LandingPageContent() {
       setLoading(false);
       return;
     }
-        try {
-      const fit = localStorage.getItem(`landing_cover_fit_${eventId}`) || 'contain';
-      if (fit === 'cover' || fit === 'contain') setCoverFit(fit);
-    } catch {}
+      
     let cancelled = false;
+        let cancelled = false;
     (async () => {
+      // קודם תמיד מ-Supabase (לא תלוי ב-localStorage)
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('landing_cover_fit')
+          .eq('id', Number(eventId))
+          .maybeSingle();
+        console.log('fit from supabase', { eventId, data, error });
+        if (!cancelled && (data?.landing_cover_fit === 'cover' || data?.landing_cover_fit === 'contain')) {
+          setCoverFit(data.landing_cover_fit);
+        }
+      } catch (e) {
+        console.warn('fit from supabase failed', e);
+      }
+
+      
+   
       try {
         const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
         const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
