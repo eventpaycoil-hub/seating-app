@@ -205,7 +205,7 @@ function LandingPageContent() {
     }
       
     let cancelled = false;
-        let cancelled = false;
+       
     (async () => {
       // קודם תמיד מ-Supabase (לא תלוי ב-localStorage)
       try {
