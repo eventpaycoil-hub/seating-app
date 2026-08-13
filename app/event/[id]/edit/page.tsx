@@ -312,8 +312,7 @@ export default function EditEventPage() {
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
           is_active: formData.isActive === true || formData.isActive === 'כן',
-          username: formData.username || null,
-          password: formData.password || null,
+          
           seating_arrangement: formData.seatingArrangement || 'לא',
           nufar_event: formData.nufarEvent || 'לא',
           show_seating_link: formData.showSeatingLink || 'לא',
