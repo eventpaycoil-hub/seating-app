@@ -808,35 +808,36 @@ function LandingPageContent() {
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
-                  <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-[#e8dfd0]">
-                                      {heroMedia?.type === 'video' ? (
-                    <video
-                      src={heroMedia.url}
-                      poster={
-                        event?.coverUrl ||
-                        event?.coverUrl2 ||
-                        event?.landingCover ||
-                        '/chatan-kala.jpg'
-                      }
-                      preload="metadata"
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="absolute inset-0 w-full h-full object-cover object-center"
-                    />
-                  ) : (
-                    <img
-                      src={heroMedia?.url || '/chatan-kala.jpg'}
-                      alt="Invitation"
-                      className="absolute inset-0 w-full h-full object-cover object-center"
-                    />
-                  )}
+                                    <div className="relative w-full rounded-2xl overflow-hidden bg-[#e8dfd0] flex items-center justify-center">
+                    {heroMedia?.type === 'video' ? (
+                      <video
+                        src={heroMedia.url}
+                        poster={
+                          event?.coverUrl ||
+                          event?.coverUrl2 ||
+                          event?.landingCover ||
+                          '/chatan-kala.jpg'
+                        }
+                        preload="metadata"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full h-auto max-h-[75vh] object-contain object-center"
+                      />
+                    ) : (
+                      <img
+                        src={heroMedia?.url || '/chatan-kala.jpg'}
+                        alt="Invitation"
+                        className="w-full h-auto max-h-[75vh] object-contain object-center"
+                      />
+                    )}
+                  </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          
 
           <div className="max-w-2xl mx-auto px-5 pt-5 pb-12 text-center">
             <div className="mb-6 text-[#3f2a1e]">
