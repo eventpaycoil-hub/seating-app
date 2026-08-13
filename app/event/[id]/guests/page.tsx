@@ -222,7 +222,7 @@ export default function GuestsPage() {
   const eventId = String(Array.isArray(rawId) ? rawId[0] : rawId || '1');
   const pathname = usePathname();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGuests, setSelectedGuests] = useState<number[]>([]);
+  const [selectedGuests, setSelectedGuests] = useState<(string | number)[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<
@@ -337,12 +337,13 @@ export default function GuestsPage() {
     return () => {
       cancelled = true;
     };
-    }, [eventId, reloadKey]);
-      useEffect(() => {
-    const onFocus = () => setReloadKey((k) => k + 1);
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, []);
+    }, [eventId]);
+       // בוטל: רענון אוטומטי בפוקוס — גרם לכבידות ולאיבוד סימונים
+  // useEffect(() => {
+  //   const onFocus = () => setReloadKey((k) => k + 1);
+  //   window.addEventListener('focus', onFocus);
+  //   return () => window.removeEventListener('focus', onFocus);
+  // }, []);
 
     useEffect(() => {
     const role = (localStorage.getItem('userRole') || '').toLowerCase();
@@ -402,20 +403,22 @@ export default function GuestsPage() {
     }
   }, [eventId]);
 
-  const getTransportDisplay = (guest: any) => {
-  const value = (guest.transportation || guest.transport || '').toString().trim();
-  if (!value) {
-    if (guest.needsTransport === true || guest.needsTransport === 'כן') {
-      return 'לא השיב לשאלת ההסעה';
+    const getTransportDisplay = (guest: any) => {
+    if (guest?.needsTransport === true || guest?.needsTransport === 'כן') {
+      const value = (guest.transportation || guest.transport || '').toString().trim();
+      if (value && value !== '*' && value.length > 3) return value;
+      return 'מסומן להסעה';
     }
-    return '-';
-  }
-  const markers = ['*', 'כן', 'הסעה', 'yes', '1', 'true'];
-  if (markers.includes(value.toLowerCase()) || value.length <= 3) {
-    return 'לא השיב לשאלת ההסעה';
-  }
-  return value;
-};
+
+    const value = (guest.transportation || guest.transport || '').toString().trim();
+    if (!value) return '-';
+
+    const markers = ['*', 'כן', 'הסעה', 'yes', '1', 'true'];
+    if (markers.includes(value.toLowerCase()) || value.length <= 3) {
+      return 'מסומן להסעה';
+    }
+    return value;
+  };
 
   const getGuestQty = (g: any) => {
     const n = Number(g.confirmed);
@@ -490,9 +493,11 @@ export default function GuestsPage() {
       (g.phone || '').includes(searchTerm);
 
     if (transportFilter) {
-      const t = (g.transportation || g.transport || '').toString();
-      if (!t.includes(transportFilter)) return false;
-    }
+  const t = (g.transportation || g.transport || '').toString();
+  const needs = g.needsTransport === true || g.needsTransport === 'כן' || t === '*';
+  // אם מסומן להסעה בלי יעד עדיין — לא להסתיר אותו
+  if (!t.includes(transportFilter) && !needs) return false;
+}
 
     if (activeFilter === 'yes')
       return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
@@ -556,31 +561,43 @@ export default function GuestsPage() {
   const isConfirmedGuest = (g: any) =>
     g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
 
-  const toggleGuest = (id: number) => {
-    setSelectedGuests((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
-    );
+    const toggleGuest = (id: any) => {
+    const sid = String(id);
+    setSelectedGuests((prev) => {
+      const asStr = prev.map(String);
+      return asStr.includes(sid)
+        ? prev.filter((g) => String(g) !== sid)
+        : [...prev, sid];
+    });
   };
 
   const toggleSelectAll = () => {
-    if (selectedGuests.length === filteredGuests.length && filteredGuests.length > 0) {
+    if (
+      filteredGuests.length > 0 &&
+      selectedGuests.length === filteredGuests.length
+    ) {
       setSelectedGuests([]);
     } else {
-      setSelectedGuests(filteredGuests.map((g: any) => g.id));
+      setSelectedGuests(filteredGuests.map((g: any) => String(g.id)));
     }
   };
 
   const toggleGroup = (groupGuests: any[]) => {
-    const ids = groupGuests.map((g) => g.id);
-    const allIn = ids.length > 0 && ids.every((id) => selectedGuests.includes(id));
-    if (allIn) setSelectedGuests((prev) => prev.filter((id) => !ids.includes(id)));
-    else setSelectedGuests((prev) => Array.from(new Set([...prev, ...ids])));
+    const ids = groupGuests.map((g) => String(g.id));
+    const selectedStr = selectedGuests.map(String);
+    const allIn = ids.length > 0 && ids.every((id) => selectedStr.includes(id));
+    if (allIn) {
+      setSelectedGuests((prev) => prev.filter((id) => !ids.includes(String(id))));
+    } else {
+      setSelectedGuests((prev) => Array.from(new Set([...prev.map(String), ...ids])));
+    }
   };
 
-  const deleteSelected = () => {
+    const deleteSelected = () => {
     if (selectedGuests.length === 0) return alert('לא בחרת מוזמנים');
     if (!confirm(`למחוק ${selectedGuests.length} מוזמנים?`)) return;
-    const updated = guests.filter((g: any) => !selectedGuests.includes(g.id));
+    const selectedIds = selectedGuests.map(String);
+    const updated = guests.filter((g: any) => !selectedIds.includes(String(g.id)));
     saveGuests(eventId, updated);
     setGuests(updated);
     setSelectedGuests([]);
@@ -604,47 +621,39 @@ export default function GuestsPage() {
     window.location.href = `/event/${eventId}/whatsapp-templates${qs}`;
   };
 
-  const setNeedsTransportForSelected = async (value: boolean) => {
-  if (selectedGuests.length === 0) {
-    alert('לא בחרת מוזמנים');
-    return;
-  }
-
-  const selectedIds = new Set(selectedGuests.map((id: any) => String(id)));
-
-  const updated = guests.map((g: any) => {
-    if (!selectedIds.has(String(g.id))) return g;
-
-    if (value) {
-      const current = (g.transportation || g.transport || '').toString().trim();
-      return {
-        ...g,
-        needsTransport: true,
-        transportation: current || '*',
-        transport: current || '*',
-      };
+      const setNeedsTransportForSelected = (value: boolean) => {
+    if (selectedGuests.length === 0) {
+      alert('לא בחרת מוזמנים');
+      return;
     }
 
-    return {
-      ...g,
-      needsTransport: false,
-      transportation: '',
-      transport: '',
-    };
-  });
+    const selectedIds = selectedGuests.map((id: any) => String(id));
 
-  // קודם מסך — ואז שמירה
-  setGuests(updated);
-  setSelectedGuests([]);
+    const updated = guests.map((g: any) => {
+      if (!selectedIds.includes(String(g.id))) return g;
 
-  try {
-    await saveGuests(eventId, updated);
-  } catch (e) {
-    console.warn('saveGuests failed', e);
-  }
+      if (value) {
+        return {
+          ...g,
+          needsTransport: true,
+          transportation: (g.transportation || g.transport || '').toString().trim() || 'ממתין להסעה',
+          transport: (g.transportation || g.transport || '').toString().trim() || 'ממתין להסעה',
+        };
+      }
 
-  alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
-};
+      return {
+        ...g,
+        needsTransport: false,
+        transportation: '',
+        transport: '',
+      };
+    });
+
+    setGuests(updated);
+    setSelectedGuests([]);
+    saveGuests(eventId, updated);
+    alert(value ? 'נוספה אפשרות הסעה למסומנים' : 'בוטלה אפשרות הסעה למסומנים');
+  };
   const downloadAllGuests = () => {
     if (guests.length === 0) return alert('אין מוזמנים להורדה');
     const safeTitle = (eventTitle || 'אירוע').replace(/[\\/:*?"<>|]/g, '-');
@@ -1188,7 +1197,7 @@ export default function GuestsPage() {
                               <td className="px-4 py-3.5 text-center border border-slate-200">
                                 <input
                                   type="checkbox"
-                                  checked={selectedGuests.includes(guest.id)}
+                                  checked={selectedGuests.map(String).includes(String(guest.id))}
                                   onChange={() => toggleGuest(guest.id)}
                                   className="w-5 h-5 accent-blue-600"
                                 />
