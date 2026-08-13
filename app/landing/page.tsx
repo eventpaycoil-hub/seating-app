@@ -847,20 +847,20 @@ function LandingPageContent() {
                         muted
                         loop
                         playsInline
-                                                className={
+                                                                        className={
                           coverFit === 'cover'
-                            ? 'w-full h-[55vh] sm:h-[65vh] object-cover object-center'
-                            : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                            ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
+                            : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
                         }
                       />
                     ) : (
                       <img
                         src={heroMedia?.url || '/chatan-kala.jpg'}
                         alt="Invitation"
-                                                className={
+                                                                        className={
                           coverFit === 'cover'
-                            ? 'w-full h-[55vh] sm:h-[65vh] object-cover object-center'
-                            : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                            ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
+                            : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
                         }
                       />
                     )}
