@@ -203,6 +203,10 @@ function LandingPageContent() {
       setLoading(false);
       return;
     }
+        try {
+      const fit = localStorage.getItem(`landing_cover_fit_${eventId}`) || 'contain';
+      if (fit === 'cover' || fit === 'contain') setCoverFit(fit);
+    } catch {}
     let cancelled = false;
     (async () => {
       try {
