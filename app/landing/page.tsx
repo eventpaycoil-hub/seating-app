@@ -862,9 +862,7 @@ function LandingPageContent() {
             <div className="w-full max-w-[1100px]">
               <div className="p-[3px] rounded-3xl bg-gradient-to-br from-[#c4a574] via-[#e8d5b0] to-[#a67c52] shadow-2xl">
                 <div className="p-2 rounded-[1.35rem] bg-[#f8f1e3]">
-                  <div className="text-center text-sm font-bold py-2 bg-yellow-300 text-black rounded-t-xl">
-                    coverFit = {String(coverFit)} | eventId = {String(eventId)}
-                  </div>
+                 
                   <div className="relative w-full rounded-2xl overflow-hidden bg-[#e8dfd0] flex items-center justify-center">
                     {heroMedia?.type === 'video' ? (
                       <video
@@ -880,21 +878,21 @@ function LandingPageContent() {
                         muted
                         loop
                         playsInline
-                        className={
-                          coverFit === 'cover'
-                            ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
-                            : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
-                        }
+                                        className={
+                  coverFit === 'cover'
+                    ? 'w-full h-[40vh] object-cover object-center'
+                    : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                }
                       />
                     ) : (
                       <img
                         src={heroMedia?.url || '/chatan-kala.jpg'}
                         alt="Invitation"
-                        className={
-                          coverFit === 'cover'
-                            ? 'w-full h-[40vh] object-cover object-center border-4 border-red-500'
-                            : 'w-full h-auto max-h-[75vh] object-contain object-center border-4 border-green-500'
-                        }
+                                        className={
+                  coverFit === 'cover'
+                    ? 'w-full h-[40vh] object-cover object-center'
+                    : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                }
                       />
                     )}
                   </div>
