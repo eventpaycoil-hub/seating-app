@@ -172,7 +172,7 @@ function LandingPageContent() {
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroMedia, setHeroMedia] = useState<{ type: 'video' | 'image'; url: string } | null>(null);
-    const [coverFit, setCoverFit] = useState<'contain' | 'cover'>('contain');
+     const [coverFit, setCoverFit] = useState<'contain' | 'cover'>('cover');
   const [rsvpStatus, setRsvpStatus] = useState<
     'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'
   >('none');
