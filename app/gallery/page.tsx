@@ -28,6 +28,7 @@ function GalleryInner() {
   const [cover1, setCover1] = useState('');
   const [cover2, setCover2] = useState('');
   const [activeLanding, setActiveLanding] = useState<1 | 2>(1);
+  const [coverFit, setCoverFit] = useState<'contain' | 'cover'>('contain');
 
   const storageKey = eventId ? `eventpay-media_${eventId}` : 'eventpay-media_unknown';
 
@@ -56,11 +57,17 @@ function GalleryInner() {
         if (current.coverUrl) setCover1(current.coverUrl);
         if (current.coverUrl2) setCover2(current.coverUrl2);
         if (current.landingCover === 2) setActiveLanding(2);
+        if (current.landingCoverFit === 'cover' || current.landingCoverFit === 'contain') {
+          setCoverFit(current.landingCoverFit);
+        }
       }
     } catch {}
 
     const slot = localStorage.getItem(`landing_cover_slot_${eventId}`);
     if (slot === '2') setActiveLanding(2);
+
+    const fit = localStorage.getItem(`landing_cover_fit_${eventId}`);
+    if (fit === 'cover' || fit === 'contain') setCoverFit(fit);
 
     (async () => {
       try {
@@ -114,7 +121,7 @@ function GalleryInner() {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const next = events.map((ev: any) =>
         String(ev.id) === String(eventId)
-          ? { ...ev, coverUrl: c1, coverUrl2: c2, landingCover: slot }
+          ? { ...ev, coverUrl: c1, coverUrl2: c2, landingCover: slot, landingCoverFit: coverFit }
           : ev
       );
       localStorage.setItem('myEvents', JSON.stringify(next));
@@ -122,7 +129,20 @@ function GalleryInner() {
     localStorage.setItem(`landing_cover_slot_${eventId}`, String(slot));
   };
 
-    const setAsCover = async (url: string, slot: 1 | 2) => {
+  const setFitMode = (mode: 'contain' | 'cover') => {
+    setCoverFit(mode);
+    if (!eventId) return;
+    localStorage.setItem(`landing_cover_fit_${eventId}`, mode);
+    try {
+      const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
+      const next = events.map((ev: any) =>
+        String(ev.id) === String(eventId) ? { ...ev, landingCoverFit: mode } : ev
+      );
+      localStorage.setItem('myEvents', JSON.stringify(next));
+    } catch {}
+  };
+
+  const setAsCover = async (url: string, slot: 1 | 2) => {
     const next1 = slot === 1 ? url : cover1;
     const next2 = slot === 2 ? url : cover2;
     setCover1(next1);
@@ -139,6 +159,7 @@ function GalleryInner() {
       console.warn('save cover failed', e);
     }
   };
+
   const chooseLanding = (slot: 1 | 2) => {
     setActiveLanding(slot);
     persistEventCovers(cover1, cover2, slot);
@@ -202,7 +223,6 @@ function GalleryInner() {
       const updated = [newItem, ...media];
       saveToLocal(updated);
 
-      // תמונה ראשונה בלי cover1 → אוטומטית תמונה 1
       if (isImage && !cover1) {
         await setAsCover(publicUrl, 1);
       }
@@ -293,6 +313,29 @@ function GalleryInner() {
 
         <div className="bg-white rounded-3xl shadow p-6 mb-8">
           <h2 className="text-lg font-bold mb-4">תמונות לדף הנחיתה</h2>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="text-sm text-gray-600 self-center">תצוגה בדף נחיתה:</span>
+            <button
+              type="button"
+              onClick={() => setFitMode('contain')}
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${
+                coverFit === 'contain' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              התאם לתמונה (בלי חיתוך)
+            </button>
+            <button
+              type="button"
+              onClick={() => setFitMode('cover')}
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${
+                coverFit === 'cover' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              מלא מסגרת (עלול לחתוך)
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div
               className={`border-2 rounded-2xl p-3 ${

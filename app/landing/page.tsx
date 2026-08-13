@@ -172,6 +172,7 @@ function LandingPageContent() {
   const [guests, setGuests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroMedia, setHeroMedia] = useState<{ type: 'video' | 'image'; url: string } | null>(null);
+    const [coverFit, setCoverFit] = useState<'contain' | 'cover'>('contain');
   const [rsvpStatus, setRsvpStatus] = useState<
     'none' | 'confirmed' | 'notFound' | 'general' | 'pending' | 'notComing'
   >('none');
@@ -823,13 +824,21 @@ function LandingPageContent() {
                         muted
                         loop
                         playsInline
-                        className="w-full h-auto max-h-[75vh] object-contain object-center"
+                                                className={
+                          coverFit === 'cover'
+                            ? 'w-full h-[55vh] sm:h-[65vh] object-cover object-center'
+                            : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                        }
                       />
                     ) : (
                       <img
                         src={heroMedia?.url || '/chatan-kala.jpg'}
                         alt="Invitation"
-                        className="w-full h-auto max-h-[75vh] object-contain object-center"
+                                                className={
+                          coverFit === 'cover'
+                            ? 'w-full h-[55vh] sm:h-[65vh] object-cover object-center'
+                            : 'w-full h-auto max-h-[75vh] object-contain object-center'
+                        }
                       />
                     )}
                   </div>
