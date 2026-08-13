@@ -214,6 +214,25 @@ function LandingPageContent() {
         const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
         if (currentEvent && !cancelled) {
           setEvent(currentEvent);
+                    try {
+            const localFit = localStorage.getItem(`landing_cover_fit_${eventId}`);
+            if (localFit === 'cover' || localFit === 'contain') {
+              setCoverFit(localFit);
+            }
+          } catch {}
+
+          try {
+            const { data } = await supabase
+              .from('events')
+              .select('landing_cover_fit')
+              .eq('id', Number(eventId))
+              .maybeSingle();
+            if (data?.landing_cover_fit === 'cover' || data?.landing_cover_fit === 'contain') {
+              setCoverFit(data.landing_cover_fit);
+            }
+          } catch (e) {
+            console.warn('load landing_cover_fit failed', e);
+          }
           if (
             currentEvent.englishEvent === 'כן' ||
             currentEvent.englishEvent === true ||

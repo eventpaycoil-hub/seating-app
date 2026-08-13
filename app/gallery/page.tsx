@@ -129,7 +129,7 @@ function GalleryInner() {
     localStorage.setItem(`landing_cover_slot_${eventId}`, String(slot));
   };
 
-  const setFitMode = (mode: 'contain' | 'cover') => {
+    const setFitMode = async (mode: 'contain' | 'cover') => {
     setCoverFit(mode);
     if (!eventId) return;
     localStorage.setItem(`landing_cover_fit_${eventId}`, mode);
@@ -140,6 +140,14 @@ function GalleryInner() {
       );
       localStorage.setItem('myEvents', JSON.stringify(next));
     } catch {}
+    try {
+      await supabase
+        .from('events')
+        .update({ landing_cover_fit: mode })
+        .eq('id', Number(eventId));
+    } catch (e) {
+      console.warn('save landing_cover_fit failed', e);
+    }
   };
 
   const setAsCover = async (url: string, slot: 1 | 2) => {
