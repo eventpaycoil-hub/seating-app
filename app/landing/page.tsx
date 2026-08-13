@@ -214,6 +214,21 @@ function LandingPageContent() {
         const currentEvent = events.find((e: any) => String(e.id) === String(eventId));
         if (currentEvent && !cancelled) {
           setEvent(currentEvent);
+                      setEvent(currentEvent);
+
+            try {
+              const { data, error } = await supabase
+                .from('events')
+                .select('landing_cover_fit')
+                .eq('id', Number(eventId))
+                .maybeSingle();
+              console.log('fit from supabase', { eventId, data, error });
+              if (data?.landing_cover_fit === 'cover' || data?.landing_cover_fit === 'contain') {
+                setCoverFit(data.landing_cover_fit);
+              }
+            } catch (e) {
+              console.warn('fit supabase error', e);
+            }
                     try {
             const localFit = localStorage.getItem(`landing_cover_fit_${eventId}`);
             if (localFit === 'cover' || localFit === 'contain') {
