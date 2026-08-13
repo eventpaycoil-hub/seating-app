@@ -27,7 +27,17 @@ const allActions: QuickAction[] = [
   { id: 'transport', label: 'הסעות', icon: '🚌' },
     { id: 'sms', label: 'SMS', icon: '📩' },
 ];
-
+const DEFAULT_CLIENT_ACTIONS = [
+  'home',
+  'fix-phones',
+  'photo',
+  'groups',
+  'guests-arrived',
+  'gifts',
+  'add-guests',
+  'duplicate-phones',
+  'transport',
+];
 interface SeatingPermissions {
   addTables: boolean;
   deleteTable: boolean;
@@ -82,10 +92,14 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     const savedActions = localStorage.getItem(`visibleActions_${eventId}`);
-    if (savedActions) {
+        if (savedActions) {
       setVisibleActions(JSON.parse(savedActions));
     } else {
-      setVisibleActions(allActions.map((a) => a.id));
+      setVisibleActions([...DEFAULT_CLIENT_ACTIONS]);
+      localStorage.setItem(
+        `visibleActions_${eventId}`,
+        JSON.stringify(DEFAULT_CLIENT_ACTIONS)
+      );
     }
 
     const savedSeating = localStorage.getItem(`permissions_seating_${eventId}`);
@@ -199,15 +213,17 @@ export default function AdminSettingsPage() {
     );
   };
 
-  const enterClientMode = () => {
+    const enterClientMode = () => {
     localStorage.setItem('userRole', 'client');
     localStorage.setItem('clientMode', 'true');
+    localStorage.setItem('canReturnToAdmin', 'true');
     router.push(`/event/${eventId}/guests`);
   };
 
   const exitClientMode = () => {
     localStorage.setItem('userRole', 'admin');
     localStorage.removeItem('clientMode');
+    localStorage.removeItem('canReturnToAdmin');
     alert('חזרת למצב מנהל');
   };
 
