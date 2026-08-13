@@ -129,10 +129,14 @@ function GalleryInner() {
     localStorage.setItem(`landing_cover_slot_${eventId}`, String(slot));
   };
 
-    const setFitMode = async (mode: 'contain' | 'cover') => {
+      const setFitMode = async (mode: 'contain' | 'cover') => {
     setCoverFit(mode);
     if (!eventId) return;
-    localStorage.setItem(`landing_cover_fit_${eventId}`, mode);
+
+    try {
+      localStorage.setItem(`landing_cover_fit_${eventId}`, mode);
+    } catch {}
+
     try {
       const events = JSON.parse(localStorage.getItem('myEvents') || '[]');
       const next = events.map((ev: any) =>
@@ -140,13 +144,26 @@ function GalleryInner() {
       );
       localStorage.setItem('myEvents', JSON.stringify(next));
     } catch {}
+
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('events')
         .update({ landing_cover_fit: mode })
-        .eq('id', Number(eventId));
-    } catch (e) {
+        .eq('id', Number(eventId))
+        .select('id, landing_cover_fit');
+
+      console.log('setFitMode result', { mode, eventId, data, error });
+
+      if (error) {
+        alert('שמירה ל-Supabase נכשלה: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        alert('לא עודכנה אף שורה (בדוק id / RLS)');
+      }
+    } catch (e: any) {
       console.warn('save landing_cover_fit failed', e);
+      alert('שמירה נכשלה');
     }
   };
 
