@@ -572,33 +572,98 @@ function AddGuestsContent() {
           <span>אפשרות הסעה לכולם</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span>קבוצה:</span>
-          <select
-            value={selectedGroup}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedGroup(val);
-              if (val) {
-                setGuests((prev) =>
-                  prev.map((g) => {
-                    const hasData = g.name.trim() !== '' || g.phone.trim() !== '';
-                    if (hasData && g.group.trim() === '') return { ...g, group: val };
-                    return g;
-                  })
-                );
-              }
-            }}
-            className="border border-slate-300 rounded-xl px-4 py-2 text-sm"
-          >
-            <option value="">— בחר —</option>
-            {groups.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-        </div>
+                  <div className="flex flex-wrap items-center gap-2">
+            <span>קבוצה:</span>
+            <select
+              value={selectedGroup === '__new__' ? '__new__' : selectedGroup}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__new__') {
+                  setSelectedGroup('__new__');
+                  return;
+                }
+                setSelectedGroup(val);
+                if (val) {
+                  setGuests((prev) =>
+                    prev.map((g) => {
+                      const hasData = g.name.trim() !== '' || g.phone.trim() !== '';
+                      if (hasData && g.group.trim() === '') return { ...g, group: val };
+                      return g;
+                    })
+                  );
+                }
+              }}
+              className="border border-slate-300 rounded-xl px-4 py-2 text-sm"
+            >
+              <option value="">— בחר —</option>
+              {groups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+              <option value="__new__">+ קבוצה חדשה...</option>
+            </select>
+
+            {selectedGroup === '__new__' && (
+              <input
+                type="text"
+                placeholder="שם קבוצה חדשה"
+                className="border border-slate-300 rounded-xl px-4 py-2 text-sm min-w-[180px]"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  const name = (e.target as HTMLInputElement).value.trim();
+                  if (!name) return;
+
+                  setGroups((prev) => {
+                    const next = prev.includes(name) ? prev : [...prev, name];
+                    try {
+                      localStorage.setItem(
+                        `groups_event_${eventId}`,
+                        JSON.stringify(next)
+                      );
+                    } catch {}
+                    return next;
+                  });
+
+                  setSelectedGroup(name);
+                  setGuests((prev) =>
+                    prev.map((g) => {
+                      const hasData = g.name.trim() !== '' || g.phone.trim() !== '';
+                      if (hasData && g.group.trim() === '') return { ...g, group: name };
+                      return g;
+                    })
+                  );
+                }}
+                onBlur={(e) => {
+                  const name = e.target.value.trim();
+                  if (!name) {
+                    setSelectedGroup('');
+                    return;
+                  }
+                  setGroups((prev) => {
+                    const next = prev.includes(name) ? prev : [...prev, name];
+                    try {
+                      localStorage.setItem(
+                        `groups_event_${eventId}`,
+                        JSON.stringify(next)
+                      );
+                    } catch {}
+                    return next;
+                  });
+                  setSelectedGroup(name);
+                  setGuests((prev) =>
+                    prev.map((g) => {
+                      const hasData = g.name.trim() !== '' || g.phone.trim() !== '';
+                      if (hasData && g.group.trim() === '') return { ...g, group: name };
+                      return g;
+                    })
+                  );
+                }}
+              />
+            )}
+          </div>
 
         <label className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold cursor-pointer">
           📊 ייבוא מאקסל

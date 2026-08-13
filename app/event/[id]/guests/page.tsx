@@ -223,6 +223,10 @@ export default function GuestsPage() {
   const pathname = usePathname();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGuests, setSelectedGuests] = useState<(string | number)[]>([]);
+    const selectedSet = useMemo(
+    () => new Set((selectedGuests || []).map(String)),
+    [selectedGuests]
+  );
   const [guests, setGuests] = useState<any[]>([]);
   const [eventTitle, setEventTitle] = useState(`אירוע #${eventId}`);
   const [activeFilter, setActiveFilter] = useState<
@@ -1146,8 +1150,9 @@ export default function GuestsPage() {
 
                 {grouped.map(([groupName, groupGuests]) => {
                   const groupIds = groupGuests.map((g) => g.id);
-                  const groupAllSelected =
-                    groupIds.length > 0 && groupIds.every((id) => selectedGuests.includes(id));
+                                    const groupAllSelected =
+                    groupIds.length > 0 &&
+                    groupIds.every((id) => selectedSet.has(String(id)));
                   const confirmedInGroup = groupGuests
                     .filter(isConfirmedGuest)
                     .reduce((sum, g) => sum + (Number(g.count) || Number(g.quantity) || 1), 0);
@@ -1193,16 +1198,24 @@ export default function GuestsPage() {
 
                         return (
                           <tr key={`${guest.id}-${index}`} className={`${rowBg} hover:bg-blue-50`}>
-                            {isFullAdmin && (
-                              <td className="px-4 py-3.5 text-center border border-slate-200">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedGuests.map(String).includes(String(guest.id))}
-                                  onChange={() => toggleGuest(guest.id)}
-                                  className="w-5 h-5 accent-blue-600"
-                                />
-                              </td>
-                            )}
+                                           {isFullAdmin && (
+                  <td
+                    className="px-2 py-2 text-center border border-slate-200"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <label className="inline-flex items-center justify-center w-10 h-10 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedSet.has(String(guest.id))}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleGuest(guest.id);
+                        }}
+                        className="w-5 h-5 accent-blue-600 cursor-pointer"
+                      />
+                    </label>
+                  </td>
+                )}
                             <td className="px-4 py-3.5 text-center text-slate-500 font-medium border border-slate-200">
                               <div className="flex flex-col items-center">
                                 <div className="text-base font-bold text-slate-700">{rowNumber}</div>
