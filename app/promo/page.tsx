@@ -11,28 +11,57 @@ export default function PromoPage() {
     month: '',
     year: '2026',
   });
+  const [sending, setSending] = useState(false);
 
   const openWhatsApp = () => {
     window.open('https://wa.me/972505270152', '_blank');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim()) {
       alert('נא למלא שם וטלפון');
       return;
     }
+
     const dateStr = [form.day, form.month, form.year].filter(Boolean).join('/');
-    const text = encodeURIComponent(
-      `שלום, אשמח לקבל הצעת מחיר\nשם: ${form.name}\nטלפון: ${form.phone}${dateStr ? `\nתאריך אירוע: ${dateStr}` : ''}`
-    );
-    window.open(`https://wa.me/972505270152?text=${text}`, '_blank');
+    setSending(true);
+
+    try {
+      const res = await fetch('/api/notify-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          date: dateStr || '',
+          source: 'דרך עמוד נחיתה סידורי הושבה',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data?.success === false) {
+        alert(data?.error || 'שגיאה בשליחה, נסו שוב או שלחו בוואטסאפ');
+        return;
+      }
+
+      alert('הפרטים נשלחו בהצלחה! נחזור אליך בהקדם');
+      setForm({ name: '', phone: '', day: '', month: '', year: '2026' });
+    } catch (err) {
+      console.warn(err);
+      alert('שגיאת רשת, נסו שוב');
+    } finally {
+      setSending(false);
+    }
   };
 
   const features = [
     { icon: '⚙️', text: 'מערכת חכמה להושבת המוזמנים שלכם!' },
     { icon: '🖨️', text: 'הורדת והדפסת פתקיות לאחר גמר ההושבה!' },
-    { icon: '💬', text: 'ביום האירוע אורחיכם יקבלו הודעת SMS כתזכורת לאירוע ובה יצויין מקום הישיבה המדויק שלהם!' },
+    {
+      icon: '💬',
+      text: 'ביום האירוע אורחיכם יקבלו הודעת SMS כתזכורת לאירוע ובה יצויין מקום הישיבה המדויק שלהם!',
+    },
     { icon: '👤', text: 'אפשרות לדיילים/דיילות בכניסה לאולם!' },
     { icon: '❤️', text: 'והכי חשוב... שירות מכל הלב!' },
   ];
@@ -43,22 +72,24 @@ export default function PromoPage() {
       style={{
         minHeight: '100vh',
         fontFamily: 'Arial, Helvetica, sans-serif',
-        backgroundImage: 'linear-gradient(rgba(255,248,240,0.88), rgba(255,248,240,0.92)), url(/chatan-kala.jpg)',
+        backgroundImage:
+          'linear-gradient(rgba(255,248,240,0.88), rgba(255,248,240,0.92)), url(/chatan-kala.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* כותרת עליונה */}
-      <div style={{
-        background: 'rgba(63,42,30,0.92)',
-        color: 'white',
-        padding: '12px 20px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '15px',
-      }}>
+      <div
+        style={{
+          background: 'rgba(63,42,30,0.92)',
+          color: 'white',
+          padding: '12px 20px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '15px',
+        }}
+      >
         <span>ליצירת קשר:</span>
         <a
           href="https://wa.me/972505270152"
@@ -70,24 +101,27 @@ export default function PromoPage() {
         </a>
       </div>
 
-      <div style={{
-        maxWidth: '1100px',
-        margin: '0 auto',
-        padding: '40px 20px 60px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '40px',
-        alignItems: 'start',
-      }}>
-        {/* צד ימין – שירות */}
+      <div
+        style={{
+          maxWidth: '1100px',
+          margin: '0 auto',
+          padding: '40px 20px 60px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '40px',
+          alignItems: 'start',
+        }}
+      >
         <div>
-          <h1 style={{
-            fontSize: 'clamp(28px, 4vw, 40px)',
-            fontWeight: 800,
-            color: '#1e3a5f',
-            margin: '0 0 28px 0',
-            lineHeight: 1.3,
-          }}>
+          <h1
+            style={{
+              fontSize: 'clamp(28px, 4vw, 40px)',
+              fontWeight: 800,
+              color: '#1e3a5f',
+              margin: '0 0 28px 0',
+              lineHeight: 1.3,
+            }}
+          >
             שירות סידורי הושבה לאירועים!
           </h1>
 
@@ -95,7 +129,15 @@ export default function PromoPage() {
             {features.map((f, i) => (
               <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '22px', flexShrink: 0 }}>{f.icon}</span>
-                <p style={{ margin: 0, fontSize: '17px', color: '#92400e', fontWeight: 600, lineHeight: 1.45 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '17px',
+                    color: '#92400e',
+                    fontWeight: 600,
+                    lineHeight: 1.45,
+                  }}
+                >
                   {f.text}
                 </p>
               </div>
@@ -103,7 +145,7 @@ export default function PromoPage() {
           </div>
 
           <button
-            onClick={() => window.location.href = '/pricing'}
+            onClick={() => (window.location.href = '/pricing')}
             style={{
               marginTop: '32px',
               background: '#16a34a',
@@ -120,23 +162,26 @@ export default function PromoPage() {
           </button>
         </div>
 
-        {/* צד שמאל – מבצע + טופס */}
         <div>
-          <h2 style={{
-            fontSize: 'clamp(26px, 3.5vw, 34px)',
-            fontWeight: 800,
-            color: '#b45309',
-            margin: '0 0 8px 0',
-          }}>
+          <h2
+            style={{
+              fontSize: 'clamp(26px, 3.5vw, 34px)',
+              fontWeight: 800,
+              color: '#b45309',
+              margin: '0 0 8px 0',
+            }}
+          >
             מבצע מטורף!
           </h2>
-          <p style={{
-            fontSize: 'clamp(22px, 3vw, 28px)',
-            fontWeight: 800,
-            color: '#1e3a5f',
-            margin: '0 0 6px 0',
-            lineHeight: 1.35,
-          }}>
+          <p
+            style={{
+              fontSize: 'clamp(22px, 3vw, 28px)',
+              fontWeight: 800,
+              color: '#1e3a5f',
+              margin: '0 0 6px 0',
+              lineHeight: 1.35,
+            }}
+          >
             אישורי הגעה
             <br />
             וסידורי הושבה
@@ -148,12 +193,14 @@ export default function PromoPage() {
             בלבד!*
           </p>
 
-          <p style={{
-            fontSize: '20px',
-            fontWeight: 700,
-            color: '#1e3a5f',
-            margin: '24px 0 12px',
-          }}>
+          <p
+            style={{
+              fontSize: '20px',
+              fontWeight: 700,
+              color: '#1e3a5f',
+              margin: '24px 0 12px',
+            }}
+          >
             חייגו עכשיו או
             <br />
             לחצו לשליחת WhatsApp:
@@ -176,17 +223,21 @@ export default function PromoPage() {
             0505270152
           </button>
 
-          <p style={{
-            fontSize: '20px',
-            fontWeight: 700,
-            color: '#1e3a5f',
-            margin: '32px 0 16px',
-          }}>
+          <p
+            style={{
+              fontSize: '20px',
+              fontWeight: 700,
+              color: '#1e3a5f',
+              margin: '32px 0 16px',
+            }}
+          >
             או מלאו את פרטיכם!
           </p>
 
           <form onSubmit={handleSubmit} style={{ maxWidth: '320px' }}>
-            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>שם:</label>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>
+              שם:
+            </label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -200,7 +251,9 @@ export default function PromoPage() {
               }}
             />
 
-            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>טלפון:</label>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>
+              טלפון:
+            </label>
             <input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -214,7 +267,9 @@ export default function PromoPage() {
               }}
             />
 
-            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>תאריך האירוע:</label>
+            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: '#374151' }}>
+              תאריך האירוע:
+            </label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <select
                 value={form.day}
@@ -223,7 +278,9 @@ export default function PromoPage() {
               >
                 <option value="">יום</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
                 ))}
               </select>
               <select
@@ -233,7 +290,9 @@ export default function PromoPage() {
               >
                 <option value="">חודש</option>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </select>
               <select
@@ -242,30 +301,42 @@ export default function PromoPage() {
                 style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #9ca3af' }}
               >
                 {['2026', '2027', '2028'].map((y) => (
-                  <option key={y} value={y}>{y}</option>
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
                 ))}
               </select>
             </div>
 
             <button
               type="submit"
+              disabled={sending}
               style={{
-                background: '#dc2626',
+                background: sending ? '#9ca3af' : '#dc2626',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '12px 28px',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                cursor: 'pointer',
+                cursor: sending ? 'wait' : 'pointer',
               }}
             >
-              שלחו
+              {sending ? 'שולח...' : 'שלחו'}
             </button>
           </form>
 
-          <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '20px', maxWidth: '320px', lineHeight: 1.4 }}>
-            *עד 200 רשומות. במסגרת שירות סידורי ההושבה נוכחות דיילים/דיילות מטעמנו אפשרית בתוספת תשלום ואינה כלולה במחיר המוצג
+          <p
+            style={{
+              fontSize: '11px',
+              color: '#6b7280',
+              marginTop: '20px',
+              maxWidth: '320px',
+              lineHeight: 1.4,
+            }}
+          >
+            *עד 200 רשומות. במסגרת שירות סידורי ההושבה נוכחות דיילים/דיילות מטעמנו אפשרית
+            בתוספת תשלום ואינה כלולה במחיר המוצג
           </p>
         </div>
       </div>
