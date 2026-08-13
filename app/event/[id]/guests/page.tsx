@@ -714,25 +714,31 @@ export default function GuestsPage() {
                 : 'bg-indigo-100 border-indigo-300'
             }`}
           >
-            <div className="font-bold text-lg flex flex-wrap items-center gap-2">
-              {roleLabel || (isFullAdmin ? '🔑 מצב מנהל' : isEditorMode ? '📞 מצב טלפנית' : '👤 מצב לקוח')}
+                        <div className="font-bold text-lg flex flex-wrap items-center gap-2">
+              {roleLabel ||
+                (isFullAdmin
+                  ? '🔑 מצב מנהל'
+                  : isEditorMode
+                  ? '📞 מצב טלפנית'
+                  : '👤 מצב לקוח')}
               {' · '}
               {eventTitle}
-                                     {isClientMode && (
-              <button
-                type="button"
-                onClick={() => {
-                  localStorage.setItem('userRole', 'admin');
-                  localStorage.removeItem('clientMode');
-                  window.location.reload();
-                }}
-                className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-full hover:bg-slate-900"
-              >
-                🔑 חזרה למנהל
-              </button>
-            )}
+              {typeof window !== 'undefined' &&
+                localStorage.getItem('canReturnToAdmin') === 'true' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('userRole', 'admin');
+                      localStorage.removeItem('clientMode');
+                      localStorage.removeItem('canReturnToAdmin');
+                      window.location.reload();
+                    }}
+                    className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-full hover:bg-slate-900"
+                  >
+                    🔑 חזרה למנהל
+                  </button>
+                )}
             </div>
-            <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
             <div className="text-sm text-gray-600">אירוע ID: {eventId}</div>
           </div>
 

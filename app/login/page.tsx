@@ -34,12 +34,12 @@ export default function LoginPage() {
     }
 
     if (data.role === 'admin') {
-      localStorage.setItem('isLoggedIn', 'true');
+           localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('username', 'admin');
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('clientMode', 'false');
       localStorage.removeItem('clientEventId');
-      router.push('/events');
+      localStorage.removeItem('canReturnToAdmin');
       return;
     }
 
@@ -52,11 +52,12 @@ export default function LoginPage() {
       localStorage.setItem('myEvents', JSON.stringify(events));
     } catch {}
 
-    localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('username', user);
     localStorage.setItem('userRole', 'client');
     localStorage.setItem('clientMode', 'true');
     localStorage.setItem('clientEventId', String(matched.id));
+    localStorage.removeItem('canReturnToAdmin');
 
     router.push(`/event/${matched.id}/guests`);
   } catch (err: any) {
