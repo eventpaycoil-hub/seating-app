@@ -496,12 +496,10 @@ export default function GuestsPage() {
       (g.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (g.phone || '').includes(searchTerm);
 
-    if (transportFilter) {
-  const t = (g.transportation || g.transport || '').toString();
-  const needs = g.needsTransport === true || g.needsTransport === 'כן' || t === '*';
-  // אם מסומן להסעה בלי יעד עדיין — לא להסתיר אותו
-  if (!t.includes(transportFilter) && !needs) return false;
-}
+        if (transportFilter) {
+      const t = (g.transportation || g.transport || '').toString();
+      if (!t.includes(transportFilter)) return false;
+    }
 
     if (activeFilter === 'yes')
       return matchesSearch && g.confirmed && !isNaN(Number(g.confirmed)) && Number(g.confirmed) >= 1;
@@ -538,10 +536,10 @@ export default function GuestsPage() {
     });
   }, [filteredGuests]);
 
-  const allGroupNames = useMemo(() => {
+    const allGroupNames = useMemo(() => {
     const set = new Set<string>();
     let hasGeneral = false;
-    guests.forEach((g: any) => {
+    filteredGuests.forEach((g: any) => {
       const raw = (g.group && String(g.group).trim()) || '';
       if (raw) set.add(raw);
       else hasGeneral = true;
@@ -549,7 +547,7 @@ export default function GuestsPage() {
     const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
     if (hasGeneral) list.push('כללי');
     return list;
-  }, [guests]);
+  }, [filteredGuests]);
 
   const scrollToGroup = (groupName: string) => {
   setJumpGroup(groupName);
@@ -889,7 +887,10 @@ export default function GuestsPage() {
             {transportFilter && (
               <button
                 type="button"
-                onClick={() => setTransportFilter(null)}
+                onClick={() => {
+  setJumpGroup('');
+  setTransportFilter(null);
+}}
                 className="bg-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-medium text-sm"
               >
                 ✕ הצג הכל
@@ -905,7 +906,10 @@ export default function GuestsPage() {
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setTransportFilter(active ? null : opt.name)}
+                    onClick={() => {
+  setJumpGroup('');
+  setTransportFilter(active ? null : opt.name);
+}}
                     className={`px-5 py-3 rounded-2xl font-medium text-sm flex items-center gap-2 border transition ${
                       active
                         ? 'bg-indigo-600 text-white border-indigo-700'
