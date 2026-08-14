@@ -818,7 +818,7 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+                 <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="text-3xl font-bold text-slate-800">רשימת מוזמנים</div>
@@ -827,60 +827,9 @@ export default function GuestsPage() {
               <div className="text-4xl font-bold">{totalConfirmedPeople}</div>
             </div>
           </div>
-
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={downloadAllGuests}
-              className="bg-teal-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap text-sm"
-            >
-              📥 הורד את כל הרשימה
-            </button>
-            <button
-              onClick={downloadConfirmedGuests}
-              className="bg-emerald-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap text-sm"
-            >
-              📥 הורד רשימת מאושרים
-            </button>
-            {hasTransport && (
-              <>
-                <button
-                  onClick={() => setNeedsTransportForSelected(true)}
-                  className="bg-cyan-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-cyan-700 whitespace-nowrap text-sm"
-                >
-                  הוסף הסעה למסומנים
-                </button>
-                <button
-                  onClick={() => setNeedsTransportForSelected(false)}
-                  className="bg-slate-500 text-white px-4 py-3 rounded-2xl font-medium hover:bg-slate-600 whitespace-nowrap text-sm"
-                >
-                  בטל הסעה למסומנים
-                </button>
-              </>
-            )}
-            {isFullAdmin && (
-  <>
-    <button
-      onClick={sendSMS}
-      className="bg-blue-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
-    >
-      📩 SMS
-    </button>
-    <button
-      onClick={sendWhatsApp}
-      className="bg-green-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap text-sm"
-    >
-      💬 ווטסאפ
-    </button>
-    <button
-      onClick={deleteSelected}
-      className="bg-red-600 text-white px-4 py-3 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap text-sm"
-    >
-      🗑 מחק
-    </button>
-  </>
-)}
-          </div>
         </div>
+
+        
 
         {hasTransport && (
           <div className="flex flex-wrap gap-3 mb-6">
@@ -1053,8 +1002,61 @@ export default function GuestsPage() {
           ))}
         </div>
 
-        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-4 border-b mb-4">
+                <div className="sticky top-0 z-50 bg-white/95 backdrop-blur py-3 border-b mb-4 shadow-sm">
           <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2 justify-start">
+              <button
+                onClick={downloadAllGuests}
+                className="bg-teal-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-teal-700 whitespace-nowrap text-sm"
+              >
+                📥 הורד את כל הרשימה
+              </button>
+              <button
+                onClick={downloadConfirmedGuests}
+                className="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-emerald-700 whitespace-nowrap text-sm"
+              >
+                📥 הורד רשימת מאושרים
+              </button>
+              {hasTransport && (
+                <>
+                  <button
+                    onClick={() => setNeedsTransportForSelected(true)}
+                    className="bg-cyan-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-cyan-700 whitespace-nowrap text-sm"
+                  >
+                    הוסף הסעה למסומנים
+                  </button>
+                  <button
+                    onClick={() => setNeedsTransportForSelected(false)}
+                    className="bg-slate-500 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-slate-600 whitespace-nowrap text-sm"
+                  >
+                    בטל הסעה למסומנים
+                  </button>
+                </>
+              )}
+              {isFullAdmin && (
+                <>
+                  <button
+                    onClick={sendSMS}
+                    className="bg-blue-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
+                  >
+                    📩 SMS
+                  </button>
+                  <button
+                    onClick={sendWhatsApp}
+                    className="bg-green-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-green-700 whitespace-nowrap text-sm"
+                  >
+                    💬 ווטסאפ
+                  </button>
+                  <button
+                    onClick={deleteSelected}
+                    className="bg-red-600 text-white px-4 py-2.5 rounded-2xl font-medium hover:bg-red-700 whitespace-nowrap text-sm"
+                  >
+                    🗑 מחק
+                  </button>
+                </>
+              )}
+            </div>
+
             <input
               type="text"
               placeholder="חיפוש לפי שם או טלפון..."
@@ -1364,7 +1366,9 @@ export default function GuestsPage() {
             </table>
           </div>
         </div>
-      </div>
-    </div>
+           </div>
+
+          </div>
   );
 }
+    
