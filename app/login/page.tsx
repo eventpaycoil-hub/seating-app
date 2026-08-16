@@ -33,13 +33,14 @@ export default function LoginPage() {
       return;
     }
 
-    if (data.role === 'admin') {
-           localStorage.setItem('isLoggedIn', 'true');
+        if (data.role === 'admin') {
+      localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('username', 'admin');
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('clientMode', 'false');
       localStorage.removeItem('clientEventId');
       localStorage.removeItem('canReturnToAdmin');
+      router.push('/events');
       return;
     }
 
