@@ -275,7 +275,7 @@ export default function HomePage() {
                 boxShadow: '0 8px 25px rgba(217, 119, 6, 0.45)',
               }}
             >
-              קבל הצעת מחיר עכשיו
+              קבל הצעת מחיר משתלמת עכשיו!
             </button>
 
             <a href="#services" style={{
