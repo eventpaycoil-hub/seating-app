@@ -300,22 +300,42 @@ export default function EditEventPage() {
 
     localStorage.setItem('myEvents', JSON.stringify(events));
 
-    try {
+        try {
       await supabase
         .from('events')
         .update({
+          // שדות בסיסיים
+          owners: formData.owners || '',
+          hall_name: formData.hallName || '',
+          city: formData.city || '',
+          time: formData.time || '19:30',
+          event_date: formData.eventDate || null,
+          full_date: formData.fullDate || formData.eventDate || null,
+          event_type: formData.eventType || null,
+          groom_parents: formData.groomParents || '',
+          bride_parents: formData.brideParents || '',
+
+          // שדות שכבר היו
           rsvp_mode: formData.rsvpMode || 'רגיל',
           welcome_line: formData.welcomeLine || '',
           use_external_landing: formData.useExternalLanding || 'לא',
           external_landing_url: formData.externalLandingUrl || '',
-          event_type: formData.eventType || null,
           has_transport: formData.hasTransport || 'לא',
           has_separation: formData.hasSeparation || 'לא',
           is_active: formData.isActive === true || formData.isActive === 'כן',
-          
           seating_arrangement: formData.seatingArrangement || 'לא',
           nufar_event: formData.nufarEvent || 'לא',
           show_seating_link: formData.showSeatingLink || 'לא',
+
+          // שדות נוספים
+          credit_link: formData.creditLink || '',
+          bit_gift_link: formData.bitGiftLink || '',
+          vendor_id: formData.vendorId || '',
+          email: formData.email || '',
+          phone: formData.phone || formData.clientPhone || '',
+          price: formData.price || '',
+          deposit: formData.deposit || '',
+          notes: formData.notes || '',
         })
         .eq('id', Number(eventId));
     } catch (err) {
@@ -324,7 +344,6 @@ export default function EditEventPage() {
 
     alert('✅ נשמר!');
   };
-
   const deleteEventPermanently = () => {
     const expected = (formData.owners || '').trim();
     if (!expected) {
@@ -610,6 +629,18 @@ export default function EditEventPage() {
             </div>
           </div>
 
+                    <div>
+            <label className="block text-sm font-medium mb-2">שם בעלי השמחה:</label>
+            <input
+              type="text"
+              name="owners"
+              value={formData.owners || ''}
+              onChange={handleChange}
+              className="w-full p-4 border rounded-2xl"
+              placeholder="לדוגמה: שלומי ויעל"
+            />
+          </div>
+
           {formData.eventType === 'חתונה' || formData.eventType === 'אחר' || !formData.eventType ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -634,7 +665,6 @@ export default function EditEventPage() {
               </div>
             </div>
           ) : null}
-
           <div>
             <label className="block text-sm font-medium mb-2">קישור לאשראי (מתנה):</label>
             <input
